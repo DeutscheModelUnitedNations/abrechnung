@@ -168,7 +168,7 @@ class ReportPrint<idType extends _id> {
       yStart: y - 16,
       fontSize: this.drawer.settings.fontSizes.S
     })
-    y = await this.drawDays({ xStart: this.drawer.settings.pagePadding, yStart: y - 16, fontSize: this.drawer.settings.fontSizes.S })
+    // y = await this.drawDays({ xStart: this.drawer.settings.pagePadding, yStart: y - 16, fontSize: this.drawer.settings.fontSizes.S })
     y = await this.drawReports({ xStart: this.drawer.settings.pagePadding, yStart: y - 16, fontSize: this.drawer.settings.fontSizes.S })
     y = await this.drawComments({ xStart: this.drawer.settings.pagePadding, yStart: y - 16, fontSize: this.drawer.settings.fontSizes.S })
 
