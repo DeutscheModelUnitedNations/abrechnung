@@ -161,15 +161,6 @@
                 <span class="ms-1 d-md-none">{{ t('labels.expense') }}</span>
               </button>
             </div>
-            <div class="col-auto">
-              <button
-                class="btn btn-outline-secondary"
-                @click="travel.days.length < 1 ? null : showModal('edit', 'lumpSums', undefined)"
-                :disabled="travel.days.length < 1">
-                <span class="ms-1 d-none d-md-inline">{{ t('labels.editX', { X: t('labels.lumpSums') }) }}</span>
-                <span class="ms-1 d-md-none">{{ t('labels.lumpSums') }}</span>
-              </button>
-            </div>
           </div>
 
           <div v-if="travel.stages.length == 0" class="alert alert-light" role="alert">
