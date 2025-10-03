@@ -61,13 +61,6 @@
           @cancel="resetAndHide"
           @edit="editTravelDetails">
         </TravelApplyForm>
-        <LumpSumEditor
-          v-else-if="modalObjectType === 'lumpSums'"
-          :travel="travel"
-          :loading="modalFormIsLoading"
-          :disabled="isReadOnly"
-          @save="postLumpSums"
-          @cancel="resetAndHide"></LumpSumEditor>
       </div>
     </ModalComponent>
     <div class="container py-3" v-if="travel._id">
@@ -197,37 +190,6 @@
                     <i class="bi bi-file-person"></i> </small
                   >{{ formatter.simpleDate((row.data as TravelDay).date) }}
                 </h5>
-              </div>
-              <div class="col">
-                <div class="row align-items-center">
-                  <!-- lump sums -->
-                  <!-- catering -->
-                  <div
-                    class="col-auto text-secondary"
-                    :title="
-                          (travel.claimSpouseRefund ? '2x ' : '') +
-                          t('lumpSums.' + row.data.lumpSums.catering.type) +
-                          ' ' +
-                          (row.data as TravelDay).country.flag +
-                          ((row.data as TravelDay).special ? ' (' + (row.data as TravelDay).special + ')' : '')
-                        ">
-                    <i class="bi bi-sun"></i>
-                    {{ formatter.money(row.data.lumpSums.catering.refund) }}
-                  </div>
-                  <!-- overnight -->
-                  <div
-                    class="col-auto text-secondary"
-                    :title="
-                          (travel.claimSpouseRefund ? '2x ' : '') +
-                          t('lumpSums.overnight') +
-                          ' ' +
-                          (row.data as TravelDay).country.flag +
-                          ((row.data as TravelDay).special ? ' (' + (row.data as TravelDay).special + ')' : '')
-                        ">
-                    <i class="bi bi-moon"></i>
-                    {{ formatter.money(row.data.lumpSums.overnight.refund) }}
-                  </div>
-                </div>
               </div>
             </div>
             <!-- Stage -->

@@ -647,7 +647,7 @@
   "settings": {},
   "states": {
     "APPLIED_FOR": "Applied for",
-    "APPROVED": "Approved",
+    "APPROVED": "In Progress",
     "BOOKED": "Booked",
     "IN_REVIEW": "In Review",
     "IN_WORK": "In Work",

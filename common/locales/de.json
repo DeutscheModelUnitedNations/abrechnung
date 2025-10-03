@@ -647,7 +647,7 @@
   "settings": {},
   "states": {
     "APPLIED_FOR": "Beantragt",
-    "APPROVED": "Genehmigt",
+    "APPROVED": "In Vorbereitung",
     "BOOKED": "Gebucht",
     "IN_REVIEW": "Wird Geprüft",
     "IN_WORK": "In Arbeit",
