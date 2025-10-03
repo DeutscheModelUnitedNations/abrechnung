@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:alpine
 
 LABEL org.opencontainers.image.source=https://github.com/deutschemodelunitednations/abrechnung
 LABEL org.opencontainers.image.description="DMUN abrechnung frontend"
