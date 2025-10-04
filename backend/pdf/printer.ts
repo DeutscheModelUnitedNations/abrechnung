@@ -193,8 +193,8 @@ export class PDFDrawer<idType extends _id> {
     this.font = font
     this.formatter = formatter
     this.settings = Object.assign({}, settings, {
-      textColor: pdf_lib.componentsToColor(hexToRGB(settings.textColor)),
-      borderColor: pdf_lib.componentsToColor(hexToRGB(settings.borderColor))
+      textColor: pdf_lib.componentsToColor(hexToRGB(settings.textColor).map((c: number) => c / 255) as [number, number, number]),
+      borderColor: pdf_lib.componentsToColor(hexToRGB(settings.borderColor).map((c: number) => c / 255) as [number, number, number])
     })
     this.getDocumentFileBufferById = getDocumentFileBufferById
     this.getOrganisationLogoIdById = getOrganisationLogoIdById
