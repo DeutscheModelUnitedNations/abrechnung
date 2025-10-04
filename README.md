@@ -1,5 +1,5 @@
 <h1 align="center">
-abrechnung 🧾
+DMUN abrechnung
 </h1>
 <p align="center">
 <a href="https://github.com/david-loe/abrechnung/actions/workflows/production-build.yml"><img src="https://github.com/david-loe/abrechnung/actions/workflows/production-build.yml/badge.svg" alt="Production Build"></a>
@@ -9,7 +9,7 @@ abrechnung 🧾
 Demo und Hosting ➡️ <a href="https://reiseabrechner.de">reiseabrechner.de</a>
 </h3>
 
-**abrechnung 🧾** ist eine Web App die:
+**DMUN Abrechnung** ist eine Web App die:
 
 - Reisekosten- (inkl. automatischer Pauschalen Berechnung auch für internationale Reisen),
 - Auslagen- und

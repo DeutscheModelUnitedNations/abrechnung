@@ -76,10 +76,10 @@
     "login": "Login",
     "logout": "Logout",
     "settings": "Einstellungen",
-    "title": "abrechnung"
+    "title": "DMUN Abrechnung"
   },
   "info": {
-    "advance": "Wähle hier die Vorschüsse aus, die du mit deiner abrechnung🧾 verrechnen willst.",
+    "advance": "Wähle hier die Vorschüsse aus, die du mit deiner DMUN Abrechnung verrechnen willst.",
     "cateringRefund": "Wenn das Essen schon vom Arbeitgeber bezahlt wird (z.B. Tagungspreis / Frühstück im Hotel) kann keine Verpflegungspauschale erstattet werden. Bitte trage ein welche Mahlzeiten schon vom Arbeitgeber bezahlt werden.",
     "claimSpouseRefund": "Wenn du gemeinsam mit deinem Ehepartner verreist und er auch erstattungberechtigt ist, kannst du ihn mitabrechnen.",
     "cost": "Trage hier die Kosten ein.",
