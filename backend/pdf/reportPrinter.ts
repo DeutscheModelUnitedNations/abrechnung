@@ -329,11 +329,11 @@ class ReportPrint<idType extends _id> {
           reference: this.t('labels.appliedForOn'),
           value: this.report.log[TravelState.APPLIED_FOR]?.on || this.report.createdAt
         })
-        summary.push({ reference: this.t('labels.approvedOn'), value: this.report.log[TravelState.APPROVED]?.on })
-        summary.push({
-          reference: this.t('labels.approvedBy'),
-          value: `${this.drawer.formatter.name(this.report.log[TravelState.APPROVED]?.by.name)}`
-        })
+        // summary.push({ reference: this.t('labels.approvedOn'), value: this.report.log[TravelState.APPROVED]?.on })
+        // summary.push({
+        //   reference: this.t('labels.approvedBy'),
+        //   value: `${this.drawer.formatter.name(this.report.log[TravelState.APPROVED]?.by.name)}`
+        // })
       }
       summary.push({ reference: this.t('labels.submittedOn'), value: this.report.log[State.IN_REVIEW]?.on })
       summary.push({ reference: this.t('labels.examinedOn'), value: this.report.log[State.BOOKABLE]?.on })
