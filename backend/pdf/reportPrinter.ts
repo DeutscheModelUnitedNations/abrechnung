@@ -143,10 +143,15 @@ class ReportPrint<idType extends _id> {
     })
     y = this.drawAdvanceInformation({ xStart: this.drawer.settings.pagePadding, yStart: y, fontSize: this.drawer.settings.fontSizes.M })
 
-    const receiptMap = {}
+    const receiptMap: any = {}
     if (!reportIsAdvance(this.report)) {
       const optionalMapTravel = reportIsTravel(this.report) ? getReceiptMap(this.report.stages) : { map: {}, number: 1 }
       Object.assign(receiptMap, optionalMapTravel.map, getReceiptMap(this.report.expenses, optionalMapTravel.number).map)
+      // Loop through all receipts and assign a new forthrunning number
+      let runningNumber = 1
+      for (const rId in receiptMap) {
+        receiptMap[rId].number = runningNumber++
+      }
     }
     let yDates = y
     y = await this.drawSummary({ xStart: this.drawer.settings.pagePadding, yStart: y, fontSize: this.drawer.settings.fontSizes.M })
@@ -313,11 +318,11 @@ class ReportPrint<idType extends _id> {
         reference: this.t('labels.appliedForOn'),
         value: this.report.log[AdvanceState.APPLIED_FOR]?.on || this.report.createdAt
       })
-      summary.push({ reference: this.t('labels.approvedOn'), value: this.report.log[AdvanceState.APPROVED]?.on })
-      summary.push({
-        reference: this.t('labels.approvedBy'),
-        value: `${this.drawer.formatter.name(this.report.log[AdvanceState.APPROVED]?.by.name)}`
-      })
+      // summary.push({ reference: this.t('labels.approvedOn'), value: this.report.log[AdvanceState.APPROVED]?.on })
+      // summary.push({
+      //   reference: this.t('labels.approvedBy'),
+      //   value: `${this.drawer.formatter.name(this.report.log[AdvanceState.APPROVED]?.by.name)}`
+      // })
     } else {
       if (reportIsTravel(this.report)) {
         summary.push({
@@ -421,14 +426,14 @@ class ReportPrint<idType extends _id> {
       title: this.t('labels.distance'),
       fn: (t: Transport) => (t.type === 'ownCar' ? String(t.distance) : EMPTY_CELL)
     })
-    columns.push({
-      key: 'purpose',
-      width: 50,
-      alignment: pdf_lib.TextAlignment.Left,
-      title: this.t('labels.purpose'),
-      fn: (p: Purpose) =>
-        this.t(`labels.${p}`) + (p === 'mixed' && travel.professionalShare ? ` (${Math.round(travel.professionalShare * 100)}%)` : '')
-    })
+    // columns.push({
+    //   key: 'purpose',
+    //   width: 50,
+    //   alignment: pdf_lib.TextAlignment.Left,
+    //   title: this.t('labels.purpose'),
+    //   fn: (p: Purpose) =>
+    //     this.t(`labels.${p}`) + (p === 'mixed' && travel.professionalShare ? ` (${Math.round(travel.professionalShare * 100)}%)` : '')
+    // })
     columns.push({
       key: 'cost',
       width: 80,
@@ -460,14 +465,14 @@ class ReportPrint<idType extends _id> {
     columns.push({ key: 'description', width: 270, alignment: pdf_lib.TextAlignment.Left, title: this.t('labels.description') })
     if (reportIsTravel(this.report)) {
       const travel = this.report
-      columns.push({
-        key: 'purpose',
-        width: 50,
-        alignment: pdf_lib.TextAlignment.Left,
-        title: this.t('labels.purpose'),
-        fn: (p: TravelExpense['purpose']) =>
-          this.t(`labels.${p}`) + (p === 'mixed' && travel.professionalShare ? ` (${Math.round(travel.professionalShare * 100)}%)` : '')
-      })
+      // columns.push({
+      //   key: 'purpose',
+      //   width: 50,
+      //   alignment: pdf_lib.TextAlignment.Left,
+      //   title: this.t('labels.purpose'),
+      //   fn: (p: TravelExpense['purpose']) =>
+      //     this.t(`labels.${p}`) + (p === 'mixed' && travel.professionalShare ? ` (${Math.round(travel.professionalShare * 100)}%)` : '')
+      // })
     }
     columns.push({
       key: 'cost',
