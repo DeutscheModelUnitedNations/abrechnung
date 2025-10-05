@@ -74,6 +74,14 @@ export default defineComponent({
   },
   async created() {
     await APP_LOADER.loadData()
+    // Preselect 'DE' if no modelValue is set
+    if (!this.modelValue && this.APP_DATA) {
+      const allCountries = this.APP_DATA.user.settings.lastCountries.concat(this.APP_DATA.countries)
+      const deCountry = allCountries.find((c: CountrySimple) => c._id === 'DE')
+      if (deCountry) {
+        this.$emit('update:modelValue', deCountry)
+      }
+    }
   }
 })
 </script>

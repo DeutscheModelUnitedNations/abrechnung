@@ -19,10 +19,10 @@
       :disabled="disabled"
       :class="APP_DATA && APP_DATA.organisations.length > 1 ? 'col-' + (12 - orgSelectSplit) : ''">
       <template #option="{ identifier, name }: Project">
-        <span>{{ identifier + (name ? ' ' + name : '') }}</span>
+        <span>{{ name ? ' ' + name : '' }}</span>
       </template>
       <template #selected-option="{ identifier, name }: Project">
-        <span>{{ identifier + (name ? ' ' + name : '') }}</span>
+        <span>{{ name ? ' ' + name : '' }}</span>
       </template>
       <template v-if="required" #search="{ attributes, events }">
         <input class="vs__search" :required="!modelValue" v-bind="attributes" v-on="events" />
