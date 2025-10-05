@@ -181,9 +181,9 @@
       </div>
     </template>
 
-    <label for="stageFormPurpose" class="form-label me-2"> {{ $t('labels.purpose') }}<span class="text-danger">*</span> </label>
-    <InfoPoint :text="$t('info.purpose')" />
-    <select class="form-select mb-3" v-model="formStage.purpose" id="stageFormPurpose" :disabled="disabled" required>
+    <label for="stageFormPurpose" class="form-label me-2 hidden"> {{ $t('labels.purpose') }}<span class="text-danger">*</span> </label>
+    <!-- <InfoPoint :text="$t('info.purpose')" /> -->
+    <select class="form-select mb-3 hidden" v-model="formStage.purpose" id="stageFormPurpose" :disabled="disabled" required>
       <option v-for="purpose of ['professional', 'mixed', 'private']" :value="purpose" :key="purpose">{{ $t('labels.' + purpose) }}</option>
     </select>
 

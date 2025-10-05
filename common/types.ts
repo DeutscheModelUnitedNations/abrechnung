@@ -538,11 +538,11 @@ export const anyStates = new Set([...travelStates, ...expenseReportStates, ...he
 export type AnyState = TravelState | HealthCareCostState | ExpenseReportState | AdvanceState
 export type AnyStateEnum = typeof TravelState | typeof HealthCareCostState | typeof ExpenseReportState | typeof AdvanceState
 
-const transportTypesButOwnCar = ['otherTransport', 'ownCar', 'airplane', 'shipOrFerry'] as const
-export const transportTypes = [...transportTypesButOwnCar] as const
+const transportTypesButOwnCar = ['otherTransport', 'airplane', 'shipOrFerry'] as const
+export const transportTypes = ['ownCar', ...transportTypesButOwnCar] as const
 export type TransportType = (typeof transportTypes)[number]
 
-export const distanceRefundTypes = ['car', 'motorcycle'] as const
+export const distanceRefundTypes = ['car', 'motorcycle', 'halfCar'] as const
 export type DistanceRefundType = (typeof distanceRefundTypes)[number]
 
 export type ReportModelName = 'Travel' | 'ExpenseReport' | 'HealthCareCost'
