@@ -211,7 +211,7 @@ const travels = [
           startLocation: { place: 'Berlin', country: DE },
           endLocation: { place: 'BER Flughafen', country: DE },
           midnightCountries: null,
-          transport: { type: 'ownCar' as const, distance: 25, distanceRefundType: 'motorcycle' as const },
+          transport: { type: 'ownCar' as const, distance: 25, distanceRefundType: 'car' as const },
           cost: { currency: EUR, amount: 5.0, date: '2025-02-01', receipts: [receipt1] },
           purpose: 'professional' as const
         },
