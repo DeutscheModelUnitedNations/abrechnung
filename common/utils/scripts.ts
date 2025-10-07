@@ -167,7 +167,7 @@ export function getAddUpTableData(formatter: Formatter, addUps: AddUp<_id>[], wi
     summary.push(['labels.expenses'])
   }
   if (withLumpSums) {
-    summary.push(['labels.lumpSums'])
+    //summary.push(['labels.lumpSums'])
   }
   if (hasAdvance) {
     summary.push(['labels.advance'])
@@ -182,7 +182,7 @@ export function getAddUpTableData(formatter: Formatter, addUps: AddUp<_id>[], wi
       summary[j++].push(formatter.baseCurrency(addUps[i].expenses.amount))
     }
     if (withLumpSums) {
-      summary[j++].push(formatter.baseCurrency((addUps[i] as AddUp<_id, Travel<_id, binary>>).lumpSums.amount))
+      //summary[j++].push(formatter.baseCurrency((addUps[i] as AddUp<_id, Travel<_id, binary>>).lumpSums.amount))
     }
     if (hasAdvance) {
       summary[j++].push(
