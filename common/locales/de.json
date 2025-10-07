@@ -66,8 +66,8 @@
     "mailXDaysBeforeDeletion": "Um keine Hinweismail zu versenden 0 eingeben"
   },
   "distanceRefundTypes": {
-    "car": "Auto 🚗",
-    "halfCar": "Weg zur Arbeit 🚗",
+    "car": "Mehr als 2 Personen oder viel Martial",
+    "halfCar": "Bis zwei Personen",
     "motorcycle": "Motorrad 🛵"
   },
   "headlines": {

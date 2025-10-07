@@ -542,7 +542,7 @@ const transportTypesButOwnCar = ['otherTransport', 'airplane', 'shipOrFerry'] as
 export const transportTypes = ['ownCar', ...transportTypesButOwnCar] as const
 export type TransportType = (typeof transportTypes)[number]
 
-export const distanceRefundTypes = ['car', 'motorcycle', 'halfCar'] as const
+export const distanceRefundTypes = ['halfCar', 'car'] as const
 export type DistanceRefundType = (typeof distanceRefundTypes)[number]
 
 export type ReportModelName = 'Travel' | 'ExpenseReport' | 'HealthCareCost'
