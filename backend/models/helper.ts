@@ -22,7 +22,7 @@ export function costObject(
   required = false,
   defaultCurrency: string | null = null,
   defaultAmount: number | null = null,
-  min: number | undefined
+  min: number | undefined = undefined
 ) {
   // biome-ignore lint/suspicious/noExplicitAny: typing to complex
   const type: any = { amount: { type: Number, min, required: required, default: required && defaultAmount === null ? 0 : defaultAmount } }
