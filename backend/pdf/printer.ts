@@ -327,6 +327,36 @@ export class PDFDrawer<idType extends _id> {
   }
 
   async attachReceipts(receiptMap: ReceiptMap<idType>) {
+    const attachWithSummary = async (fileBuffer: ArrayBuffer | Uint8Array, receipt: any) => {
+      const fileName = receipt.name || `${receipt._id}${receipt.type === 'application/pdf' ? '.pdf' : ''}`;
+      const mimeType = receipt.type || 'application/octet-stream';
+
+      await this.doc.attach(fileBuffer as any, fileName, {
+          mimeType,
+          description: 'Original receipt attached (rendering failed)',
+          creationDate: receipt.createdAt ? new Date(receipt.createdAt) : new Date(),
+          modificationDate: receipt.updatedAt ? new Date(receipt.updatedAt) : new Date(),
+      });
+
+      // Summary page so users know there is an attachment
+      this.newPage('portrait');
+      this.drawReceiptNumber(receipt);
+
+      const page = this.currentPage;
+      const { width, height } = page.getSize();
+      const margin = this.settings?.pagePadding ?? 36;
+      page.drawText(`Attached (rendering failed): ${fileName}`, {
+          x: margin,
+          y: height - margin - 24,
+          size: 12,
+      });
+      page.drawText(`MIME: ${mimeType}`, {
+          x: margin,
+          y: height - margin - 42,
+          size: 10,
+      });
+    };
+
     for (const receiptId in receiptMap) {
       const receipt = receiptMap[receiptId]
       const doc = await this.getDocumentFileBufferById(receipt._id)
@@ -336,16 +366,23 @@ export class PDFDrawer<idType extends _id> {
       }
       try {
         if (receipt.type === 'application/pdf') {
-          const insertPDF = await pdf_lib.PDFDocument.load(doc.buffer)
-          const pages = await this.doc.copyPages(insertPDF, insertPDF.getPageIndices())
-          for (const p of pages) {
-            try {
-            this.currentPage = this.doc.addPage(p)
-            this.drawReceiptNumber(receipt)
-            } catch (error) {
-              console.error(`Error while trying to add PDF page for Document (${receipt._id}) to PDF: ${error}`)
+          let rendered = false;
+
+          try {
+            const insertPDF = await pdf_lib.PDFDocument.load(doc.buffer)
+            const pages = await this.doc.copyPages(insertPDF, insertPDF.getPageIndices())
+            for (const p of pages) {
+              this.currentPage = this.doc.addPage(p)
+              this.drawReceiptNumber(receipt)
             }
+          } catch (error) {
+            // swallow error
           }
+
+          if (!rendered) {
+            await attachWithSummary(doc.buffer, receipt);
+          }
+
         } else {
           let image: pdf_lib.PDFImage
           if (receipt.type === 'image/jpeg') {
