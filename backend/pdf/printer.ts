@@ -327,16 +327,9 @@ export class PDFDrawer<idType extends _id> {
   }
 
   async attachReceipts(receiptMap: ReceiptMap<idType>) {
-    const attachWithSummary = async (fileBuffer: ArrayBuffer | Uint8Array, receipt: any) => {
+    const failedToRenderWarning = async (receipt: any) => {
       const fileName = receipt.name || `${receipt._id}${receipt.type === 'application/pdf' ? '.pdf' : ''}`;
       const mimeType = receipt.type || 'application/octet-stream';
-
-      await this.doc.attach(fileBuffer as any, fileName, {
-          mimeType,
-          description: 'Original receipt attached (rendering failed)',
-          creationDate: receipt.createdAt ? new Date(receipt.createdAt) : new Date(),
-          modificationDate: receipt.updatedAt ? new Date(receipt.updatedAt) : new Date(),
-      });
 
       // Summary page so users know there is an attachment
       this.newPage('portrait');
@@ -345,16 +338,21 @@ export class PDFDrawer<idType extends _id> {
       const page = this.currentPage;
       const { width, height } = page.getSize();
       const margin = this.settings?.pagePadding ?? 36;
-      page.drawText(`Attached (rendering failed): ${fileName}`, {
+      page.drawText(`Rendering fehlgeschlagen: ${fileName}`, {
           x: margin,
           y: height - margin - 24,
           size: 12,
       });
-      page.drawText(`MIME: ${mimeType}`, {
+      page.drawText(`${fileName}`, {
           x: margin,
-          y: height - margin - 42,
+          y: height - margin - 36,
           size: 10,
       });
+      page.drawText(`Wahrscheinlich ist das PDF schreibgeschützt oder beschädigt.`, {
+          x: margin,
+          y: height - margin - 48,
+          size: 10,
+      })
     };
 
     for (const receiptId in receiptMap) {
@@ -366,8 +364,6 @@ export class PDFDrawer<idType extends _id> {
       }
       try {
         if (receipt.type === 'application/pdf') {
-          let rendered = false;
-
           try {
             const insertPDF = await pdf_lib.PDFDocument.load(doc.buffer)
             const pages = await this.doc.copyPages(insertPDF, insertPDF.getPageIndices())
@@ -376,11 +372,7 @@ export class PDFDrawer<idType extends _id> {
               this.drawReceiptNumber(receipt)
             }
           } catch (error) {
-            // swallow error
-          }
-
-          if (!rendered) {
-            await attachWithSummary(doc.buffer, receipt);
+            await failedToRenderWarning(receipt);
           }
 
         } else {
