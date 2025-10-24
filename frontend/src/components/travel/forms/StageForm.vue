@@ -214,7 +214,7 @@
       <TextArea class="form-control-sm" id="travelFormDescription" v-model="formStage.note" :disabled="disabled"></TextArea>
     </div>
 
-    <div class="mb-3 p-2 bg-[#ff5555] rounded-sm" v-if="formStage.transport.type === 'otherTransport'">
+    <b-alert show variant="danger" class="mb-3" v-if="formStage.transport.type === 'otherTransport'">
       <h3 class="text-lg">Alles beachtet?</h3>
       <ul>
         <li>Sitzplatzreservierung abgezogen?</li>
@@ -222,7 +222,7 @@
         <li>DB Rechnung statt Fahrkarte als Beleg angehängt?</li>
         <li>Fahrten über 90 Euro -> Genehmigung eingeholt?</li>
       </ul>
-    </div>
+    </b-alert>
 
     <div class="mb-1 d-flex align-items-center">
       <button type="submit" class="btn btn-primary me-2" v-if="!disabled" :disabled="loading">
