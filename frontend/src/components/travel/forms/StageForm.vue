@@ -214,8 +214,8 @@
       <TextArea class="form-control-sm" id="travelFormDescription" v-model="formStage.note" :disabled="disabled"></TextArea>
     </div>
 
-    <div class="mb-3 p-2 bg-[ff4444]" v-if="formStage.transport.type !== 'otherTransport'">
-      <h3 class="text-xl">Alles beachtet?</h3>
+    <div class="mb-3 p-2 bg-[#ff5555] rounded-sm" v-if="formStage.transport.type === 'otherTransport'">
+      <h3 class="text-lg">Alles beachtet?</h3>
       <ul>
         <li>Sitzplatzreservierung abgezogen?</li>
         <li>Hin- und Rückfahrt nicht doppelt abgerechnet?</li>
