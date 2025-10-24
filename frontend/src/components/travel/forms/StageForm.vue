@@ -214,6 +214,16 @@
       <TextArea class="form-control-sm" id="travelFormDescription" v-model="formStage.note" :disabled="disabled"></TextArea>
     </div>
 
+    <div class="mb-3 p-2 bg-[ff4444]" v-if="formStage.transport.type !== 'otherTransport'">
+      <h3 class="text-xl">Alles beachtet?</h3>
+      <ul>
+        <li>Sitzplatzreservierung abgezogen?</li>
+        <li>Hin- und Rückfahrt nicht doppelt abgerechnet?</li>
+        <li>DB Rechnung statt Fahrkarte als Beleg angehängt?</li>
+        <li>Fahrten über 90 Euro -> Genehmigung eingeholt?</li>
+      </ul>
+    </div>
+
     <div class="mb-1 d-flex align-items-center">
       <button type="submit" class="btn btn-primary me-2" v-if="!disabled" :disabled="loading">
         {{ mode === 'add' ? $t('labels.addX', { X: $t('labels.stage') }) : $t('labels.save') }}
