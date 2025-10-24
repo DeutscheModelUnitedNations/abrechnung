@@ -336,11 +336,15 @@ export class PDFDrawer<idType extends _id> {
       }
       try {
         if (receipt.type === 'application/pdf') {
-          const insertPDF = await pdf_lib.PDFDocument.load(doc.buffer, { ignoreEncryption: true })
+          const insertPDF = await pdf_lib.PDFDocument.load(doc.buffer)
           const pages = await this.doc.copyPages(insertPDF, insertPDF.getPageIndices())
           for (const p of pages) {
+            try {
             this.currentPage = this.doc.addPage(p)
             this.drawReceiptNumber(receipt)
+            } catch (error) {
+              console.error(`Error while trying to add PDF page for Document (${receipt._id}) to PDF: ${error}`)
+            }
           }
         } else {
           let image: pdf_lib.PDFImage
