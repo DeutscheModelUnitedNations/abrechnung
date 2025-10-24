@@ -20,7 +20,7 @@
                   <div class="row">
                     <label for="amount" class="col-form-label col-auto"> {{ t('labels.amount') }}<span class="text-danger">*</span> </label>
                     <div class="col-auto">
-                      <input type="number" class="form-control" id="amount" step="0.01" v-model="offsetAmount" min="0" required />
+                      <input type="number" class="form-control" id="amount" step="0.01" v-model="offsetAmount" required />
                     </div>
                     <div class="col-auto">
                       <div class="mb-1 d-flex align-items-center">

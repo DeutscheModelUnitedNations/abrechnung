@@ -18,7 +18,7 @@
     <div class="mb-3">
       <label for="advanceFormBudget" class="form-label me-2"> {{ t('labels.amount') }}<span class="text-danger">*</span> </label>
       <div class="input-group" id="advanceFormBudget">
-        <input type="number" class="form-control" step="0.01" v-model="formAdvance.budget.amount" min="0" :disabled="disabled" required />
+        <input type="number" class="form-control" step="0.01" v-model="formAdvance.budget.amount" :disabled="disabled" required />
         <CurrencySelector v-model="formAdvance.budget.currency" :disabled="disabled" :required="true"></CurrencySelector>
       </div>
     </div>

@@ -142,7 +142,7 @@
           </label>
           <InfoPoint :text="$t('info.cost')" />
           <div class="input-group" id="stageFormCost">
-            <input type="number" class="form-control" step="0.01" v-model="formStage.cost.amount" min="0" :disabled="disabled" />
+            <input type="number" class="form-control" step="0.01" v-model="formStage.cost.amount" :disabled="disabled" />
             <CurrencySelector v-model="formStage.cost.currency" :disabled="disabled" :required="true"></CurrencySelector>
           </div>
         </div>
