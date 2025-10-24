@@ -336,7 +336,7 @@ export class PDFDrawer<idType extends _id> {
       }
       try {
         if (receipt.type === 'application/pdf') {
-          const insertPDF = await pdf_lib.PDFDocument.load(doc.buffer)
+          const insertPDF = await pdf_lib.PDFDocument.load(doc.buffer, { ignoreEncryption: true })
           const pages = await this.doc.copyPages(insertPDF, insertPDF.getPageIndices())
           for (const p of pages) {
             this.currentPage = this.doc.addPage(p)
