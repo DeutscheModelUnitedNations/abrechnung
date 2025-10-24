@@ -338,19 +338,19 @@ export class PDFDrawer<idType extends _id> {
       const page = this.currentPage;
       const { width, height } = page.getSize();
       const margin = this.settings?.pagePadding ?? 36;
-      page.drawText(`Rendering fehlgeschlagen: ${fileName}`, {
+      page.drawText(`Rendering fehlgeschlagen:`, {
           x: margin,
           y: height - margin - 24,
           size: 12,
       });
       page.drawText(`${fileName}`, {
           x: margin,
-          y: height - margin - 36,
-          size: 10,
+          y: height - margin - 48,
+          size: 12,
       });
       page.drawText(`Wahrscheinlich ist das PDF schreibgeschützt oder beschädigt.`, {
           x: margin,
-          y: height - margin - 48,
+          y: height - margin - 72,
           size: 10,
       })
     };
