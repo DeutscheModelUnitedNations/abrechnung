@@ -224,7 +224,7 @@
                     v-model="expenseReport.bookingRemark"
                     :disabled="isReadOnly && !(endpointPrefix === 'examine/' && expenseReport.state === State.IN_REVIEW)"></TextArea>
                 </div>
-                <div v-if="expenseReport.state === State.EDITABLE_BY_OWNER" class="mb-3">
+                <div v-if="expenseReport.state === State.EDITABLE_BY_OWNER">
                   <TooltipElement v-if="expenseReport.expenses.length < 1" :text="t('alerts.noData.expense')">
                     <button class="btn btn-primary" disabled>
                       <i class="bi bi-pencil-square"></i>
@@ -243,7 +243,7 @@
                       <span class="ms-1">{{ t('labels.completeReview') }}</span>
                     </button>
                   </div>
-                  <div>
+                  <div class="mb-3">
                     <button
                       class="btn btn-secondary"
                       @click="expenseReport.editor._id !== expenseReport.owner._id && endpointPrefix !== 'examine/' ? null : backToInWork()"
@@ -252,7 +252,7 @@
                       <span class="ms-1">{{ t(endpointPrefix === 'examine/' ? 'labels.backToApplicant' : 'labels.editAgain') }}</span>
                     </button>
                   </div>
-                  <div v-if="expenseReport.state === ExpenseReportState.REVIEW_COMPLETED">
+                  <div v-if="expenseReport.state === ExpenseReportState.REVIEW_COMPLETED" class="mb-3">
                     <button
                       class="btn btn-secondary"
                       @click="expenseReport.editor._id !== expenseReport.owner._id && endpointPrefix !== 'examine/' ? null : backToinReview()"
@@ -262,7 +262,7 @@
                     </button>
                   </div>
                 </template>
-                <div v-else-if="expenseReport.state >= State.BOOKABLE">
+                <div v-if="expenseReport.state >= State.BOOKABLE">
                   <button
                     class="btn btn-primary"
                     @click="
