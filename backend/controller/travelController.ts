@@ -189,30 +189,23 @@ export class TravelController extends Controller {
     let extendedBody: SetterBody<ITravel<Types.ObjectId, mongo.Binary>> = requestBody
     let cb: ((travel: ITravel<Types.ObjectId>) => unknown) | undefined
     if (!request.user.access['approved:travel']) {
-      console.error("1")
       if (!extendedBody._id) {
-      console.error("2")
         throw new AuthorizationError()
       } else {
-      console.error("3")
         extendedBody = Object.assign({ _id: extendedBody._id }, { state: TravelState.APPROVED, editor: request.user._id })
       }
     } else {
-      console.error("4")
       if (!extendedBody.name && extendedBody.startDate) {
-      console.error("5")
         const date = new Date(extendedBody.startDate)
         extendedBody.name = `${extendedBody.destinationPlace?.place} ${i18n.t(`monthsShort.${date.getUTCMonth()}`, { lng: request.user.settings.language })} ${date.getUTCFullYear()}`
       }
       cb = (travel: ITravel) => {
         if (travel.isCrossBorder && travel.destinationPlace.country.needsA1Certificate) {
-      console.error("6")
           sendA1Notification(travel)
         }
       }
       Object.assign(extendedBody, { state: TravelState.APPROVED, editor: request.user._id, owner: request.user._id })
     }
-      console.error("7")
     return await this.setter(Travel, {
       requestBody: extendedBody,
       allowNew: true,
@@ -541,7 +534,7 @@ export class TravelExamineController extends Controller {
       allowNew: false,
       cb: (e: ITravel) => sendNotification(e, 'BACK_TO_APPROVED'),
       async checkOldObject(oldObject: TravelDoc) {
-        if (oldObject.state === TravelState.IN_REVIEW && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
+        if ((oldObject.state === TravelState.IN_REVIEW || oldObject.state === TravelState.REVIEW_COMPLETED) && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
           await oldObject.saveToHistory()
           return true
         }
