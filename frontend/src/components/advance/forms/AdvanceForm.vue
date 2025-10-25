@@ -31,7 +31,7 @@
     </div>
 
     <div class="mb-3" v-if="!disabled">
-      <label class="form-label me-2">Begründung</label>
+      <label class="form-label me-2">Begründung<span class="text-danger">*</span></label>
       <InfoPoint text="Grund und Auflistung der Ausgaben" />
 
       <TextArea required v-model="formAdvance.comment"></TextArea>
