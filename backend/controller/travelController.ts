@@ -206,6 +206,7 @@ export class TravelController extends Controller {
       }
       Object.assign(extendedBody, { state: TravelState.APPROVED, editor: request.user._id, owner: request.user._id })
     }
+    console.log('Tade 403', extendedBody)
     return await this.setter(Travel, {
       requestBody: extendedBody,
       allowNew: true,
