@@ -236,7 +236,7 @@
                     <span class="ms-1">{{ t('labels.toExamination') }}</span>
                   </button>
                 </div>
-                <template v-else-if="expenseReport.state === State.IN_REVIEW">
+                <template v-if="expenseReport.state === State.IN_REVIEW || expenseReport.state === ExpenseReportState.REVIEW_COMPLETED">
                   <div v-if="endpointPrefix === 'examine/'" class="mb-3">
                     <button class="btn btn-success" @click="completeReview()">
                       <i class="bi bi-check2-square"></i>

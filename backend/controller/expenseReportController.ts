@@ -318,7 +318,7 @@ export class ExpenseReportExamineController extends Controller {
       cb: (e: IExpenseReport) => sendNotification(e, extendedBody._id ? 'BACK_TO_IN_WORK' : undefined),
       allowNew: true,
       async checkOldObject(oldObject: ExpenseReportDoc) {
-        if (oldObject.state === ExpenseReportState.IN_REVIEW && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
+        if ((oldObject.state === ExpenseReportState.IN_REVIEW || oldObject.state === ExpenseReportState.REVIEW_COMPLETED) && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
           await oldObject.saveToHistory()
           return true
         }
