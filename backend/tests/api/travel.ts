@@ -250,6 +250,20 @@ test.serial('POST /travel/underExamination AGAIN', async (t) => {
   t.is((res.body.result as Travel).history.length, 4)
 })
 
+test.serial('POST /travel/inReview AGAIN', async (t) => {
+  t.plan(4)
+  const comment = ''
+  const res = await agent.post('/travel/inReview').send({ _id: travel._id, comment })
+  if (res.status === 200) {
+    t.pass()
+  } else {
+    console.log(res.body)
+  }
+  t.is((res.body.result as Travel).state, TravelState.IN_REVIEW)
+  t.is((res.body.result as Travel).history.length, 2)
+  t.is((res.body.result as Travel).comments.length, 1)
+})
+
 // EXAMINE
 
 test.serial('POST /examine/travel/reviewCompleted', async (t) => {

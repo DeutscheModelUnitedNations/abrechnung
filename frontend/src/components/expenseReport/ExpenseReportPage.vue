@@ -215,7 +215,7 @@
                   <TextArea
                     id="comment"
                     v-model="expenseReport.comment as string | undefined"
-                    :disabled="isReadOnly && !(endpointPrefix === 'examine/' && expenseReport.state === State.IN_REVIEW)"></TextArea>
+                    ></TextArea>
                 </div>
                 <div v-if="endpointPrefix === 'examine/'" class="mb-3">
                   <label for="bookingRemark" class="form-label">{{ t('labels.bookingRemark') }}</label>
@@ -224,7 +224,7 @@
                     v-model="expenseReport.bookingRemark"
                     :disabled="isReadOnly && !(endpointPrefix === 'examine/' && expenseReport.state === State.IN_REVIEW)"></TextArea>
                 </div>
-                <div v-if="expenseReport.state === State.EDITABLE_BY_OWNER">
+                <div v-if="expenseReport.state === State.EDITABLE_BY_OWNER" class="mb-3">
                   <TooltipElement v-if="expenseReport.expenses.length < 1" :text="t('alerts.noData.expense')">
                     <button class="btn btn-primary" disabled>
                       <i class="bi bi-pencil-square"></i>
@@ -237,7 +237,7 @@
                   </button>
                 </div>
                 <template v-if="expenseReport.state === State.IN_REVIEW || expenseReport.state === ExpenseReportState.REVIEW_COMPLETED">
-                  <div v-if="endpointPrefix === 'examine/'" class="mb-3">
+                  <div v-if="expenseReport.state === State.IN_REVIEW && endpointPrefix === 'examine/'" class="mb-3">
                     <button class="btn btn-success" @click="completeReview()">
                       <i class="bi bi-check2-square"></i>
                       <span class="ms-1">{{ t('labels.completeReview') }}</span>
@@ -250,6 +250,15 @@
                       :disabled="expenseReport.editor._id !== expenseReport.owner._id && endpointPrefix !== 'examine/'">
                       <i class="bi bi-arrow-counterclockwise"></i>
                       <span class="ms-1">{{ t(endpointPrefix === 'examine/' ? 'labels.backToApplicant' : 'labels.editAgain') }}</span>
+                    </button>
+                  </div>
+                  <div v-if="expenseReport.state === ExpenseReportState.REVIEW_COMPLETED">
+                    <button
+                      class="btn btn-secondary"
+                      @click="expenseReport.editor._id !== expenseReport.owner._id && endpointPrefix !== 'examine/' ? null : backToinReview()"
+                      :disabled="expenseReport.editor._id !== expenseReport.owner._id && endpointPrefix !== 'examine/'">
+                      <i class="bi bi-arrow-counterclockwise"></i>
+                      <span class="ms-1">{{ t(endpointPrefix === 'examine/' ? 'labels.backToReviewer' : 'labels.editAgain') }}</span>
                     </button>
                   </div>
                 </template>
@@ -409,6 +418,20 @@ async function toExamination() {
 
 async function backToInWork() {
   const result = await API.setter<ExpenseReport<string>>(`${props.endpointPrefix}expenseReport/inWork`, {
+    _id: expenseReport.value._id,
+    comment: expenseReport.value.comment
+  })
+  if (result.ok) {
+    if (props.endpointPrefix === 'examine/') {
+      router.push({ path: '/examine/expenseReport' })
+    } else {
+      setExpenseReport(result.ok)
+    }
+  }
+}
+
+async function backToinReview() {
+  const result = await API.setter<ExpenseReport<string>>(`${props.endpointPrefix}expenseReport/inReview`, {
     _id: expenseReport.value._id,
     comment: expenseReport.value.comment
   })

@@ -30,6 +30,16 @@ test.serial('GET /category', async (t) => {
   }
 })
 
+test.serial('POST /expenseReport/inReview', async (t) => {
+  const res = await agent.post('/expenseReport/inReview').send(expenseReport)
+  expenseReport = res.body.result
+  if (res.status === 200) {
+    t.pass()
+  } else {
+    console.log(res.body)
+  }
+})
+
 test.serial('POST /expenseReport/inWork', async (t) => {
   const res = await agent.post('/expenseReport/inWork').send(expenseReport)
   expenseReport = res.body.result
@@ -115,6 +125,20 @@ test.serial('POST /expenseReport/underExamination', async (t) => {
   t.is((res.body.result as ExpenseReport).state, ExpenseReportState.IN_REVIEW)
   t.is((res.body.result as ExpenseReport).history.length, 1)
   t.like((res.body.result as ExpenseReport).comments[0], { text: comment, toState: ExpenseReportState.IN_REVIEW })
+})
+
+test.serial('POST /expenseReport/inReview AGAIN', async (t) => {
+  t.plan(4)
+  const comment = ''
+  const res = await agent.post('/expenseReport/inReview').send({ _id: expenseReport._id, comment })
+  if (res.status === 200) {
+    t.pass()
+  } else {
+    console.log(res.body)
+  }
+  t.is((res.body.result as ExpenseReport).state, ExpenseReportState.IN_REVIEW)
+  t.is((res.body.result as ExpenseReport).history.length, 2)
+  t.is((res.body.result as ExpenseReport).comments.length, 1)
 })
 
 test.serial('POST /expenseReport/inWork AGAIN', async (t) => {

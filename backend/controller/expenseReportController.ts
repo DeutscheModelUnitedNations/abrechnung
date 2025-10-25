@@ -292,6 +292,41 @@ export class ExpenseReportExamineController extends Controller {
     })
   }
 
+  @Post('inReview')
+  public async postBackInReview(
+    @Body()
+    requestBody: {
+      project?: IdDocument<Types.ObjectId>
+      _id?: string
+      name?: string
+      advances?: IdDocument<Types.ObjectId>[]
+      category?: IdDocument<Types.ObjectId>
+      owner?: IdDocument<Types.ObjectId>
+      comment?: string
+    },
+    @Request() request: AuthenticatedExpressRequest
+  ) {
+    const extendedBody = Object.assign(requestBody, { state: ExpenseReportState.IN_REVIEW, editor: request.user._id })
+    if (!extendedBody._id) {
+      if (!extendedBody.name) {
+        const date = new Date()
+        extendedBody.name = `${i18n.t('labels.expenses', { lng: request.user.settings.language })} ${i18n.t(`monthsShort.${date.getUTCMonth()}`, { lng: request.user.settings.language })} ${date.getUTCFullYear()}`
+      }
+    }
+    return await this.setter(ExpenseReport, {
+      requestBody: extendedBody,
+      cb: (e: IExpenseReport) => sendNotification(e, extendedBody._id ? 'BACK_TO_IN_REVIEW' : undefined),
+      allowNew: true,
+      async checkOldObject(oldObject: ExpenseReportDoc) {
+        if (oldObject.state === ExpenseReportState.REVIEW_COMPLETED && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
+          await oldObject.saveToHistory()
+          return true
+        }
+        return false
+      }
+    })
+  }
+
   @Post('inWork')
   public async postBackInWork(
     @Body()

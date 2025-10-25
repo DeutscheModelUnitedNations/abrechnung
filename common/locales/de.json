@@ -202,6 +202,7 @@
     "auth": "Authentifizierung",
     "autoSelectAvailableAdvances": "Passende Vorschüsse automatisch auswählen",
     "backToApplicant": "Zurück zum Antragsteller*in",
+    "backToReviewer": "Zurück zum Prüfer*in",
     "balance": "Saldo",
     "bankDetails": "Bankverbindung",
     "black": "Schwarz",
@@ -513,6 +514,11 @@
         "paragraph": "Deine Auslagenabrechnung wurde dir zum Überarbeiten zurückgeschickt.",
         "subject": "🔙 Auslagen überarbeiten"
       },
+      "BACK_TO_IN_REVIEW": {
+        "lastParagraph": "{commentator} schrieb: '{comment}'",
+        "paragraph": "Eine Auslagenabrechnung wurde dir zum prüfen zurückgeschickt.",
+        "subject": "🔙 Auslagen (erneut) prüfen"
+      },
       "BOOKED_getsDeletedSoon": {
         "paragraph": "Deine erstattete Auslagenabrechnung '{reportName}' wird in {days} Tagen automatisch gelöscht. Du kannst dir den Bericht noch bis dahin herunterladen.",
         "subject": "Automatische Löschung steht bevor"
@@ -617,6 +623,11 @@
         "lastParagraph": "{commentator} schrieb: '{comment}'",
         "paragraph": "{owner} hat die Reiseabrechnung fertiggestellt.",
         "subject": "🛂 Reise zu prüfen"
+      },
+     "BACK_TO_IN_REVIEW": {
+        "lastParagraph": "{commentator} schrieb: '{comment}'",
+        "paragraph": "Eine Reise wurde dir zum prüfen zurückgeschickt.",
+        "subject": "🔙 Reise (erneut) prüfen"
       },
       "REJECTED": {
         "lastParagraph": "{commentator} schrieb: '{comment}'",
