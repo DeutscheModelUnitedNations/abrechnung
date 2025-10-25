@@ -31,8 +31,8 @@
     </div>
 
     <div class="mb-3" v-if="!disabled">
-      <label class="form-label me-2"> {{ t('labels.comment') }} </label>
-      <TextArea v-model="formAdvance.comment"></TextArea>
+      <label class="form-label me-2">Begründung</label>
+      <TextArea required v-model="formAdvance.comment"></TextArea>
     </div>
 
     <div v-if="askBookingRemark" class="mb-3">
