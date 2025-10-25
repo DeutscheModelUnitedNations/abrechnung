@@ -267,7 +267,7 @@
                     v-model="travel.bookingRemark"
                     :disabled="isReadOnly && !(endpointPrefix === 'examine/' && travel.state === State.IN_REVIEW)"></TextArea>
                 </div>
-                <template v-if="travel.state < State.BOOKABLE">
+                <template v-if="travel.state <= State.BOOKABLE">
                   <div v-if="travel.state === TravelState.APPROVED">
                     <TooltipElement v-if="travel.stages.length < 1" :text="t('alerts.noData.stage')">
                       <button class="btn btn-primary" disabled>
@@ -280,8 +280,8 @@
                       <span class="ms-1">{{ t('labels.toExamination') }}</span>
                     </button>
                   </div>
-                  <template v-else-if="travel.state === State.IN_REVIEW">
-                    <div v-if="endpointPrefix === 'examine/'" class="mb-3">
+                  <template v-if="travel.state === State.IN_REVIEW || travel.state === TravelState.REVIEW_COMPLETED">
+                    <div v-if="endpointPrefix === 'examine/' && travel.state === State.IN_REVIEW" class="mb-3">
                       <button class="btn btn-success" @click="completeReview()">
                         <i class="bi bi-check2-square"></i>
                         <span class="ms-1">{{ t('labels.completeReview') }}</span>
@@ -289,7 +289,7 @@
                     </div>
                     <div>
                       <button
-                        class="btn btn-secondary"
+                        class="btn btn-secondary mb-4"
                         @click="travel.editor._id !== travel.owner._id && endpointPrefix !== 'examine/' ? null : backToApproved()"
                         :disabled="travel.editor._id !== travel.owner._id && endpointPrefix !== 'examine/'">
                         <i class="bi bi-arrow-counterclockwise"></i>
@@ -298,7 +298,7 @@
                     </div>
                   </template>
                 </template>
-                <div v-else>
+                <div v-if="travel.state >= State.BOOKABLE">
                   <button
                     class="btn btn-primary"
                     @click="
