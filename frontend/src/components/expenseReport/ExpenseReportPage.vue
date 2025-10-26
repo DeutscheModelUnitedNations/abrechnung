@@ -252,13 +252,12 @@
                       <span class="ms-1">{{ t(endpointPrefix === 'examine/' ? 'labels.backToApplicant' : 'labels.editAgain') }}</span>
                     </button>
                   </div>
-                  <div v-if="expenseReport.state === ExpenseReportState.REVIEW_COMPLETED" class="mb-3">
+                  <div v-if="expenseReport.state === ExpenseReportState.REVIEW_COMPLETED && endpointPrefix === 'examine/'" class="mb-3">
                     <button
                       class="btn btn-secondary"
                       @click="expenseReport.editor._id !== expenseReport.owner._id && endpointPrefix !== 'examine/' ? null : backToinReview()"
                       :disabled="expenseReport.editor._id !== expenseReport.owner._id && endpointPrefix !== 'examine/'">
                       <i class="bi bi-arrow-counterclockwise"></i>
-                      <span class="ms-1">{{ t(endpointPrefix === 'examine/' ? 'labels.backToReviewer' : 'labels.editAgain') }}</span>
                     </button>
                   </div>
                 </template>
