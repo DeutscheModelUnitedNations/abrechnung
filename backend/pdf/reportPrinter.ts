@@ -318,11 +318,11 @@ class ReportPrint<idType extends _id> {
         reference: this.t('labels.appliedForOn'),
         value: this.report.log[AdvanceState.APPLIED_FOR]?.on || this.report.createdAt
       })
-      // summary.push({ reference: this.t('labels.approvedOn'), value: this.report.log[AdvanceState.APPROVED]?.on })
-      // summary.push({
-      //   reference: this.t('labels.approvedBy'),
-      //   value: `${this.drawer.formatter.name(this.report.log[AdvanceState.APPROVED]?.by.name)}`
-      // })
+      summary.push({ reference: this.t('labels.approvedOn'), value: this.report.log[AdvanceState.APPROVED]?.on })
+      summary.push({
+        reference: this.t('labels.approvedBy'),
+        value: `${this.drawer.formatter.name(this.report.log[AdvanceState.APPROVED]?.by.name)}`
+      })
     } else {
       if (reportIsTravel(this.report)) {
         summary.push({

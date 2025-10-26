@@ -253,12 +253,12 @@
                     </p>
                   </small>
                 </div>
-                <div v-if="travel.state < State.BOOKABLE" class="mb-3">
+                <div v-if="travel.state < State.BOOKED" class="mb-3">
                   <label for="comment" class="form-label">{{ t('labels.comment') }}</label>
                   <TextArea
                     id="comment"
                     v-model="travel.comment"
-                    :disabled="isReadOnly && !(endpointPrefix === 'examine/' && travel.state === State.IN_REVIEW)"></TextArea>
+                    ></TextArea>
                 </div>
                 <div v-if="endpointPrefix === 'examine/'" class="mb-3">
                   <label for="bookingRemark" class="form-label">{{ t('labels.bookingRemark') }}</label>
@@ -287,15 +287,24 @@
                         <span class="ms-1">{{ t('labels.completeReview') }}</span>
                       </button>
                     </div>
-                    <div>
+                    <div class="mb-3">
                       <button
-                        class="btn btn-secondary mb-4"
+                        class="btn btn-secondary"
                         @click="travel.editor._id !== travel.owner._id && endpointPrefix !== 'examine/' ? null : backToApproved()"
                         :disabled="travel.editor._id !== travel.owner._id && endpointPrefix !== 'examine/'">
                         <i class="bi bi-arrow-counterclockwise"></i>
                         <span class="ms-1">{{ t(endpointPrefix === 'examine/' ? 'labels.backToApplicant' : 'labels.editAgain') }}</span>
                       </button>
                     </div>
+                    <div v-if="travel.state === TravelState.REVIEW_COMPLETED && endpointPrefix === 'examine/'" class="mb-3">
+                    <button
+                      class="btn btn-secondary"
+                      @click="travel.editor._id !== travel.owner._id && endpointPrefix !== 'examine/' ? null : backToinReview()"
+                      :disabled="travel.editor._id !== travel.owner._id && endpointPrefix !== 'examine/'">
+                      <i class="bi bi-arrow-counterclockwise"></i>
+                      <span class="ms-1">{{ t(endpointPrefix === 'examine/' ? 'labels.backToReviewer' : 'labels.editAgain') }}</span>
+                    </button>
+                  </div>
                   </template>
                 </template>
                 <div v-if="travel.state >= State.BOOKABLE">
@@ -493,6 +502,20 @@ async function toExamination() {
   modalFormIsLoading.value = false
   if (result.ok) {
     router.push({ path: '/' })
+  }
+}
+
+async function backToinReview() {
+  const result = await API.setter<Travel<string>>(`${props.endpointPrefix}travel/inReview`, {
+    _id: travel.value._id,
+    comment: travel.value.comment
+  })
+  if (result.ok) {
+    if (props.endpointPrefix === 'examine/') {
+      router.push({ path: '/examine/travel' })
+    } else {
+      setTravel(result.ok)
+    }
   }
 }
 

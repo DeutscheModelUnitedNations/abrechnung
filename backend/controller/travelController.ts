@@ -525,6 +525,24 @@ export class TravelExamineController extends Controller {
     })
   }
 
+    @Post('inReview')
+  public async postinReview(@Body() requestBody: { _id: string; comment?: string }, @Request() request: AuthenticatedExpressRequest) {
+    const extendedBody = Object.assign(requestBody, { state: TravelState.IN_REVIEW, editor: request.user._id })
+
+    return await this.setter(Travel, {
+      requestBody: extendedBody,
+      allowNew: false,
+      cb: (e: ITravel) => sendNotification(e, 'BACK_TO_IN_REVIEW'),
+      async checkOldObject(oldObject: TravelDoc) {
+        if ((oldObject.state === TravelState.IN_REVIEW || oldObject.state === TravelState.REVIEW_COMPLETED) && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
+          await oldObject.saveToHistory()
+          return true
+        }
+        return false
+      }
+    })
+  }
+
   @Post('approved')
   public async postAnyApproved(@Body() requestBody: { _id: string; comment?: string }, @Request() request: AuthenticatedExpressRequest) {
     const extendedBody = Object.assign(requestBody, { state: TravelState.APPROVED, editor: request.user._id })
