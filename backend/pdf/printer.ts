@@ -5,6 +5,7 @@ import {
   CountrySimple,
   DocumentFileType,
   Locale,
+  Money,
   PageOrientation,
   PrinterSettings,
   PrintSettingsBase
@@ -54,6 +55,7 @@ interface ReceiptMapEntry<idType extends _id> {
   noNumberPrint?: boolean
   _id: idType
   type: DocumentFileType
+  amount?: number
 }
 export interface ReceiptMap<idType extends _id> {
   [key: string]: ReceiptMapEntry<idType>
@@ -309,7 +311,7 @@ export class PDFDrawer<idType extends _id> {
     if (receipt.noNumberPrint) {
       return
     }
-    const text = `#${receipt.number}${receipt.date ? ` - ${this.formatter.date(receipt.date)}` : ''}`
+    const text = `#${receipt.number}${receipt.date ? ` - ${this.formatter.date(receipt.date)}` : ''}${receipt.amount ? ` - ${this.formatter.baseCurrency(receipt.amount)}` : ''}`
     const width = this.font.widthOfTextAtSize(text, this.settings.fontSizes.L)
     this.currentPage.drawRectangle({
       x: 2,
@@ -328,32 +330,20 @@ export class PDFDrawer<idType extends _id> {
 
   async attachReceipts(receiptMap: ReceiptMap<idType>) {
     const failedToRenderWarning = async (receipt: any) => {
-      const fileName = receipt.name || `${receipt._id}${receipt.type === 'application/pdf' ? '.pdf' : ''}`;
-      const mimeType = receipt.type || 'application/octet-stream';
+      const fileName = receipt.name || `${receipt._id}${receipt.type === 'application/pdf' ? '.pdf' : ''}`
+      const mimeType = receipt.type || 'application/octet-stream'
 
       // Summary page so users know there is an attachment
-      this.newPage('portrait');
-      this.drawReceiptNumber(receipt);
+      this.newPage('portrait')
+      this.drawReceiptNumber(receipt)
 
-      const page = this.currentPage;
-      const { width, height } = page.getSize();
-      const margin = this.settings?.pagePadding ?? 36;
-      page.drawText(`Rendering fehlgeschlagen:`, {
-          x: margin,
-          y: height - margin - 24,
-          size: 12,
-      });
-      page.drawText(`${fileName}`, {
-          x: margin,
-          y: height - margin - 48,
-          size: 12,
-      });
-      page.drawText(`Wahrscheinlich ist das PDF schreibgeschützt oder beschädigt.`, {
-          x: margin,
-          y: height - margin - 72,
-          size: 10,
-      })
-    };
+      const page = this.currentPage
+      const { width, height } = page.getSize()
+      const margin = this.settings?.pagePadding ?? 36
+      page.drawText(`Rendering fehlgeschlagen:`, { x: margin, y: height - margin - 24, size: 12 })
+      page.drawText(`${fileName}`, { x: margin, y: height - margin - 48, size: 12 })
+      page.drawText(`Wahrscheinlich ist das PDF schreibgeschützt oder beschädigt.`, { x: margin, y: height - margin - 72, size: 10 })
+    }
 
     for (const receiptId in receiptMap) {
       const receipt = receiptMap[receiptId]
@@ -372,9 +362,8 @@ export class PDFDrawer<idType extends _id> {
               this.drawReceiptNumber(receipt)
             }
           } catch (error) {
-            await failedToRenderWarning(receipt);
+            await failedToRenderWarning(receipt)
           }
-
         } else {
           let image: pdf_lib.PDFImage
           if (receipt.type === 'image/jpeg') {
