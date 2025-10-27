@@ -12,6 +12,7 @@ import {
   HealthCareCost,
   Locale,
   Meal,
+  Money,
   Place,
   PrinterSettings,
   Purpose,
@@ -40,7 +41,10 @@ function getReceiptMap<idType extends _id>(costList: { cost: Cost<idType> }[], n
   for (const cost of costList) {
     if (cost.cost?.receipts) {
       for (const receipt of cost.cost.receipts) {
-        map[receipt._id.toString()] = Object.assign({ number: counter++, date: cost.cost.date as Date }, receipt)
+        map[receipt._id.toString()] = Object.assign(
+          { number: counter++, date: cost.cost.date as Date, amount: cost.cost.amount as number },
+          receipt
+        )
       }
     }
   }
