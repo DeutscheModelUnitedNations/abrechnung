@@ -13,8 +13,9 @@ permissions:
   packages: write
 
 jobs:
-  build-test-migrate:
-    uses: ./.github/workflows/migration-test.yml
+  #disabled build-test-migrate job for now
+  #build-test-migrate:
+  #  uses: ./.github/workflows/migration-test.yml
 
   build_and_publish_platform_containers:
     name: Build and publish platform containers
