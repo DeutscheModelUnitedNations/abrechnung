@@ -19,7 +19,7 @@ jobs:
 
   build_and_publish_platform_containers:
     name: Build and publish platform containers
-    needs: [build-test-migrate]
+    #needs: [build-test-migrate]
     runs-on: ubuntu-latest
 
     env:
