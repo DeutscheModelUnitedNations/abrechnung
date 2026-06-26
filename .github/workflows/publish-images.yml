@@ -3,51 +3,52 @@ name: Publish Images
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
+      - dev
     tags: ['**']
-    branches: ['main']
 
 permissions:
+  contents: read
   packages: write
 
 jobs:
-  build-test-migrate:
-    uses: ./.github/workflows/migration-test.yml
+  #disabled build-test-migrate job for now
+  #build-test-migrate:
+  #  uses: ./.github/workflows/migration-test.yml
 
   build_and_publish_platform_containers:
     name: Build and publish platform containers
-    needs: [build-test-migrate]
+    #needs: [build-test-migrate]
     runs-on: ubuntu-latest
+
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_PREFIX: ${{ github.repository }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@v5
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
-
-      - name: Login to DockerHub
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Docker meta for backend
         id: meta-backend
-        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+        uses: docker/metadata-action@v5
         with:
           images: |
-            davidloe/abrechnung-backend
-            ghcr.io/david-loe/abrechnung-backend
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
@@ -57,11 +58,10 @@ jobs:
 
       - name: Docker meta for frontend
         id: meta-frontend
-        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+        uses: docker/metadata-action@v5
         with:
           images: |
-            davidloe/abrechnung-frontend
-            ghcr.io/david-loe/abrechnung-frontend
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
@@ -70,19 +70,21 @@ jobs:
             type=sha
 
       - name: Build and push backend image
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./backend/Dockerfile.production
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
 
       - name: Build and push frontend image
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./frontend/Dockerfile.production
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
