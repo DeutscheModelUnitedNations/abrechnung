@@ -9,7 +9,7 @@
             <i v-else class="bi bi-funnel"></i>
           </span>
           <div v-if="showFilter[nameFilterKey]" @click.stop>
-            <input type="text" class="form-control" v-model="(filter[nameFilterKey] as any).$regex" />
+            <input type="text" class="form-control" v-model="(filter[nameFilterKey] as any).$regex" >
           </div>
         </div>
       </template>
@@ -22,27 +22,15 @@
             <i v-else class="bi bi-funnel"></i>
           </span>
           <div v-if="showFilter._id" @click.stop>
-            <input type="text" class="form-control" v-model="(filter._id as any).$regex" style="max-width: 80px" />
+            <input type="text" class="form-control" v-model="(filter._id as any).$regex" style="max-width: 80px" >
           </div>
         </div>
       </template>
 
-      <template #item-name="{ name }">
-        {{ name[$i18n.locale] }}
-      </template>
+      <template #item-name="{ name }">{{ name[locale] }}</template>
       <template #item-buttons="currency">
-        <button type="button" class="btn btn-light btn-sm" @click="showForm(currency)">
-          <div class="d-none d-md-block">
-            <i class="bi bi-pencil"></i>
-          </div>
-          <i class="bi bi-pencil d-block d-md-none"></i>
-        </button>
-        <button type="button" class="btn btn-danger btn-sm ms-2" @click="deleteCurrency(currency)">
-          <div class="d-none d-md-block">
-            <i class="bi bi-trash"></i>
-          </div>
-          <i class="bi bi-trash d-block d-md-none"></i>
-        </button>
+        <button type="button" class="btn btn-light btn-sm" @click="showForm(currency)"><i class="bi bi-pencil"></i></button>
+        <button type="button" class="btn btn-danger btn-sm ms-2" @click="deleteCurrency(currency)"><i class="bi bi-trash"></i></button>
       </template>
     </ListElement>
     <div v-if="_showForm" class="container">
@@ -52,11 +40,9 @@
         :sync="true"
         :endpoint="false"
         @submit="(form$: any) => postCurrency(form$.data)"
-        @reset="_showForm = false"></Vueform>
+        @reset="_showForm = false" />
     </div>
-    <button v-else type="button" class="btn btn-secondary" @click="showForm()">
-      {{ $t('labels.addX', { X: $t('labels.currency') }) }}
-    </button>
+    <button v-else type="button" class="btn btn-secondary" @click="showForm()">{{ t('labels.addX', { X: t('labels.currency') }) }}</button>
   </div>
 </template>
 
@@ -67,10 +53,10 @@ import { Ref, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Header } from 'vue3-easy-data-table'
 import API from '@/api.js'
-import APP_LOADER from '@/appData.js'
 import ListElement, { Filter } from '@/components/elements/ListElement.vue'
+import APP_LOADER from '@/dataLoader.js'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const headers: Header[] = [
   { text: 'labels.name', value: 'name' },

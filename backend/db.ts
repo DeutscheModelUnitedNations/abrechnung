@@ -1,46 +1,55 @@
-import travelSettings from 'abrechnung-common/travel/travelSettings.json' with { type: 'json' }
+import countries from 'abrechnung-common/data/countries.json' with { type: 'json' }
+import currencies from 'abrechnung-common/data/currencies.json' with { type: 'json' }
+import displaySettings from 'abrechnung-common/data/displaySettings.js'
+import printerSettings from 'abrechnung-common/print/printerSettings.js'
+import travelSettings from 'abrechnung-common/travel/travelSettings.js'
 import {
-  CountryLumpSum,
+  _id,
+  accesses,
   ConnectionSettings as IConnectionSettings,
   DisplaySettings as IDisplaySettings,
   PrinterSettings as IPrinterSettings,
   Settings as ISettings,
   TravelSettings as ITravelSettings,
-  tokenAdminUser
+  User as IUser,
+  LumpSumIntegrationSettings,
+  RetentionIntegrationSettings,
+  TravelExpenseItem,
+  tokenAdminUser,
+  travelExpenseItems
 } from 'abrechnung-common/types.js'
 import { mergeDeep } from 'abrechnung-common/utils/scripts.js'
-import axios from 'axios'
 import MongoStore from 'connect-mongo'
-import mongoose, { Connection, Model, Types } from 'mongoose'
-import connectionSettingsDev from './data/connectionSettings.development.json' with { type: 'json' }
-import connectionSettingsProd from './data/connectionSettings.production.json' with { type: 'json' }
-import countries from './data/countries.json' with { type: 'json' }
-import currencies from './data/currencies.json' with { type: 'json' }
-import displaySettings from './data/displaySettings.json' with { type: 'json' }
+import mongoose, { Connection, Model } from 'mongoose'
+import { CACHE } from './data/cache.js'
+import connectionSettingsDev from './data/connectionSettings.development.js'
+import connectionSettingsProd from './data/connectionSettings.production.js'
 import healthInsurances from './data/healthInsurances.json' with { type: 'json' }
-import printerSettings from './data/printerSettings.json' with { type: 'json' }
-import settings from './data/settings.json' with { type: 'json' }
+import integrationSettings from './data/integrationSettings.js'
+import settings from './data/settings.js'
 import ENV from './env.js'
 import { genAuthenticatedLink } from './helper.js'
+import { syncLumpSums } from './integrations/lumpSums/sync.js'
 import { logger } from './logger.js'
 import Category from './models/category.js'
-import ConnectionSettings from './models/connectionSettings.js'
 import Country from './models/country.js'
 import Currency from './models/currency.js'
-import DisplaySettings from './models/displaySettings.js'
 import HealthInsurance from './models/healthInsurance.js'
+import LedgerAccount from './models/ledgerAccount.js'
 import Organisation from './models/organisation.js'
 import Project from './models/project.js'
 
 let connectionPromise: Promise<Connection> | null = null
 
-export function connectDB() {
+export function connectDB(init = true) {
   if (!connectionPromise) {
     mongoose.connection.on('connected', () => logger.debug('Connected to Database'))
     mongoose.connection.on('disconnected', () => logger.debug('Disconnected from Database'))
     connectionPromise = (async () => {
       const mongoDB = await mongoose.connect(ENV.MONGO_URL)
-      await initDB()
+      if (init) {
+        await initDB()
+      }
       return mongoDB.connection
     })()
   }
@@ -73,7 +82,7 @@ export async function initDB() {
       DBsettings.migrateFrom = DBsettings.version
     }
     DBsettings.version = settings.version
-    const mergedSettings = mergeDeep({}, settings, DBsettings)
+    const mergedSettings = mergeDeep({}, settings satisfies Omit<ISettings, '_id'>, DBsettings)
     await mongoose.connection.collection('settings').findOneAndDelete({})
     await mongoose.connection.collection('settings').insertOne(mergedSettings)
     logger.info('Updated Settings')
@@ -82,36 +91,125 @@ export async function initDB() {
     logger.info('Created Settings from Default')
   }
 
-  const DBtravelSettings = (await mongoose.connection.collection('travelsettings').findOne()) as ITravelSettings | null
-  if (!DBtravelSettings) {
-    await mongoose.connection.collection('travelsettings').insertOne(travelSettings)
+  if ((await mongoose.connection.collection('travelsettings').countDocuments()) === 0) {
+    await mongoose.connection.collection('travelsettings').insertOne(travelSettings satisfies Omit<ITravelSettings, '_id'>)
   }
 
-  const DBprinterSettings = (await mongoose.connection.collection('printersettings').findOne()) as IPrinterSettings | null
-  if (!DBprinterSettings) {
-    await mongoose.connection.collection('printersettings').insertOne(printerSettings)
+  if ((await mongoose.connection.collection('printersettings').countDocuments()) === 0) {
+    await mongoose.connection.collection('printersettings').insertOne(printerSettings satisfies Omit<IPrinterSettings, '_id'>)
   }
 
-  if (ENV.NODE_ENV === 'production') {
-    await initer(ConnectionSettings, 'connectionSettings', [connectionSettingsProd])
-  } else {
-    await initer(ConnectionSettings, 'connectionSettings', [connectionSettingsDev as Partial<IConnectionSettings<Types.ObjectId>>], true)
+  if ((await mongoose.connection.collection('displaysettings').countDocuments()) === 0) {
+    await mongoose.connection.collection('displaysettings').insertOne(displaySettings satisfies Omit<IDisplaySettings, '_id'>)
   }
 
-  await initer(DisplaySettings, 'displaySettings', [displaySettings as Partial<IDisplaySettings<Types.ObjectId>>])
+  if ((await mongoose.connection.collection('connectionsettings').countDocuments()) === 0) {
+    if (ENV.NODE_ENV === 'production') {
+      if (ENV.PROD_INIT_CONNECTION_SETTINGS) {
+        await mongoose.connection
+          .collection('connectionsettings')
+          .insertOne({
+            PDFReportsViaEmail: { sendPDFReportsToOrganisationEmail: false, locale: 'de' },
+            auth: {},
+            ...ENV.PROD_INIT_CONNECTION_SETTINGS
+          } satisfies Omit<IConnectionSettings, '_id'>)
+      } else {
+        await mongoose.connection
+          .collection('connectionsettings')
+          .insertOne(connectionSettingsProd satisfies Omit<IConnectionSettings, '_id'>)
+      }
+    } else {
+      await mongoose.connection.collection('connectionsettings').insertOne(connectionSettingsDev satisfies Omit<IConnectionSettings, '_id'>)
+    }
+  }
+
+  for (const defaultIntegrationSettings of integrationSettings) {
+    if (
+      (await mongoose.connection
+        .collection('integrationsettings')
+        .countDocuments({ integrationKey: defaultIntegrationSettings.integrationKey })) === 0
+    ) {
+      await mongoose.connection
+        .collection('integrationsettings')
+        .insertOne(defaultIntegrationSettings satisfies Omit<RetentionIntegrationSettings | LumpSumIntegrationSettings, '_id'>)
+    }
+  }
 
   await initer(Currency, 'currencies', currencies)
   await initer(Country, 'countries', countries)
-  await fetchAndUpdateLumpSums()
-  initer(HealthInsurance, 'health insurances', healthInsurances)
+  await syncLumpSums()
+  await initer(HealthInsurance, 'health insurances', healthInsurances)
 
-  const organisations = [{ name: 'My Organisation' }]
-  await initer(Organisation, 'organisation', organisations)
-  const org = await Organisation.findOne()
+  const ledgerAccounts = [
+    { identifier: '1530', name: 'Forderungen gegen Personal aus Lohn- und Gehaltsabrechnung' },
+    { identifier: '1740', name: 'Verbindlichkeiten aus Lohn und Gehalt' },
+    { identifier: '1200', name: 'Bank' },
+    { identifier: '1571', name: 'Abziehbare Vorsteuer 7 %' },
+    { identifier: '1576', name: 'Abziehbare Vorsteuer 19 %' },
+    { identifier: '4660', name: 'Reisekosten Arbeitnehmer' },
+    { identifier: '4900', name: 'Sonstige betriebliche Aufwendungen' }
+  ]
+  await initer(LedgerAccount, 'ledger accounts', ledgerAccounts)
+
+  const account1530 = await LedgerAccount.findOne({ identifier: '1530' }).lean()
+  const account1740 = await LedgerAccount.findOne({ identifier: '1740' }).lean()
+  const account1571 = await LedgerAccount.findOne({ identifier: '1571' }).lean()
+  const account1576 = await LedgerAccount.findOne({ identifier: '1576' }).lean()
+  const account4660 = await LedgerAccount.findOne({ identifier: '4660' }).lean()
+  const account4900 = await LedgerAccount.findOne({ identifier: '4900' }).lean()
+  const organisation = {
+    name: 'My Organisation',
+    accountingSettings: {
+      employeeLiabilitiesAccount: account1740?._id,
+      employeeClaimsAccount: account1530?._id,
+      includeBankBookings: false,
+      payoutAccounts: [],
+      vatAccountingEnabled: true,
+      vatRates: [{ rate: 0 }, { rate: 7, inputTaxAccount: account1571?._id }, { rate: 19, inputTaxAccount: account1576?._id }],
+      accountMapping: {} as { [key in TravelExpenseItem]?: _id }
+    }
+  }
+  for (const item of travelExpenseItems) {
+    organisation.accountingSettings.accountMapping[item] = account4660?._id
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: id instead of full leaderAccount
+  await initer(Organisation, 'organisation', [organisation as any])
+  const org = await Organisation.findOne().lean()
   const projects = [{ identifier: '001', organisation: org?._id, name: 'Expense Management' }]
   await initer(Project, 'projects', projects)
-  const categories = [{ name: 'General', style: { color: '#D8DCFF', text: 'black' as const }, isDefault: true }]
+  const categories = [
+    {
+      name: 'General',
+      style: { color: '#D8DCFF', text: 'black' as const },
+      isDefault: true,
+      ledgerAccount: account4900 ?? undefined,
+      for: 'ExpenseReport' as const
+    },
+    {
+      name: 'Travel expenses',
+      style: { color: '#D8DCFF', text: 'black' as const },
+      isDefault: true,
+      ledgerAccount: account4660 ?? undefined,
+      for: 'Travel' as const
+    }
+  ]
   await initer(Category, 'category', categories)
+
+  if (ENV.NODE_ENV === 'production' && ENV.PROD_INIT_ADMIN_USER && (await mongoose.connection.collection('users').countDocuments()) === 0) {
+    const ac: Partial<IUser['access']> = {}
+    for (const access of accesses) {
+      ac[access] = access !== 'approved:travel'
+    }
+    const adminUser: Omit<IUser, '_id'> = {
+      ...ENV.PROD_INIT_ADMIN_USER,
+      fk: { magiclogin: ENV.PROD_INIT_ADMIN_USER.email },
+      access: ac as IUser['access'],
+      settings: { language: 'de', hasUserSetLanguage: false, lastCountries: [], lastCurrencies: [], showInstallBanner: true },
+      projects: { assigned: [], supervised: [] }
+    }
+    await mongoose.connection.collection('users').insertOne(adminUser)
+  }
 
   const tokenAdmin = await mongoose.connection.collection('users').findOne({ 'fk.magiclogin': tokenAdminUser.fk.magiclogin })
   if (tokenAdmin) {
@@ -132,55 +230,8 @@ async function initer<T>(model: Model<T>, name: string, data: Partial<T>[], lean
   }
 }
 
-export async function fetchAndUpdateLumpSums() {
-  const pauschbetrag_api = 'https://cdn.jsdelivr.net/npm/pauschbetrag-api/ALL.json'
-  try {
-    const res = await axios.get<LumpSumsJSON>(pauschbetrag_api)
-    if (res.status === 200) {
-      await addLumpSumsToCountries(res.data)
-    }
-  } catch (error) {
-    logger.error(`Unable to fetch lump sums from: ${pauschbetrag_api}`, 'error')
-    logger.error(error, 'error')
-  }
-}
-
-type LumpSumsJSON = { data: LumpSumWithCountryCode[]; validFrom: string }[]
-type LumpSumWithCountryCode = Omit<CountryLumpSum, 'validFrom'> & { countryCode: string }
-async function addLumpSumsToCountries(lumpSumsJSON: LumpSumsJSON) {
-  lumpSumsJSON.sort((a, b) => new Date(a.validFrom).valueOf() - new Date(b.validFrom).valueOf())
-  for (const lumpSums of lumpSumsJSON) {
-    const validFrom = new Date(lumpSums.validFrom).valueOf()
-    let count = 0
-    for (const lumpSum of lumpSums.data) {
-      const country = await Country.findOne({ _id: lumpSum.countryCode })
-      if (country) {
-        let newData = true
-        for (const countrylumpSums of country.lumpSums) {
-          if ((countrylumpSums.validFrom as Date).valueOf() >= validFrom) {
-            newData = false
-            break
-          }
-        }
-        if (newData) {
-          const newLumpSum: CountryLumpSum = Object.assign({ validFrom: new Date(lumpSums.validFrom) }, lumpSum)
-          country.lumpSums.push(newLumpSum)
-          country.markModified('lumpSums')
-          await country.save()
-          count++
-        }
-      } else {
-        throw new Error(`No Country with id "${lumpSum.countryCode}" found`)
-      }
-    }
-    if (count > 0) {
-      logger.info(`Added ${count} lump sums for ${new Date(lumpSums.validFrom)}`)
-    }
-  }
-}
-
-export async function getSettings(): Promise<ISettings> {
-  await connectDB()
+export async function getSettings(init = true): Promise<ISettings> {
+  await connectDB(init)
   const settings = (await mongoose.connection.collection('settings').findOne()) as ISettings | null
   if (settings) {
     return settings
@@ -188,8 +239,8 @@ export async function getSettings(): Promise<ISettings> {
   throw Error('Settings not found')
 }
 
-export async function getTravelSettings(): Promise<ITravelSettings> {
-  await connectDB()
+export async function getTravelSettings(init = true): Promise<ITravelSettings> {
+  await connectDB(init)
   const travelSettings = (await mongoose.connection.collection('travelsettings').findOne()) as ITravelSettings | null
   if (travelSettings) {
     return travelSettings
@@ -197,8 +248,8 @@ export async function getTravelSettings(): Promise<ITravelSettings> {
   throw Error('Travel Settings not found')
 }
 
-export async function getPrinterSettings(): Promise<IPrinterSettings> {
-  await connectDB()
+export async function getPrinterSettings(init = true): Promise<IPrinterSettings> {
+  await connectDB(init)
   const printerSettings = (await mongoose.connection.collection('printersettings').findOne()) as IPrinterSettings | null
   if (printerSettings) {
     return printerSettings
@@ -206,8 +257,8 @@ export async function getPrinterSettings(): Promise<IPrinterSettings> {
   throw Error('Printer Settings not found')
 }
 
-export async function getConnectionSettings(): Promise<IConnectionSettings> {
-  await connectDB()
+export async function getConnectionSettings(init = true): Promise<IConnectionSettings> {
+  await connectDB(init)
   const connectionSettings = (await mongoose.connection.collection('connectionsettings').findOne()) as IConnectionSettings | null
   if (connectionSettings) {
     return connectionSettings
@@ -215,11 +266,19 @@ export async function getConnectionSettings(): Promise<IConnectionSettings> {
   throw Error('Connection Settings not found')
 }
 
-export async function getDisplaySettings(): Promise<IDisplaySettings> {
-  await connectDB()
+export async function getDisplaySettings(init = true): Promise<IDisplaySettings> {
+  await connectDB(init)
   const displaySettings = (await mongoose.connection.collection('displaysettings').findOne()) as IDisplaySettings | null
   if (displaySettings) {
     return displaySettings
   }
   throw Error('Display Settings not found')
 }
+
+export const BACKEND_CACHE = new CACHE({
+  loadSettings: getSettings,
+  loadConnectionSettings: getConnectionSettings,
+  loadDisplaySettings: getDisplaySettings,
+  loadPrinterSettings: getPrinterSettings,
+  loadTravelSettings: getTravelSettings
+})

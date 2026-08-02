@@ -1,10 +1,10 @@
 import { GETResponse, SETResponse } from 'abrechnung-common/types.js'
 import axios, { AxiosRequestConfig } from 'axios'
 import { Reactive, reactive } from 'vue'
-import ENV from '@/env.js'
-import i18n from '@/i18n.js'
-import { logger } from '@/logger.js'
-import router from '@/router'
+import ENV from './env.js'
+import i18n from './i18n.js'
+import { logger } from './logger.js'
+import { purgeSession, sessionState } from './session.js'
 
 export interface Alert {
   type: 'danger' | 'success'
@@ -21,7 +21,7 @@ export interface APICallOptions {
 
 class API {
   alerts: Reactive<Alert[]>
-  router = router
+  private loginRedirectHandler?: () => void
 
   constructor() {
     this.alerts = reactive([])
@@ -31,8 +31,9 @@ class API {
     endpoint: string,
     params: AxiosRequestConfig['params'] = {},
     config: AxiosRequestConfig = {},
-    showAlert = true
+    options: { showAlert?: boolean; handleAuthenticationError?: boolean } = {}
   ): Promise<{ ok?: GETResponse<T>; error?: unknown }> {
+    const { showAlert = true, handleAuthenticationError = true } = options
     try {
       const res = await axios.get(`${ENV.VITE_BACKEND_URL}/${endpoint}`, Object.assign({ params: params, withCredentials: true }, config))
       if (config.responseType === 'blob') {
@@ -49,7 +50,7 @@ class API {
       ) {
         error.response.data = JSON.parse(await error.response.data.text())
       }
-      return this.#handleError(error, showAlert)
+      return this.#handleError(error, showAlert, handleAuthenticationError)
     }
   }
   async setter<T>(
@@ -58,6 +59,7 @@ class API {
     config: AxiosRequestConfig = {},
     showAlert = true
   ): Promise<{ ok?: T; error?: unknown }> {
+    if (!sessionState.isOnline.value) return { error: new Error('Offline mode is read-only') }
     try {
       const res = await axios.post(`${ENV.VITE_BACKEND_URL}/${endpoint}`, data, Object.assign({ withCredentials: true }, config))
       if (showAlert) this.addAlert({ title: i18n.global.t(res.data.message), type: 'success' })
@@ -68,10 +70,11 @@ class API {
   }
   async deleter(
     endpoint: string,
-    params: { _id?: string; parentId?: string },
+    params: { _id?: string; parentId?: string } & Record<string, unknown>,
     ask = true,
     showAlert = { success: true, error: true }
   ): Promise<boolean | unknown> {
+    if (!sessionState.isOnline.value && endpoint !== 'auth/logout') return false
     if (ask) {
       if (!confirm(i18n.global.t('alerts.areYouSureDelete'))) {
         return false
@@ -85,27 +88,28 @@ class API {
       }
       return true
     } catch (error: unknown) {
-      this.#handleError(error, showAlert.error)
+      await this.#handleError(error, showAlert.error)
     }
     return false
   }
 
-  #handleError(error: unknown, showAlert: boolean) {
+  async #handleError(error: unknown, showAlert: boolean, handleAuthenticationError = true) {
     if (!axios.isAxiosError(error) || !error.response) {
       logger.error(error)
       return { error: error }
     }
-    if (showAlert) {
-      if (error.response.status === 401) {
+    if (handleAuthenticationError && (error.response.status === 401 || error.response.status === 403)) {
+      await purgeSession()
+      if (showAlert) {
         this.redirectToLogin()
-      } else {
-        logger.error(error.response.data)
-        this.addAlert({
-          message: error.response.data.message,
-          title: error.response.data.name ? i18n.global.t(error.response.data.name) : 'ERROR',
-          type: 'danger'
-        })
       }
+    } else if (showAlert) {
+      logger.error(error.response.data)
+      this.addAlert({
+        message: error.response.data.message,
+        title: error.response.data.name ? i18n.global.t(error.response.data.name) : 'ERROR',
+        type: 'danger'
+      })
     }
     return { error: error.response.data }
   }
@@ -120,10 +124,14 @@ class API {
       if (index !== -1) {
         this.alerts.splice(index, 1)
       }
-    }, alertWithId.ttl || 5000)
+    }, alertWithId.ttl || 5_000)
   }
   redirectToLogin() {
-    this.router.push({ path: '/login', query: { redirect: router.currentRoute.value.path } })
+    this.loginRedirectHandler?.()
+  }
+
+  registerLoginRedirect(handler: () => void) {
+    this.loginRedirectHandler = handler
   }
 }
 

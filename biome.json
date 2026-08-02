@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.2.2/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -8,7 +8,14 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**"]
+    "includes": [
+      "**",
+      "!**/*.vue",
+      "!common/fonts/base64.json",
+      "!common/print/flags.json",
+      "!frontend/src/vendor/vue3-easy-data-table.css",
+      "!schema.drawio.svg"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -32,12 +39,15 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "style": {
         "useImportType": "off"
       },
       "performance": {
         "noDelete": "info"
+      },
+      "complexity": {
+        "noBannedTypes": "info"
       }
     }
   },
@@ -48,13 +58,19 @@
       "trailingCommas": "none",
       "semicolons": "asNeeded",
       "arrowParentheses": "always",
-      "bracketSameLine": false,
       "quoteStyle": "single",
       "attributePosition": "auto",
       "bracketSpacing": true
     },
     "parser": {
       "unsafeParameterDecoratorsEnabled": true
+    }
+  },
+  "html": {
+    "experimentalFullSupportEnabled": true,
+    "formatter": {
+      "enabled": true,
+      "bracketSameLine": true
     }
   },
   "json": {
@@ -73,7 +89,15 @@
           },
           "correctness": {
             "noUnusedImports": "off",
-            "noUnusedVariables": "off"
+            "noUnusedVariables": "off",
+            "noUnknownFunction": "off"
+          }
+        }
+      },
+      "assist": {
+        "actions": {
+          "source": {
+            "organizeImports": "off"
           }
         }
       }
@@ -82,7 +106,9 @@
       "includes": ["common/locales/*.json"],
       "assist": {
         "actions": {
-          "source": { "useSortedKeys": "on" }
+          "source": {
+            "useSortedKeys": "on"
+          }
         }
       }
     }

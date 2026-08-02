@@ -1,16 +1,16 @@
 <template>
   <div v-if="props.user.fk && props.user.fk.httpBearer && !token" class="alert alert-warning d-flex align-items-center" role="alert">
     <i class="bi bi-exclamation-triangle-fill me-2"></i>
-    <div>{{ $t('alerts.apiKeyAlreadyExists') }}</div>
+    <div>{{ t('alerts.apiKeyAlreadyExists') }}</div>
   </div>
 
   <template v-if="token">
     <div class="alert alert-info d-flex align-items-center" role="alert">
       <i class="bi bi-info-circle-fill me-2"></i>
-      <div>{{ $t('alerts.apiKeyShownOnlyOnce') }}</div>
+      <div>{{ t('alerts.apiKeyShownOnlyOnce') }}</div>
     </div>
     <div class="input-group mb-3">
-      <input class="form-control" type="text" v-model="token" readonly />
+      <input class="form-control" type="text" v-model="token" readonly >
       <button class="btn btn-outline-secondary" type="button" @click="copyToClipboard">
         <i class="bi bi-copy"></i><i v-if="copied" class="bi bi-check-lg ms-2"></i>
       </button>
@@ -19,19 +19,17 @@
 
   <form class="container" @submit.prevent="postApiKey(props.endpoint)">
     <div class="mb-1 d-flex align-items-center">
-      <button type="submit" class="btn btn-primary me-2" :disabled="loading">
-        {{ $t('labels.addX', { X: 'API Key' }) }}
-      </button>
+      <button type="submit" class="btn btn-primary me-2" :disabled="loading">{{ t('labels.addX', { X: 'API Key' }) }}</button>
       <span v-if="loading" class="spinner-border spinner-border-sm ms-1 me-3"></span>
       <button
+        v-if="props.showCancel"
         type="button"
         class="btn btn-light"
         v-on:click="
-          //prettier-ignore
           emits('cancel');
           resetForm()
         ">
-        {{ $t('labels.cancel') }}
+        {{ t('labels.cancel') }}
       </button>
     </div>
   </form>
@@ -40,13 +38,17 @@
 <script lang="ts" setup>
 import { User } from 'abrechnung-common/types.js'
 import { PropType, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import API from '@/api.js'
 import { logger } from '@/logger.js'
+
+const { t } = useI18n()
 
 const props = defineProps({
   user: { type: Object as PropType<User>, required: true },
   endpoint: { type: String, required: true },
-  includeUserIdInRequest: { type: Boolean, default: false }
+  includeUserIdInRequest: { type: Boolean, default: false },
+  showCancel: { type: Boolean, default: true }
 })
 
 const loading = ref(false)

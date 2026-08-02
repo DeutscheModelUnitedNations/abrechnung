@@ -1,15 +1,27 @@
 import { Readable } from 'node:stream'
-import { AdvanceState, Advance as IAdvance, IdDocument, idDocumentToId, Locale, State } from 'abrechnung-common/types.js'
-import { Condition, Types } from 'mongoose'
-import { Body, Delete, Get, Post, Produces, Queries, Query, Request, Route, Security, Tags } from 'tsoa'
-import ENV from '../env.js'
-import { reportPrinter } from '../factory.js'
-import { checkIfUserIsProjectSupervisor, setAdvanceBalance, writeToDisk } from '../helper.js'
+import { Body, Delete, Get, Post, Produces, Queries, Query, Request, Route, Security, Tags } from '@tsoa/runtime'
+import {
+  AdvanceState,
+  BookingExportPackageRequest,
+  Advance as IAdvance,
+  IdDocument,
+  idDocumentToId,
+  State
+} from 'abrechnung-common/types.js'
+import { Document, model, QueryFilter, Types } from 'mongoose'
+import { BACKEND_CACHE } from '../db.js'
+import { createOperationServices } from '../factory.js'
+import { checkIfUserIsProjectSupervisor, setAdvanceBalance } from '../helper.js'
 import i18n from '../i18n.js'
+import { emitIntegrationEvent } from '../integrations/dispatcher.js'
+import { sendAdvanceDeletionNotification } from '../integrations/notifications/status.js'
 import Advance, { AdvanceDoc } from '../models/advance.js'
-import { sendNotification } from '../notifications/notification.js'
-import { sendViaMail, writeToDiskFilePath } from '../pdf/helper.js'
-import { Controller, GetterQuery } from './controller.js'
+import ExpenseReport from '../models/expenseReport.js'
+import HealthCareCost from '../models/healthCareCost.js'
+import ReportUsage from '../models/reportUsage.js'
+import Travel from '../models/travel.js'
+import { createBookingExportPackage, getBookingExportPreview } from './bookingExport.js'
+import { Controller, checkOwner, GetterQuery } from './controller.js'
 import { AuthorizationError, NotFoundError } from './error.js'
 import { AuthenticatedExpressRequest, MoneyPost } from './types.js'
 
@@ -17,9 +29,25 @@ interface AdvanceApplication {
   project?: IdDocument<Types.ObjectId>
   _id?: Types.ObjectId
   name?: string
-  budget: MoneyPost | undefined
+  budget: MoneyPost
   reason: string
   comment?: string
+}
+
+async function unlinkAdvanceFromIncompleteReports(advanceId: Types.ObjectId) {
+  const filter = { advances: advanceId, historic: false, state: { $lt: State.BOOKABLE } }
+  const reports: Document[] = []
+  reports.push(...(await model('Travel').find(filter)))
+  reports.push(...(await model('ExpenseReport').find(filter)))
+  reports.push(...(await model('HealthCareCost').find(filter)))
+  for (const report of reports) {
+    const advances = report.get('advances') as IdDocument<Types.ObjectId>[]
+    report.set(
+      'advances',
+      advances.filter((advance) => !idDocumentToId(advance).equals(advanceId))
+    )
+    await report.save()
+  }
 }
 
 @Tags('Advance')
@@ -31,18 +59,22 @@ export class AdvanceController extends Controller {
   public async getOwn(@Queries() query: GetterQuery<IAdvance>, @Request() request: AuthenticatedExpressRequest) {
     return await this.getter(Advance, {
       query,
-      filter: { owner: request.user._id, historic: false },
-      projection: { history: 0, historic: 0, bookingRemark: 0 },
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter: { owner: request.user._id as any, historic: false },
+      projection: { history: 0, historic: 0, bookings: 0, bookingRemark: 0 },
       sort: { createdAt: -1 }
     })
   }
+
   @Delete()
   public async deleteOwn(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
+    const notAfterReview = BACKEND_CACHE.settings.preventOwnersFromDeletingReportsAfterReviewCompleted
     return await this.deleter(Advance, {
       _id: _id,
       checkOldObject: async (oldObject: AdvanceDoc) =>
-        request.user._id.equals(oldObject.owner._id) &&
-        (oldObject.state < State.BOOKABLE || (oldObject.state === State.BOOKED && Boolean(oldObject.settledOn)))
+        !oldObject.historic &&
+        (await checkOwner(request.user)(oldObject)) &&
+        (oldObject.state < State.BOOKABLE || (!notAfterReview && oldObject.state === State.BOOKED && Boolean(oldObject.settledOn)))
     })
   }
 
@@ -62,7 +94,7 @@ export class AdvanceController extends Controller {
     new Advance(extendedBody)
     return await this.setter(Advance, {
       requestBody: extendedBody,
-      cb: sendNotification,
+      cb: async (a: IAdvance<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.submitted', report: a }),
       checkOldObject: async (oldObject: AdvanceDoc) =>
         !oldObject.historic &&
         oldObject.state <= AdvanceState.APPLIED_FOR &&
@@ -72,14 +104,41 @@ export class AdvanceController extends Controller {
     })
   }
 
+  @Post('received')
+  public async postReceived(
+    @Body() requestBody: { _id: string; receivedOn: Date | string },
+    @Request() request: AuthenticatedExpressRequest
+  ) {
+    const extendedBody = Object.assign(requestBody, { editor: request.user._id })
+    return await this.setter(Advance, {
+      requestBody: extendedBody,
+      allowNew: false,
+      cb: async (a: IAdvance<Types.ObjectId>) => {
+        a.state += 5
+        await emitIntegrationEvent({ type: 'advance.received', report: a })
+      },
+      checkOldObject: async (oldObject: AdvanceDoc) =>
+        !oldObject.historic &&
+        oldObject.state >= AdvanceState.APPROVED &&
+        !oldObject.receivedOn &&
+        request.user._id.equals(oldObject.owner._id)
+    })
+  }
+
   @Get('report')
   @Produces('application/pdf')
   public async getReportForOwn(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
-    const advance = await Advance.findOne({ _id: _id, owner: request.user._id, historic: false, state: { $gte: State.BOOKABLE } }).lean()
+    const advance = await Advance.findOne({
+      _id: _id,
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      owner: request.user._id as any,
+      historic: false,
+      state: { $gte: State.BOOKABLE }
+    }).lean()
     if (!advance) {
       throw new NotFoundError(`No advance with id: '${_id}' found or not allowed`)
     }
-    const report = await reportPrinter.print(advance, request.user.settings.language)
+    const report = await createOperationServices().reportPrinter.print(advance, request.user.settings.language)
     this.setHeader('Content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(advance.name)}.pdf`)
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
@@ -100,11 +159,17 @@ export class AdvanceController extends Controller {
 export class AdvanceExamineController extends Controller {
   @Get()
   public async getForExamineReport(@Queries() query: GetterQuery<IAdvance>, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<IAdvance> = { $and: [{ historic: false }, { state: { $gte: AdvanceState.APPROVED } }] }
+    const filter: QueryFilter<IAdvance> = { $and: [{ historic: false }, { state: { $gte: AdvanceState.APPROVED } }] }
     if (request.user.projects.supervised.length > 0) {
-      filter.$and.push({ project: { $in: request.user.projects.supervised } })
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.$and?.push({ project: { $in: request.user.projects.supervised as any } })
     }
-    return await this.getter(Advance, { query, filter, projection: { history: 0, historic: 0, bookingRemark: 0 }, sort: { updatedAt: -1 } })
+    return await this.getter(Advance, {
+      query,
+      filter,
+      projection: { history: 0, historic: 0, bookings: 0, bookingRemark: 0 },
+      sort: { updatedAt: -1 }
+    })
   }
 }
 
@@ -115,15 +180,40 @@ export class AdvanceExamineController extends Controller {
 export class AdvanceApproveController extends Controller {
   @Get()
   public async getToApprove(@Queries() query: GetterQuery<IAdvance>, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<IAdvance> = { $and: [{ historic: false }, { state: { $gte: State.APPLIED_FOR } }] }
+    const filter: QueryFilter<IAdvance> = { $and: [{ historic: false }, { state: { $gte: State.APPLIED_FOR } }] }
     if (request.user.projects.supervised.length > 0) {
-      filter.$and.push({ project: { $in: request.user.projects.supervised } })
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.$and?.push({ project: { $in: request.user.projects.supervised as any } })
     }
-    return await this.getter(Advance, { query, filter, projection: { history: 0, historic: 0 }, sort: { updatedAt: -1 } })
+    return await this.getter(Advance, { query, filter, projection: { history: 0, historic: 0, bookings: 0 }, sort: { updatedAt: -1 } })
+  }
+
+  @Delete()
+  public async deleteApproved(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
+    const result = await this.deleter(Advance, {
+      _id,
+      referenceChecks: [
+        { model: Travel, paths: ['advances'], conditions: { historic: false } },
+        { model: ExpenseReport, paths: ['advances'], conditions: { historic: false } },
+        { model: HealthCareCost, paths: ['advances'], conditions: { historic: false } }
+      ],
+      cb: async (deleteResult) => {
+        if (deleteResult.deletedCount === 1) {
+          await sendAdvanceDeletionNotification(deleteResult.deletedObject, request.user)
+        }
+      },
+      checkOldObject: async (oldObject: AdvanceDoc) =>
+        !oldObject.historic &&
+        oldObject.state === AdvanceState.APPROVED &&
+        !oldObject.receivedOn &&
+        oldObject.offsetAgainst.length === 0 &&
+        checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
+    })
+    return result
   }
 
   @Post('approved')
-  public async postAnyBackApproved(
+  public async postAnyApproved(
     @Body() requestBody:
       | (AdvanceApplication & { owner: IdDocument; bookingRemark?: string | null })
       | { _id: string; comment?: string; bookingRemark?: string | null },
@@ -131,6 +221,7 @@ export class AdvanceApproveController extends Controller {
   ) {
     const extendedBody = Object.assign(requestBody, { state: AdvanceState.APPROVED, editor: request.user._id })
     if (!extendedBody._id) {
+      await createOperationServices().currencyConverter.addExchangeRate((extendedBody as AdvanceApplication).budget, new Date())
       setAdvanceBalance(extendedBody as AdvanceApplication as IAdvance)
       if (!(extendedBody as AdvanceApplication).name) {
         const date = new Date()
@@ -138,13 +229,7 @@ export class AdvanceApproveController extends Controller {
           `${i18n.t(`monthsShort.${date.getUTCMonth()}`, { lng: request.user.settings.language })} ${date.getUTCFullYear()}`
       }
     }
-    const cb = async (advance: IAdvance<Types.ObjectId>) => {
-      sendNotification(advance)
-      sendViaMail(advance)
-      if (ENV.BACKEND_SAVE_REPORTS_ON_DISK) {
-        await writeToDisk(await writeToDiskFilePath(advance), await reportPrinter.print(advance, i18n.language as Locale))
-      }
-    }
+    const cb = async (a: IAdvance<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.review_completed', report: a })
 
     return await this.setter(Advance, {
       requestBody: extendedBody,
@@ -160,13 +245,43 @@ export class AdvanceApproveController extends Controller {
     })
   }
 
+  @Post('withdrawApproval')
+  public async withdrawApproval(@Body() requestBody: { _id: string; comment?: string }, @Request() request: AuthenticatedExpressRequest) {
+    const extendedBody = Object.assign(requestBody, { state: AdvanceState.REJECTED, editor: request.user._id, bookingRemark: null })
+
+    const result = await this.setter(Advance, {
+      requestBody: extendedBody,
+      allowNew: false,
+      async checkOldObject(oldObject: AdvanceDoc) {
+        if (
+          oldObject.state !== AdvanceState.APPROVED ||
+          oldObject.receivedOn ||
+          oldObject.offsetAgainst.length > 0 ||
+          !checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
+        ) {
+          return false
+        }
+        await unlinkAdvanceFromIncompleteReports(oldObject._id)
+        await oldObject.saveToHistory()
+        oldObject.log[AdvanceState.REJECTED] = undefined
+        oldObject.log[AdvanceState.APPROVED] = undefined
+        oldObject.markModified('log')
+        return true
+      }
+    })
+
+    await ReportUsage.deleteOne({ reportId: result.result._id })
+    await emitIntegrationEvent({ type: 'report.approval_withdrawn', report: result.result })
+    return result
+  }
+
   @Post('rejected')
   public async postAnyRejected(@Body() requestBody: { _id: string; comment?: string }, @Request() request: AuthenticatedExpressRequest) {
     const extendedBody = Object.assign(requestBody, { state: AdvanceState.REJECTED, editor: request.user._id })
 
     return await this.setter(Advance, {
       requestBody: extendedBody,
-      cb: sendNotification,
+      cb: async (a: IAdvance<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.rejected', report: a }),
       allowNew: false,
       checkOldObject: async (oldObject: AdvanceDoc) =>
         oldObject.state === AdvanceState.APPLIED_FOR && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
@@ -174,9 +289,12 @@ export class AdvanceApproveController extends Controller {
   }
 
   @Post('offset')
-  public async offset(@Body() requestBody: { amount: number; advanceId: IdDocument }, @Request() request: AuthenticatedExpressRequest) {
+  public async offset(
+    @Body() requestBody: { amount: number; advanceId: IdDocument; subject: string },
+    @Request() request: AuthenticatedExpressRequest
+  ) {
     const advance = await Advance.findOne({
-      _id: requestBody.advanceId,
+      _id: idDocumentToId(requestBody.advanceId),
       historic: false,
       state: { $gte: AdvanceState.APPROVED },
       settledOn: null
@@ -184,9 +302,9 @@ export class AdvanceApproveController extends Controller {
     if (!advance || !checkIfUserIsProjectSupervisor(request.user, advance.project._id)) {
       throw new NotFoundError(`No advance with id: '${requestBody.advanceId}' found or not allowed`)
     }
-    await advance.offset(requestBody.amount, 'ExpenseReport', null)
+    await advance.offset(requestBody.amount, 'offsetEntry', null, requestBody.subject)
     const result: IAdvance | null = await Advance.findOne(
-      { _id: requestBody.advanceId, historic: false },
+      { _id: idDocumentToId(requestBody.advanceId), historic: false },
       { historic: 0, history: 0 }
     ).lean()
     if (result) {
@@ -197,15 +315,16 @@ export class AdvanceApproveController extends Controller {
   @Get('report')
   @Produces('application/pdf')
   public async getReportForAny(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<IAdvance> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
+    const filter: QueryFilter<IAdvance<Types.ObjectId>> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     const advance = await Advance.findOne(filter).lean()
     if (!advance) {
       throw new NotFoundError(`No advance with id: '${_id}' found or not allowed`)
     }
-    const report = await reportPrinter.print(advance, request.user.settings.language)
+    const report = await createOperationServices().reportPrinter.print(advance, request.user.settings.language)
     this.setHeader('Content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(advance.name)}.pdf`)
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
@@ -220,14 +339,15 @@ export class AdvanceApproveController extends Controller {
 export class AdvanceBookableController extends Controller {
   @Get()
   public async getBookable(@Queries() query: GetterQuery<IAdvance>, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<IAdvance> = { historic: false, state: { $gte: State.BOOKABLE } }
+    const filter: QueryFilter<IAdvance> = { historic: false, state: { $gte: State.BOOKABLE } }
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     return await this.getter(Advance, {
       query,
       filter,
-      projection: { history: 0, historic: 0 },
+      projection: { history: 0, historic: 0, bookings: 0 },
       sort: { [`log.${State.BOOKABLE}.on`]: -1 }
     })
   }
@@ -235,19 +355,33 @@ export class AdvanceBookableController extends Controller {
   @Get('report')
   @Produces('application/pdf')
   public async getBookableReport(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<IAdvance> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
+    const filter: QueryFilter<IAdvance<Types.ObjectId>> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     const advance = await Advance.findOne(filter).lean()
     if (!advance) {
       throw new NotFoundError(`No advance with id: '${_id}' found or not allowed`)
     }
-    const report = await reportPrinter.print(advance, request.user.settings.language)
+    const report = await createOperationServices().reportPrinter.print(advance, request.user.settings.language)
     this.setHeader('Content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(advance.name)}.pdf`)
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
     return Readable.from([report])
+  }
+
+  @Post('bookingExportPreview')
+  public async postBookingExportPreview(@Body() requestBody: IdDocument<string>[], @Request() request: AuthenticatedExpressRequest) {
+    return { result: await getBookingExportPreview(Advance, 'Advance', requestBody, request) }
+  }
+
+  @Post('bookingExportPackage')
+  public async postBookingExportPackage(
+    @Body() requestBody: BookingExportPackageRequest<string>,
+    @Request() request: AuthenticatedExpressRequest
+  ) {
+    return { result: await createBookingExportPackage(Advance, 'Advance', requestBody, request) }
   }
 
   @Post('booked')

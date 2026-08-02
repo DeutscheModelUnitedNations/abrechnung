@@ -1,0 +1,105 @@
+import { Contact, User as IUser, Locale } from 'abrechnung-common/types.js'
+import ejs from 'ejs'
+import nodemailer from 'nodemailer'
+import { mapSmtpConfig } from '../../data/settingsValidator.js'
+import ENV from '../../env.js'
+import { createOperationServices } from '../../factory.js'
+import { genAuthenticatedLink } from '../../helper.js'
+import i18n, { updateI18n } from '../../i18n.js'
+import { logger } from '../../logger.js'
+import { getMailTemplate } from '../../templates/cache.js'
+import { Integration } from '../integration.js'
+
+export async function getMailClient() {
+  const { connectionSettings } = createOperationServices().snapshot
+  if (connectionSettings.smtp?.host) {
+    return nodemailer.createTransport(mapSmtpConfig(connectionSettings.smtp))
+  }
+  throw new Error('SMTP not configured in Connection Settings')
+}
+export type MailRecipient = Contact & { fk: IUser['fk']; settings: { language: IUser['settings']['language'] } }
+interface NotificationEmailPayload {
+  recipient: MailRecipient
+  subject: string
+  paragraph: string
+  language: Locale
+  button?: { text: string; link: string }
+  lastParagraph?: string | string[]
+}
+
+class MailNotificationIntegration extends Integration {
+  public override readonly operations = {
+    send: {
+      jobOptions: { attempts: 5, backoff: { type: 'exponential', delay: 5_000 } },
+      run: async (payload: unknown) => {
+        const mail = payload as NotificationEmailPayload
+        await sendMail(mail.recipient, mail.subject, mail.paragraph, mail.language, mail.button, mail.lastParagraph)
+      }
+    }
+  }
+
+  public constructor() {
+    super('notifications.email')
+  }
+}
+
+export const mailNotificationIntegration = new MailNotificationIntegration()
+
+export async function enqueueMail(
+  recipients: MailRecipient[],
+  subject: string,
+  paragraph: string,
+  button?: { text: string; link: string },
+  lastParagraph?: string | string[],
+  authenticateLink = true
+) {
+  const { displaySettings } = createOperationServices().snapshot
+  updateI18n(displaySettings.locale)
+
+  for (const recipient of recipients) {
+    const language = recipient.settings.language
+    let recipientButton: { text: string; link: string } | undefined
+    if (button) {
+      recipientButton = { ...button }
+      if (authenticateLink && recipient.fk.magiclogin && recipientButton.link.startsWith(ENV.VITE_FRONTEND_URL)) {
+        recipientButton.link = await genAuthenticatedLink({
+          destination: recipient.fk.magiclogin,
+          redirect: recipientButton.link.substring(ENV.VITE_FRONTEND_URL.length)
+        })
+      }
+    }
+
+    const payload: NotificationEmailPayload = { recipient, subject, paragraph, language, button: recipientButton, lastParagraph }
+    await mailNotificationIntegration.enqueue('send', payload)
+  }
+}
+
+export async function sendMail(
+  recipient: Contact,
+  subject: string,
+  paragraph: string,
+  language: Locale,
+  button?: { text: string; link: string },
+  lastParagraph?: string | string[]
+) {
+  const mailClient = await getMailClient()
+  const salutation = i18n.t('mail.hiX', { lng: language, X: recipient.name.givenName })
+  const regards = i18n.t('mail.regards', { lng: language })
+  const app = {
+    name: `${i18n.t('headlines.title', { lng: language })} ${i18n.t('headlines.emoji', { lng: language })}`,
+    url: ENV.VITE_FRONTEND_URL
+  }
+
+  const template = await getMailTemplate()
+  const renderedHTML = ejs.render(template, { salutation, paragraph, button, lastParagraph, regards, app })
+  const plainText = `${salutation}\n\n${paragraph}\n\n${button ? `${button.text}: ${button.link}\n\n` : ''}${lastParagraph ? `${Array.isArray(lastParagraph) ? lastParagraph.join('\n') : lastParagraph}\n\n` : ''}${regards}\n\n${app.name}: ${app.url}`
+
+  logger.debug(`Send mail to ${recipient.email}`)
+  return mailClient.sendMail({
+    from: `"${app.name}" <${mailClient.options.from}>`,
+    to: recipient.email,
+    subject,
+    text: plainText,
+    html: renderedHTML
+  })
+}

@@ -1,7 +1,7 @@
+import { Body, Delete, Get, Post, Queries, Query, Request, Route, Security, Tags } from '@tsoa/runtime'
 import { Project as IProject, locales, ProjectSimple, ProjectSimpleWithName, ProjectWithUsers } from 'abrechnung-common/types.js'
 import { Types } from 'mongoose'
-import { Body, Delete, Get, Post, Queries, Query, Request, Route, Security, Tags } from 'tsoa'
-import { getSettings } from '../db.js'
+import { BACKEND_CACHE } from '../db.js'
 import ExpenseReport from '../models/expenseReport.js'
 import HealthCareCost from '../models/healthCareCost.js'
 import Project, { projectSchema, projectUsersSchema } from '../models/project.js'
@@ -20,7 +20,7 @@ import { AuthenticatedExpressRequest } from './types.js'
 export class ProjectController extends Controller {
   @Get()
   public async get(@Queries() query: GetterQuery<ProjectSimple>, @Request() request: AuthenticatedExpressRequest) {
-    const settings = await getSettings()
+    const { settings } = BACKEND_CACHE.getSnapshot()
     const userHasExtendedAccess = await isUserAllowedToAccess(
       request.user,
       [
@@ -86,9 +86,21 @@ export class ProjectAdminController extends Controller {
     return await this.deleter(Project, {
       _id: _id,
       referenceChecks: [
-        { model: ExpenseReport, paths: ['project', 'addUp.$elemMatch.project'], conditions: { historic: false } },
-        { model: Travel, paths: ['project', 'addUp.$elemMatch.project'], conditions: { historic: false } },
-        { model: HealthCareCost, paths: ['project', 'addUp.$elemMatch.project'], conditions: { historic: false } }
+        {
+          model: ExpenseReport,
+          paths: ['project', 'addUp.$elemMatch.project', 'expenses.cost.positions.project'],
+          conditions: { historic: false }
+        },
+        {
+          model: Travel,
+          paths: ['project', 'addUp.$elemMatch.project', 'expenses.cost.positions.project', 'stages.cost.positions.project'],
+          conditions: { historic: false }
+        },
+        {
+          model: HealthCareCost,
+          paths: ['project', 'addUp.$elemMatch.project', 'expenses.cost.positions.project'],
+          conditions: { historic: false }
+        }
       ],
       minDocumentCount: 1
     })

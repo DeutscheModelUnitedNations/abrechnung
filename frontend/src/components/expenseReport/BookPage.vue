@@ -1,15 +1,25 @@
 <template>
   <div class="container py-3">
+    <BookingExportDialog
+      ref="bookingExportDialog"
+      endpoint="book/expenseReport"
+      :reports="selected"
+      @booked="handleBooked" />
     <div class="row justify-content-between">
       <div class="col-auto">
         <h2>{{ t('accesses.book/expenseReport') }}</h2>
       </div>
       <div class="col-auto">
-        <button class="btn btn-secondary" @click="handlePrint"><i class="bi bi-printer-fill"></i></button>
+        <button class="btn btn-secondary" @click="handlePrint">
+          <i class="bi bi-printer-fill"></i>
+        </button>
       </div>
     </div>
     <div class="mb-3 d-flex align-items-center">
-      <button type="button" class="btn btn-success" :disabled="selected.length === 0 || loading" @click="book(selected)">
+      <button type="button" class="btn btn-secondary me-2" :disabled="selected.length === 0 || loading" @click="bookingExportDialog?.open()">
+        <i class="bi bi-download me-1"></i>{{ t('labels.exportBookings') }}
+      </button>
+      <button type="button" class="btn btn-light btn-sm" :disabled="selected.length === 0 || loading" @click="book(selected)">
         {{ t('labels.setSelectedToBooked') }}
       </button>
       <span v-if="loading" class="spinner-border spinner-border-sm ms-1"></span>
@@ -20,7 +30,7 @@
       class="mb-5"
       table-class-name="small-table"
       endpoint="book/expenseReport"
-      :columns-to-hide="['state']"
+      :columns-to-hide="['state', 'addUp.totalAdvance']"
       make-name-no-link
       :stateFilter="State.BOOKABLE"
       :rows-per-page="10"
@@ -31,12 +41,7 @@
       <template #expand="report">
         <div class="px-3 pb-1 border-bottom border-4">
           <div v-if="report.addUp.length > 1 || report.addUp[0].advance.amount > 0" class="d-inline-block">
-            <AddUpTable
-              class="table-sm"
-              :add-up="report.addUp"
-              :project="report.project"
-              :showAdvanceOverflow="false"
-              id="addUp"></AddUpTable>
+            <AddUpTable class="table-sm" :add-up="report.addUp" :project="report.project" :showAdvanceOverflow="false" id="addUp" />
           </div>
           <div v-if="report.bookingRemark">
             <small style="white-space: pre-wrap">{{ report.bookingRemark }}</small>
@@ -45,64 +50,77 @@
       </template>
     </ExpenseReportList>
     <button v-if="!show" type="button" class="btn btn-light" @click="show = ExpenseReportState.BOOKED">
-      {{ t('labels.show') }} <StateBadge :state="ExpenseReportState.BOOKED" :StateEnum="ExpenseReportState"></StateBadge>
+      {{ t('labels.show') }}
+      <StateBadge :state="ExpenseReportState.BOOKED" :StateEnum="ExpenseReportState" />
       <i class="bi bi-chevron-down"></i>
     </button>
     <template v-else>
       <button type="button" class="btn btn-light" @click="show = null">
-        {{ t('labels.hide') }} <StateBadge :state="show" :StateEnum="ExpenseReportState"></StateBadge> <i class="bi bi-chevron-up"></i>
+        {{ t('labels.hide') }}
+        <StateBadge :state="show" :StateEnum="ExpenseReportState" />
+        <i class="bi bi-chevron-up"></i>
       </button>
-      <hr class="hr" />
+      <hr class="hr" >
       <ExpenseReportList
         class="mb-5"
         table-class-name="small-table"
         endpoint="book/expenseReport"
-        :columns-to-hide="['state']"
+        :columns-to-hide="['state', 'addUp.totalAdvance']"
         make-name-no-link
         :stateFilter="show"
         :rows-per-page="10"
         :rows-items="[10, 20, 50]"
-        dbKeyPrefix="booked">
-      </ExpenseReportList>
+        dbKeyPrefix="booked" />
     </template>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { ExpenseReportSimple, ExpenseReportState, State } from 'abrechnung-common/types.js'
-import { ComponentPublicInstance, MaybeRefOrGetter, ref, useTemplateRef } from 'vue'
+import { ComponentPublicInstance, MaybeRefOrGetter, nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useVueToPrint } from 'vue-to-print'
 import API from '@/api'
 import AddUpTable from '@/components/elements/AddUpTable.vue'
+import BookingExportDialog from '@/components/elements/BookingExportDialog.vue'
 import StateBadge from '@/components/elements/StateBadge.vue'
 import ExpenseReportList from '@/components/expenseReport/ExpenseReportList.vue'
-import { expandCollapseComments, hideExpandColumn as hideExpCol } from '@/helper'
+import { expandCollapseComments, hideExpandColumn as hideExpCol, showFile } from '@/helper'
 
 const { t } = useI18n()
 
 const tableRef = useTemplateRef('table')
 
-const selected = ref([])
+const selected = ref<ExpenseReportSimple<string>[]>([])
 const show = ref<null | ExpenseReportState.BOOKED>(null)
 const loading = ref(false)
+const bookingExportDialog = useTemplateRef<{ open: () => Promise<void> }>('bookingExportDialog')
 
-async function book(expenseReports: ExpenseReportSimple[]) {
+async function book(expenseReports: ExpenseReportSimple<string>[]) {
   loading.value = true
-  const result = await API.setter(
+  const result = await API.setter<{ status: 'fulfilled' | 'rejected' }[]>(
     'book/expenseReport/booked',
     expenseReports.map((e) => e._id)
   )
   loading.value = false
   if (result.ok) {
-    selected.value = []
+    selected.value = expenseReports.filter((_, index) => result.ok?.[index]?.status !== 'fulfilled')
     tableRef.value?.loadFromServer()
   }
 }
 
+function handleBooked(reportIds: string[]) {
+  const bookedReportIds = new Set(reportIds)
+  selected.value = selected.value.filter(({ _id }) => !bookedReportIds.has(_id))
+  tableRef.value?.loadFromServer()
+}
+
 let colDeleted = false
 function hideExpandColumn() {
-  hideExpCol(colDeleted, 1)
+  if (tableRef.value) {
+    hideExpCol(tableRef.value.$el, colDeleted, 1)
+  }
   colDeleted = true
 }
 
@@ -112,12 +130,16 @@ const { handlePrint } = useVueToPrint({
   removeAfterPrint: true,
   onBeforeGetContent() {
     return new Promise((resolve) => {
-      expandCollapseComments()
+      if (tableRef.value) {
+        expandCollapseComments(tableRef.value.$el)
+      }
       queueMicrotask(resolve)
     })
   },
   onAfterPrint() {
-    expandCollapseComments()
+    if (tableRef.value) {
+      expandCollapseComments(tableRef.value.$el)
+    }
   },
   pageStyle: `
     @page {
@@ -133,6 +155,18 @@ const { handlePrint } = useVueToPrint({
       display: block;
     }`
 })
+
+const router = useRouter()
+const props = defineProps<{ _id?: string }>()
+async function showPropsReport() {
+  if (props._id) {
+    await showFile({ endpoint: `book/expenseReport/report`, params: { _id: props._id }, filename: `${t('labels.expenseReport')}.pdf` })
+    await nextTick()
+    router.replace('/book/expenseReport')
+  }
+}
+onMounted(showPropsReport)
+watch(() => props._id, showPropsReport)
 </script>
 
 <style>
@@ -142,6 +176,7 @@ const { handlePrint } = useVueToPrint({
 }
 
 .vue3-easy-data-table__body td.expand {
+  /* biome-ignore lint/complexity/noImportantStyles: needed */
   padding: 0 !important;
 }
 </style>

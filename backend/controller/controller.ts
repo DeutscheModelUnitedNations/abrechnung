@@ -1,13 +1,13 @@
+import { Controller as TsoaController } from '@tsoa/runtime'
 import { _id, GETResponse, IdDocument, Meta, User } from 'abrechnung-common/types.js'
-import { Base64 } from 'abrechnung-common/utils/scripts.js'
+import { Base64 } from 'abrechnung-common/utils/encoding.js'
 import { DeleteResult } from 'mongodb'
-import { FilterQuery, HydratedDocument, Model, mongo, ProjectionType, SortOrder, Types } from 'mongoose'
-import { Controller as TsoaController } from 'tsoa'
+import { HydratedDocument, Model, mongo, ProjectionType, QueryFilter, SortOrder, Types } from 'mongoose'
 import Country from '../models/country.js'
 import Currency from '../models/currency.js'
 import { ConflictError, NotAllowedError, NotFoundError } from './error.js'
 
-export interface GetterQuery<ModelType> {
+export interface PaginationQuery {
   /**
    * @isInt
    * @minimum 0
@@ -20,6 +20,9 @@ export interface GetterQuery<ModelType> {
    * @default 1
    */
   page?: number
+}
+
+export interface GetterQuery<ModelType> extends PaginationQuery {
   _id?: string
   additionalFields?: (keyof ModelType)[]
   /**
@@ -34,7 +37,7 @@ export interface GetterQuery<ModelType> {
 
 export interface GetterOptions<ModelType> {
   query: GetterQuery<ModelType>
-  filter?: FilterQuery<ModelType>
+  filter?: QueryFilter<ModelType>
   projection?: ProjectionType<ModelType>
   sort?: string | { [key: string]: SortOrder } | [string, SortOrder][] | undefined | null
   cb?: (data: ModelType | ModelType[]) => unknown
@@ -136,7 +139,7 @@ type _SetterPartial1<T, U extends string> = T extends object
     }
   : T
 
-export type NoPost = 'historic' | 'owner' | 'history' | 'createdAt' | 'updatedAt' | 'editor' | 'exchangeRate' | 'state'
+export type NoPost = 'historic' | 'owner' | 'history' | 'bookings' | 'createdAt' | 'updatedAt' | 'editor' | 'exchangeRate' | 'state'
 export type SetterBody<ModelType> = SetterPartial<ModelType, NoPost>
 
 // biome-ignore lint/suspicious/noExplicitAny: to complex typing
@@ -162,7 +165,7 @@ export interface DeleterOptions<ModelType, ModelMethods = any> extends DeleterQu
   // biome-ignore lint/suspicious/noExplicitAny: to complex typing
   referenceChecks?: { paths: string[]; model: Model<any>; conditions?: { [key: string]: any } }[]
   minDocumentCount?: number
-  cb?: (data: DeleteResult) => unknown
+  cb?: (data: DeleteResult & { deletedObject: ModelType }) => unknown
   checkOldObject?: (oldObject: HydratedDocument<ModelType> & ModelMethods) => Promise<boolean>
 }
 
@@ -170,7 +173,10 @@ export interface DeleterForArrayElemetQuery extends DeleterQuery {
   parentId: string
 }
 
-export interface DeleterForArrayElemetOptions<ModelType, ArrayElementType> extends DeleterOptions<ModelType>, DeleterForArrayElemetQuery {
+// biome-ignore lint/suspicious/noExplicitAny: to complex typing
+export interface DeleterForArrayElemetOptions<ModelType, ArrayElementType, ModelMethods = any> extends DeleterForArrayElemetQuery {
+  cb?: (data: ArrayElementType) => unknown
+  checkOldObject?: (oldObject: HydratedDocument<ModelType> & ModelMethods) => Promise<boolean>
   arrayElementKey: keyof ModelType
   beforeDelete?(element: ArrayElementType): Promise<unknown>
 }
@@ -216,7 +222,7 @@ export class Controller extends TsoaController {
 
     // find all
     // conditions
-    let conditions: FilterQuery<ModelType> = {}
+    let conditions: QueryFilter<ModelType> = {}
     if (options.query.filterJSON) {
       conditions = JSON.parse(Base64.decode(options.query.filterJSON))
     }
@@ -338,7 +344,7 @@ export class Controller extends TsoaController {
     }
     if (options.referenceChecks) {
       for (const referenceCheck of options.referenceChecks) {
-        const filter: FilterQuery<unknown> = {}
+        const filter: QueryFilter<unknown> = {}
         filter.$or = []
         for (const path of referenceCheck.paths) {
           const conditions = structuredClone(referenceCheck.conditions) || {}
@@ -351,12 +357,12 @@ export class Controller extends TsoaController {
         }
       }
     }
-
-    const result = await doc.deleteOne()
+    const deletedObject = doc.toObject()
+    const deleteResult = await doc.deleteOne()
     if (options.cb) {
-      options.cb(result)
+      options.cb({ ...deleteResult, deletedObject })
     }
-    return result
+    return deleteResult
   }
 
   async deleterForArrayElement<ModelType, ArrayElementType extends { _id: Types.ObjectId }>(
@@ -370,25 +376,25 @@ export class Controller extends TsoaController {
     if (options.checkOldObject && !(await options.checkOldObject(parentObject))) {
       throw new NotAllowedError(`Not allowed to modify this ${model.modelName} - ${String(options.arrayElementKey)}`)
     }
-    let found = false
+    let deletedElement: ArrayElementType | undefined
     const arr = parentObject[options.arrayElementKey] as Array<ArrayElementType>
     for (let i = 0; i < arr.length; i++) {
       if (arr[i]._id.equals(options._id)) {
-        found = true
         if (options.beforeDelete) {
           await options.beforeDelete(arr[i])
         }
+        deletedElement = arr[i]
         arr.splice(i, 1)
         break
       }
     }
-    if (!found) {
+    if (!deletedElement) {
       throw new NotFoundError(`No ${model.modelName} - ${String(options.arrayElementKey)} for _id: '${options._id}' found.`)
     }
     parentObject.markModified(options.arrayElementKey)
     const result: ModelType = (await parentObject.save()).toObject()
     if (options.cb) {
-      options.cb({ acknowledged: true, deletedCount: 1 })
+      options.cb(deletedElement)
     }
     return { message: 'alerts.successDeleting', result: result }
   }

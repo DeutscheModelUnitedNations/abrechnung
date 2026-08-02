@@ -1,7 +1,8 @@
 import type { mongo, Types } from 'mongoose'
 import { DocumentFileType, documentFileTypes, ImageType, imageTypes } from './utils/file.js'
-export { documentFileTypes, imageTypes }
+
 export type { DocumentFileType, ImageType }
+export { documentFileTypes, imageTypes }
 
 /**
  * @pattern ^[0-9a-fA-F]{24}$
@@ -9,10 +10,20 @@ export type { DocumentFileType, ImageType }
 export type _id = string | Types.ObjectId
 export type binary = mongo.Binary | Blob
 
+/** A browser-safe authentication snapshot used to bind offline data to one session context. */
+export interface AuthContext {
+  userId: string
+  cacheScope: string
+  expiresAt: string
+  permissions: Partial<Record<Access, boolean>>
+}
+
 export type IdDocument<idType = _id> = idType | { _id: idType }
 
-export function idDocumentToId<idType>(doc: IdDocument<idType>): idType {
-  return doc ? (doc as { _id: idType })._id || (doc as idType) : doc
+type IdOf<T> = T extends { _id: infer I } ? I : T
+
+export function idDocumentToId<T>(doc: T): IdOf<T> {
+  return doc && typeof doc === 'object' && '_id' in doc ? (doc as { _id: IdOf<T> })._id : (doc as IdOf<T>)
 }
 
 /**
@@ -20,16 +31,37 @@ export function idDocumentToId<idType>(doc: IdDocument<idType>): idType {
  */
 export type HexColor = string
 
+export const webhookMethods = ['POST', 'PUT', 'PATCH'] as const
+export type WebhookMethod = (typeof webhookMethods)[number]
+
+export type Webhook<idType extends _id = _id> = {
+  name: string
+  executionOrder: number
+  reportType: ReportType[]
+  onState: (AnyState | 35 | 45)[]
+  script?: string | null
+  isActive: boolean
+  request: {
+    url: string
+    headers: { [key: string]: string }
+    method: WebhookMethod
+    convertBodyToFormData: boolean
+    pdfFormFieldName?: string | null
+    body?: unknown
+  }
+  _id: idType
+}
+
 export interface Settings<idType extends _id = _id> {
   userCanSeeAllProjects: boolean
   onlyShowProjectNamesOnAssigned: boolean
   autoSelectAvailableAdvances: boolean
+  preventOwnersFromDeletingReportsAfterReviewCompleted: boolean
   defaultAccess: { [key in Access]: boolean }
   disableReportType: { [key in ReportType]: boolean }
-  retentionPolicy: {
-    [key in RetentionType]: number
-  }
   uploadTokenExpireAfterSeconds: number
+  exchangeRateProvider: ExchangeRateProviderName
+  isReadOnly: boolean
   version: string
   /**
    * @Hidden
@@ -72,12 +104,28 @@ export interface ldapauthSettings {
   givenNameAttribute: string
 }
 
+export const smtpAuthTypes = ['Login', 'OAuth2'] as const
+export type SMTPAuthType = (typeof smtpAuthTypes)[number]
+
 export interface smtpSettings {
   host: string
   port: number
   secure: boolean
-  user: string
-  password: string
+  auth:
+    | { authType: 'Login'; user: string; pass: string }
+    | {
+        authType: 'OAuth2'
+        user?: string
+        clientId?: string
+        clientSecret?: string
+        refreshToken?: string
+        accessUrl?: string
+        accessToken?: string
+        privateKey?: string // | { key: string; passphrase: string }
+        expires?: number
+        timeout?: number
+        serviceClient?: string
+      }
   senderAddress: string
 }
 
@@ -99,6 +147,34 @@ export interface ConnectionSettings<idType extends _id = _id> {
   smtp?: smtpSettings | null
 
   _id: idType
+}
+
+export type Schedule =
+  | { type: 'everyXHour'; value: number }
+  | { type: 'daily'; hour: number; minute: number }
+  | { type: 'weekly'; weekdays: number[]; hour: number; minute: number }
+
+export interface IntegrationScheduleSettings {
+  enabled: boolean
+  schedule: Schedule
+}
+
+export interface IntegrationSettings<idType extends _id = _id> {
+  integrationKey: string
+  schedules: { [scheduleKey: string]: IntegrationScheduleSettings }
+  settings: Record<string, unknown>
+  _id: idType
+}
+
+export interface RetentionIntegrationSettings<idType extends _id = _id> extends IntegrationSettings<idType> {
+  integrationKey: 'retentionPolicy'
+  schedules: { apply: IntegrationScheduleSettings }
+  settings: { [key in RetentionType]: number }
+}
+export interface LumpSumIntegrationSettings<idType extends _id = _id> extends IntegrationSettings<idType> {
+  integrationKey: 'lumpSums'
+  schedules: { sync: IntegrationScheduleSettings }
+  settings: Record<string, never>
 }
 
 export interface DisplaySettings<idType extends _id = _id> {
@@ -131,6 +207,17 @@ export interface PrintSettingsBase {
   borderThickness: number
   cellPadding: { x: number; bottom: number }
   pageSize: { width: number; height: number }
+  options: { [key in ReportType]: PrintOptions }
+}
+
+export interface PrintOptions {
+  reviewDates: boolean
+  metaInformation: boolean
+  project: boolean
+  comments: boolean
+  notes: boolean
+  bookingRemark: boolean
+  additionalOwnerDetails: boolean
 }
 
 export interface BadgeStyle {
@@ -141,7 +228,9 @@ export interface BadgeStyle {
 export interface Category<idType extends _id = _id> {
   name: string
   style: BadgeStyle
+  ledgerAccount: LedgerAccount<idType>
   isDefault: boolean
+  for: 'Travel' | 'ExpenseReport' | 'both'
   _id: idType
 }
 
@@ -152,16 +241,20 @@ export type CountryCode = string
 
 export interface CountrySimple {
   _id: CountryCode
-  name: { de: string; en: string }
+  name: { [key in Locale]: string }
   needsA1Certificate?: boolean | null
-  alias?: { de: string[]; en?: string[] }
+  alias?: { [key in Locale]?: string[] }
   flag?: string | null
   currency?: CurrencyCode | null
 }
 
-export interface CountryLumpSum extends LumpSum {
-  validFrom: Date | string
+export interface LumpSumWithSpecials extends LumpSum {
   specials?: ({ city: string } & LumpSum)[]
+}
+
+export interface CountryLumpSum extends LumpSumWithSpecials {
+  validFrom: Date | string
+  validUntil: Date | string | null
 }
 
 export interface Country extends CountrySimple {
@@ -170,10 +263,10 @@ export interface Country extends CountrySimple {
 }
 
 export interface ExchangeRate {
+  provider: ExchangeRateProviderName
   currency: string
-  value: number
-  year: number
-  month: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
+  rate: number
+  date: Date
 }
 
 /**
@@ -182,7 +275,7 @@ export interface ExchangeRate {
 export type CurrencyCode = string
 
 export interface Currency {
-  name: { de: string; en: string }
+  name: { [key in Locale]: string }
   _id: CurrencyCode
   subunit?: string | null
   symbol?: string | null
@@ -234,6 +327,10 @@ export interface OrganisationSimple<idType extends _id = _id> {
   _id: idType
 }
 
+export interface OrganisationWithVatSettings<idType extends _id = _id> extends OrganisationSimple<idType> {
+  accountingSettings: { vatAccountingEnabled: boolean; vatRates: Pick<VatRate<idType>, 'rate'>[] }
+}
+
 export interface ProjectSimple<idType extends _id = _id> {
   identifier: string
   organisation: idType
@@ -256,8 +353,37 @@ export interface ProjectUsers<idType extends _id = _id> {
 
 export interface ProjectWithUsers<idType extends _id = _id> extends Project<idType>, ProjectUsers<idType> {}
 
+export interface AccountingSettings<idType extends _id = _id> {
+  employeeLiabilitiesAccount: LedgerAccount<idType>
+  employeeClaimsAccount: LedgerAccount<idType>
+  employeeSpecificTemplate?: string | null
+  accountMapping: { [key in TravelExpenseItem]: LedgerAccount<idType> }
+  vatAccountingEnabled: boolean
+  vatRates: VatRate<idType>[]
+  payoutAccounts: OrganisationBankAccount<idType>[]
+  includeBankBookings: boolean
+}
+
+export interface BankAccount {
+  accountHolder: string
+  iban: string
+  bic?: string | null
+}
+
+export interface OrganisationBankAccount<idType extends _id = _id> extends BankAccount {
+  _id: idType
+  name: string
+  ledgerAccount?: LedgerAccount<idType> | null
+}
+
+export interface VatRate<idType extends _id = _id> {
+  rate: number
+  inputTaxAccount?: LedgerAccount<idType> | null
+}
+
 export interface Organisation<idType extends _id = _id, dataType extends binary = binary> extends OrganisationSimple<idType> {
   subfolderPath: string
+  accountingSettings: AccountingSettings<idType>
   reportEmail?: string | null
   a1CertificateEmail?: string | null
   bankDetails?: string | null
@@ -267,12 +393,12 @@ export interface Organisation<idType extends _id = _id, dataType extends binary 
 }
 
 export interface User<idType extends _id = _id, dataType extends binary = binary> extends UserSimple<idType> {
+  employeeId?: string | null
   fk: { microsoft?: string | null; ldapauth?: string | null; magiclogin?: string | null; oidc?: string | null; httpBearer?: string | null }
   access: {
     [key in Access]: boolean
   }
   projects: UserProjects<idType>
-  loseAccessAt?: null | Date | string
   settings: {
     language: Locale
     hasUserSetLanguage: boolean
@@ -280,8 +406,11 @@ export interface User<idType extends _id = _id, dataType extends binary = binary
     lastCountries: CountrySimple[]
     insurance?: HealthInsurance<idType> | null
     organisation?: OrganisationSimple<idType> | null
+    bankAccount?: BankAccount | null
     showInstallBanner: boolean
   }
+  loseAccessAt?: null | Date | string
+  additionalDetails?: string | null
   vehicleRegistration?: DocumentFile<idType, dataType>[] | null
   token?: Token<idType, dataType> | null
 }
@@ -291,7 +420,7 @@ export interface UserWithName<idType extends _id = _id> {
   name: Name
 }
 
-export interface UserWithNameAndProject<idType extends _id = _id> extends UserWithName<idType> {
+export interface UserSimpleWithProject<idType extends _id = _id> extends UserSimple<idType> {
   projects: UserProjects<idType>
 }
 
@@ -304,7 +433,8 @@ export const tokenAdminUser = {
   fk: { magiclogin: 'admin@to.ken' },
   email: 'admin@to.ken',
   name: { familyName: 'Token Access', givenName: 'Admin' },
-  access: { user: true, admin: true }
+  access: { user: true, admin: true },
+  isActive: async () => true
 }
 
 export interface BaseCurrencyMoneyNotNull extends BaseCurrencyMoney {
@@ -327,9 +457,22 @@ export interface MoneyPlus<idType extends _id = _id, dataType extends binary = b
   date?: Date | string | null
 }
 
-export interface Cost<idType extends _id = _id, dataType extends binary = binary> extends MoneyPlus<idType, dataType> {
+export interface CostPosition<idType extends _id = _id> {
+  kind: 'manual' | 'ownCar'
+  description?: string | null
+  grossAmount: number
+  vatRate: number
+  project: ProjectSimple<idType>
+  category: Category<idType>
+  _id?: idType
+}
+
+export interface Cost<idType extends _id = _id, dataType extends binary = binary> {
+  positions: CostPosition<idType>[]
+  currency: Currency
+  exchangeRate?: { date: Date | string; rate: number } | null
   receipts: DocumentFile<idType, dataType>[]
-  date: Date | string
+  date?: Date | string | null
 }
 
 export interface Stage<idType extends _id = _id, dataType extends binary = binary> {
@@ -341,7 +484,6 @@ export interface Stage<idType extends _id = _id, dataType extends binary = binar
   transport: Transport
   cost: Cost<idType, dataType>
   purpose: Purpose
-  project?: ProjectSimple<idType> | null
   note?: string | null
   _id: idType
 }
@@ -349,7 +491,6 @@ export interface Stage<idType extends _id = _id, dataType extends binary = binar
 export interface Expense<idType extends _id = _id, dataType extends binary = binary> {
   description: string
   cost: Cost<idType, dataType>
-  project?: ProjectSimple<idType> | null
   note?: string | null
   _id: idType
 }
@@ -394,10 +535,14 @@ export interface TravelDay<idType extends _id = _id> {
 export type Log<idType extends _id = _id, S extends AnyState = AnyState> = {
   [key in S]?: { on: Date | string; by: UserSimple<idType> }
 }
+interface ReportOwner<idType extends _id = _id> extends UserSimple<idType> {
+  additionalDetails?: string | null
+}
 
 export interface ReportSimple<idType extends _id = _id, S extends AnyState = AnyState> {
   name: string
-  owner: UserSimple<idType>
+  reference: number
+  owner: ReportOwner<idType>
   editor: UserSimple<idType>
   project: Project<idType>
   comment?: string | null
@@ -411,6 +556,7 @@ export interface ReportSimple<idType extends _id = _id, S extends AnyState = Any
 }
 
 export interface Report<idType extends _id = _id, S extends AnyState = AnyState> extends ReportSimple<idType, S> {
+  bookings: Booking<idType>[]
   history: idType[]
   historic: boolean
 }
@@ -422,12 +568,13 @@ export interface AdvanceBase<idType extends _id = _id> {
   balance: BaseCurrencyMoneyNotNull
   reason: string
   state: AdvanceState
+  receivedOn?: Date | string | null
   settledOn?: Date | string | null
   _id: idType
 }
 
 export interface AdvanceSimple<idType extends _id = _id> extends ReportSimple<idType, AdvanceState>, AdvanceBase<idType> {
-  offsetAgainst: { type: ReportModelName; report: { _id: idType; name: string } | null | undefined; amount: number }[]
+  offsetAgainst: { type: ReportModelNameWithoutAdvance | 'offsetEntry'; reportId?: idType | null; subject: string; amount: number }[]
 }
 
 export interface Advance<idType extends _id = _id> extends Report<idType, AdvanceState>, AdvanceSimple<idType> {}
@@ -462,7 +609,6 @@ export interface Travel<idType extends _id = _id, dataType extends binary = bina
 export interface ExpenseReportSimple<idType extends _id = _id> extends ReportSimple<idType, ExpenseReportState> {
   addUp: AddUp<idType, ExpenseReport<_id, binary>>[]
   advances: AdvanceBase<idType>[]
-  category: Category<idType>
 }
 export interface ExpenseReport<idType extends _id = _id, dataType extends binary = binary>
   extends ExpenseReportSimple<idType>,
@@ -489,6 +635,16 @@ export interface ApprovedTravel<idType extends _id = _id> extends TravelBase {
   appliedForOn: Date | string
   approvedBy: string
   approvedOn: Date | string
+}
+
+export interface ReportUsage<idType extends _id = _id> {
+  reportId: idType
+  reference: number
+  reportModelName: ReportModelName
+  organisationId: idType
+  projectId: idType
+  createdAt: Date | string
+  updatedAt: Date | string
 }
 
 export const State = { REJECTED: -10, APPLIED_FOR: 0, EDITABLE_BY_OWNER: 10, IN_REVIEW: 20, BOOKABLE: 30, BOOKED: 40 } as const
@@ -531,7 +687,66 @@ export enum HealthCareCostState {
 export type HealthCareCostStateStrings = keyof typeof HealthCareCostState
 export const healthCareCostStates = Object.values(HealthCareCostState).filter((v) => typeof v === 'number')
 
-export const locales = ['de', 'en'] as const
+export type BookingSide = 'debit' | 'credit'
+
+export interface Booking<idType extends _id = _id> {
+  side: BookingSide
+  ledgerAccount: LedgerAccount<idType>
+  amount: number
+  date: Date | string
+  project: ProjectSimple<idType>
+  remark?: string | null
+  _id: idType
+}
+
+export interface BookingExportRow<idType extends _id = _id> extends Booking<idType> {
+  report: { _id: idType; name: string; reference: number }
+  reportType: ReportModelName
+  employee: { _id: idType; name: User['name']; employeeId: User['employeeId'] }
+}
+
+export interface BookingExportAccount<idType extends _id = _id> {
+  _id: idType
+  name: string
+  maskedIban: string
+}
+
+export interface BookingExportOrganisation<idType extends _id = _id> {
+  _id: idType
+  name: string
+  amount: number
+  accounts: BookingExportAccount<idType>[]
+}
+
+export interface BookingExportPreview<idType extends _id = _id> {
+  organisations: BookingExportOrganisation<idType>[]
+  errors: string[]
+}
+
+export interface BookingExportPackageRequest<idType extends _id = _id> {
+  reports: IdDocument<idType>[]
+  executionDate: string
+  bankAccounts: { organisation: idType; account: idType }[]
+}
+
+export interface SepaExportFile {
+  organisation: { name: string }
+  account: { lastFour: string }
+  xml: string
+}
+
+export interface BookingExportPackage<idType extends _id = _id> {
+  bookings: BookingExportRow<idType>[]
+  sepaFiles: SepaExportFile[]
+}
+
+export interface LedgerAccount<idType extends _id = _id> {
+  identifier: string
+  name: string
+  _id: idType
+}
+
+export const locales = ['de', 'en', 'fr', 'ru', 'es', 'kk'] as const
 export type Locale = (typeof locales)[number]
 
 export const anyStates = new Set([...travelStates, ...expenseReportStates, ...healthCareCostStates, ...advanceStates])
@@ -545,7 +760,11 @@ export type TransportType = (typeof transportTypes)[number]
 export const distanceRefundTypes = ['halfCar', 'car'] as const
 export type DistanceRefundType = (typeof distanceRefundTypes)[number]
 
-export type ReportModelName = 'Travel' | 'ExpenseReport' | 'HealthCareCost'
+export const reportModelNamesWithoutAdvance = ['Travel', 'ExpenseReport', 'HealthCareCost'] as const
+export type ReportModelNameWithoutAdvance = (typeof reportModelNamesWithoutAdvance)[number]
+
+export const reportModelNames = [...reportModelNamesWithoutAdvance, 'Advance'] as const
+export type ReportModelName = (typeof reportModelNames)[number]
 
 export const reportTypes = ['travel', 'expenseReport', 'healthCareCost', 'advance'] as const
 export type ReportType = (typeof reportTypes)[number]
@@ -556,7 +775,10 @@ export type NameDisplayFormat = (typeof nameDisplayFormats)[number]
 export const defaultLastPlaceOfWorkSettings = ['destinationPlace', 'lastEndLocation'] as const
 export type DefaultLastPlaceOfWorkSetting = (typeof defaultLastPlaceOfWorkSettings)[number]
 
-export function getReportTypeFromModelName(modelName: ReportModelName) {
+export const travelExpenseItems = ['cateringLumpSum', 'overnightLumpSum', 'airplane', 'shipOrFerry', 'otherTransport', 'ownCar'] as const
+export type TravelExpenseItem = (typeof travelExpenseItems)[number]
+
+export function getReportTypeFromModelName(modelName: ReportModelName): ReportType {
   switch (modelName) {
     case 'Travel':
       return 'travel'
@@ -564,6 +786,47 @@ export function getReportTypeFromModelName(modelName: ReportModelName) {
       return 'expenseReport'
     case 'HealthCareCost':
       return 'healthCareCost'
+    case 'Advance':
+      return 'advance'
+  }
+}
+
+export function getReportModelNameFromType(reportType: ReportType): ReportModelName {
+  switch (reportType) {
+    case 'travel':
+      return 'Travel'
+    case 'expenseReport':
+      return 'ExpenseReport'
+    case 'healthCareCost':
+      return 'HealthCareCost'
+    case 'advance':
+      return 'Advance'
+  }
+}
+
+export function getStateEnumFromModelName(modelName: ReportModelName): AnyStateEnum {
+  switch (modelName) {
+    case 'Travel':
+      return TravelState
+    case 'ExpenseReport':
+      return ExpenseReportState
+    case 'HealthCareCost':
+      return HealthCareCostState
+    case 'Advance':
+      return AdvanceState
+  }
+}
+export function getModelNameFromReport(report: Travel | ExpenseReport | HealthCareCost | Advance): ReportModelName
+// biome-ignore lint/suspicious/noExplicitAny: generic type is needed for type guard
+export function getModelNameFromReport(report: any): ReportModelName {
+  if (reportIsTravel(report)) {
+    return 'Travel'
+  } else if (reportIsHealthCareCost(report)) {
+    return 'HealthCareCost'
+  } else if (reportIsAdvance(report)) {
+    return 'Advance'
+  } else {
+    return 'ExpenseReport'
   }
 }
 
@@ -574,8 +837,6 @@ export const retention = [
   'mailXDaysBeforeDeletion'
 ] as const
 export type RetentionType = (typeof retention)[number]
-
-export type schemaNames = 'Travel' | 'ExpenseReport' | 'HealthCareCost'
 
 export const accesses = [
   'user',
@@ -600,8 +861,11 @@ export type Access = (typeof accesses)[number]
 export const meals = ['breakfast', 'lunch', 'dinner'] as const
 export type Meal = (typeof meals)[number]
 
-export const fontNames = ['NotoSans'] as const
+export const fontNames = ['NotoSans', 'Inter'] as const
 export type FontName = (typeof fontNames)[number]
+
+export const exchangeRateProviderNames = ['InforEuro', 'Frankfurter'] as const
+export type ExchangeRateProviderName = (typeof exchangeRateProviderNames)[number]
 
 export type PageOrientation = 'portrait' | 'landscape'
 
@@ -636,7 +900,7 @@ export interface SETResponse<T> {
   result: T
 }
 
-export const userReplaceCollections = ['travels', 'expensereports', 'healthcarecosts'] as const
+export const userReplaceCollections = ['travels', 'expensereports', 'healthcarecosts', 'advances'] as const
 export type UserReplaceReferencesResult = {
   [key in (typeof userReplaceCollections)[number] | 'documentfiles']?: { matchedCount: number; modifiedCount: number }
 }
@@ -693,6 +957,7 @@ type AddUpBase<idType extends _id = _id> = {
   advance: BaseCurrencyMoneyNotNull
   expenses: BaseCurrencyMoneyNotNull
   advanceOverflow: boolean
+  negativeTotal: boolean
 }
 
 export interface AddUpTravel {
@@ -725,5 +990,14 @@ export const objectIdRegex = /^[0-9a-fA-F]{24}$/
 
 export const hexColorRegex = /^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/
 
-export const baseCurrency: Currency = { _id: 'EUR', flag: '🇪🇺', name: { de: 'Euro', en: 'euro' }, subunit: 'Cent', symbol: '€' }
+export const refStringRegex = /^[TEHA](-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{3})+$/
+export const refStringRegexLax = /^[TEHA](-[0123456789ABCDEFGHJKMNPQRSTVWXYZILO]{3})+$/i
+
+export const baseCurrency: Currency = {
+  _id: 'EUR',
+  name: { de: 'Euro', en: 'euro', fr: 'euro', es: 'euro', ru: 'евро', kk: 'Еуро' },
+  subunit: 'Cent',
+  symbol: '€',
+  flag: '🇪🇺'
+}
 export const defaultLocale: Locale = 'de'

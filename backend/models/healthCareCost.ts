@@ -1,8 +1,20 @@
 import { AddUp, Comment, HealthCareCost, HealthCareCostState, healthCareCostStates } from 'abrechnung-common/types.js'
 import { addUp } from 'abrechnung-common/utils/scripts.js'
-import mongoose, { HydratedDocument, Model, model, mongo, Query, Schema, Types } from 'mongoose'
-import { addExchangeRate } from './exchangeRate.js'
-import { addToProjectBalance, costObject, offsetAdvance, populateAll, populateSelected, requestBaseSchema, setLog } from './helper.js'
+import { HydratedDocument, Model, model, mongo, Query, Schema, Types } from 'mongoose'
+import { createOperationServices } from '../factory.js'
+import {
+  addHistoryEntry,
+  addReferenceOnNewDocs,
+  addToProjectBalance,
+  getCostPositionValidationIssues,
+  offsetAdvance,
+  populateAll,
+  populateSelected,
+  positionedCostObject,
+  requestBaseSchema,
+  setLog
+} from './helper.js'
+import ReportUsage from './reportUsage.js'
 
 interface Methods {
   saveToHistory(): Promise<void>
@@ -10,19 +22,15 @@ interface Methods {
   addComment(): void
 }
 
-// biome-ignore lint/complexity/noBannedTypes: mongoose uses {} as type
-type HealthCareCostModel = Model<HealthCareCost<Types.ObjectId, mongo.Binary>, {}, Methods>
-
 const healthCareCostSchema = () =>
-  new Schema<HealthCareCost<Types.ObjectId, mongo.Binary>, HealthCareCostModel, Methods>(
+  new Schema<HealthCareCost<Types.ObjectId, mongo.Binary>, Model<HealthCareCost<Types.ObjectId, mongo.Binary>>, Methods>(
     Object.assign(requestBaseSchema(healthCareCostStates, HealthCareCostState.IN_WORK, 'HealthCareCost', true, false), {
       patientName: { type: String, trim: true, required: true },
       insurance: { type: Schema.Types.ObjectId, ref: 'HealthInsurance', required: true },
       expenses: [
         {
           description: { type: String, required: true },
-          cost: costObject(true, true, true),
-          project: { type: Schema.Types.ObjectId, ref: 'Project' },
+          cost: positionedCostObject({ required: true, receiptsRequired: false }),
           note: { type: String }
         }
       ]
@@ -37,12 +45,14 @@ const populates = {
   expenses: [
     { path: 'expenses.cost.currency' },
     { path: 'expenses.cost.receipts', select: { name: 1, type: 1 } },
-    { path: 'expenses.project', select: { identifier: 1, organisation: 1 } }
+    { path: 'expenses.cost.positions.project', select: { identifier: 1, organisation: 1 } },
+    { path: 'expenses.cost.positions.category' }
   ],
   addUp: [{ path: 'addUp.project', select: { identifier: 1, organisation: 1 } }],
   advances: [{ path: 'advances', select: { name: 1, balance: 1, budget: 1, state: 1, project: 1 } }],
+  bookings: [{ path: 'bookings.ledgerAccount' }, { path: 'bookings.project', select: { identifier: 1, organisation: 1 } }],
   project: [{ path: 'project' }],
-  owner: [{ path: 'owner', select: { name: 1, email: 1 } }],
+  owner: [{ path: 'owner', select: { name: 1, email: 1, additionalDetails: 1 } }],
   editor: [{ path: 'editor', select: { name: 1, email: 1 } }],
   log: healthCareCostStates.map((state) => ({ path: `log.${state}.by`, select: { name: 1, email: 1 } })),
   comments: [{ path: 'comments.author', select: { name: 1, email: 1 } }]
@@ -55,76 +65,90 @@ schema.pre(
   }
 )
 
-schema.pre('deleteOne', { document: true, query: false }, function (this: HealthCareCostDoc) {
-  for (const historyId of this.history) {
-    model('HealthCareCost').deleteOne({ _id: historyId }).exec()
-  }
+schema.pre('deleteOne', { document: true, query: false }, async function () {
+  const receiptIds: (string | Types.ObjectId)[] = []
   for (const expense of this.expenses) {
     if (expense.cost) {
       for (const receipt of expense.cost.receipts) {
-        model('DocumentFile').deleteOne({ _id: receipt._id }).exec()
+        receiptIds.push(receipt._id)
       }
     }
   }
+  await Promise.all([
+    model('HealthCareCost').deleteMany({ _id: { $in: this.history } }),
+    model('DocumentFile').deleteMany({ _id: { $in: receiptIds } })
+  ])
 })
 
-schema.methods.saveToHistory = async function (this: HealthCareCostDoc) {
-  const m = model<HealthCareCost<Types.ObjectId, mongo.Binary>, HealthCareCostModel>('HealthCareCost')
-  const doc = await m.findOne({ _id: this._id }, { history: 0 }).lean()
-  if (!doc) {
-    throw new Error('Health Care Cost not found')
-  }
-  doc._id = new mongoose.Types.ObjectId()
-  doc.updatedAt = new Date()
-  doc.historic = true
-  const old = new m(doc)
-  old.$locals.SKIP_POST_SAFE_HOOK = true
-  await old.save({ timestamps: false })
-  this.history.push(old._id)
-  this.markModified('history')
+schema.methods.saveToHistory = async function () {
+  await addHistoryEntry(this, 'HealthCareCost')
   this.$locals.SKIP_POST_SAFE_HOOK = true
   await this.save()
   this.$locals.SKIP_POST_SAFE_HOOK = false
 }
 
-schema.methods.calculateExchangeRates = async function (this: HealthCareCostDoc) {
+schema.methods.calculateExchangeRates = async function () {
+  const { currencyConverter } = createOperationServices()
   const promiseList = []
   for (const expense of this.expenses) {
-    promiseList.push(addExchangeRate(expense.cost, expense.cost.date))
+    promiseList.push(currencyConverter.addCostExchangeRate(expense.cost, expense.cost.date as Date))
   }
-  await Promise.allSettled(promiseList)
+  await Promise.all(promiseList)
 }
 
-schema.methods.addComment = function (this: HealthCareCostDoc) {
+schema.methods.addComment = function () {
   if (this.comment) {
     this.comments.push({ text: this.comment, author: this.editor, toState: this.state } as Comment<Types.ObjectId, HealthCareCostState>)
     this.comment = undefined
   }
 }
 
-schema.pre('validate', function (this: HealthCareCostDoc) {
+schema.pre('validate', function () {
   this.addComment()
 })
 
-schema.pre('save', async function (this: HealthCareCostDoc) {
+schema.pre('validate', async function () {
+  if (!this.isNew && !this.isModified('expenses')) return
+  const issues = await getCostPositionValidationIssues(
+    this.expenses.map(({ cost }) => cost),
+    'ExpenseReport',
+    true,
+    false
+  )
+  for (const issue of issues) {
+    this.invalidate(`expenses.${issue.path.replace(/^(\d+)\./, '$1.cost.')}`, issue.message)
+  }
+})
+
+schema.pre('save', async function () {
   await populateAll(this, populates)
 
   await this.calculateExchangeRates()
   this.addUp = addUp(this) as AddUp<Types.ObjectId, HealthCareCost<Types.ObjectId, mongo.Binary>>[]
   await populateAll(this, populates)
   setLog(this)
+  await addReferenceOnNewDocs(this, 'HealthCareCost')
+  if (!this.historic && this.state < HealthCareCostState.REVIEW_COMPLETED) {
+    this.bookings = []
+  }
 })
 
-schema.post('save', async function (this: HealthCareCostDoc) {
+schema.post('save', async function () {
   if (this.$locals.SKIP_POST_SAFE_HOOK) {
     return
   }
   if (this.state === HealthCareCostState.REVIEW_COMPLETED) {
     await addToProjectBalance(this)
     await offsetAdvance(this, 'HealthCareCost')
+    await ReportUsage.addOrUpdate(this)
   }
 })
 
-export default model<HealthCareCost<Types.ObjectId, mongo.Binary>, HealthCareCostModel>('HealthCareCost', schema)
+schema.index(
+  { name: 'text', 'comments.text': 'text', 'expenses.description': 'text' },
+  { weights: { name: 10, 'expenses.description': 6, 'comments.text': 3 } }
+)
+
+export default model('HealthCareCost', schema)
 
 export interface HealthCareCostDoc extends Methods, HydratedDocument<HealthCareCost<Types.ObjectId, mongo.Binary>> {}

@@ -1,17 +1,18 @@
 import test from 'ava'
-import { AddUpTravel, baseCurrency, Country, CountryCode, DocumentFile, TravelSettings } from '../types.js'
+import { AddUpTravel, baseCurrency, Category, Country, CountryCode, DocumentFile } from '../types.js'
 import { addUp } from '../utils/scripts.js'
 import { TravelCalculator } from './calculator.js'
-import travelSettings from './travelSettings.json' with { type: 'json' }
+import travelSettings from './travelSettings.js'
 
 const DE: Country = {
   _id: 'DE',
-  name: { de: 'Deutschland', en: 'Germany' },
+  name: { de: 'Deutschland', en: '', fr: '', es: '', ru: '', kk: '' },
   currency: 'EUR',
 
   lumpSums: [
     {
       validFrom: '2024-01-01',
+      validUntil: '2024-12-31',
       overnight: 18,
       catering8: 12,
       catering24: 24,
@@ -19,6 +20,7 @@ const DE: Country = {
     },
     {
       validFrom: '2025-01-01',
+      validUntil: null,
       overnight: 20,
       catering8: 14,
       catering24: 28,
@@ -29,13 +31,14 @@ const DE: Country = {
 
 const FR: Country = {
   _id: 'FR',
-  name: { de: 'Frankreich', en: 'France' },
+  name: { de: 'Frankreich', en: '', fr: '', es: '', ru: '', kk: '' },
   currency: 'EUR',
   needsA1Certificate: true,
 
   lumpSums: [
     {
       validFrom: '2024-01-01',
+      validUntil: '2024-12-31',
       overnight: 55,
       catering8: 16,
       catering24: 32,
@@ -43,6 +46,7 @@ const FR: Country = {
     },
     {
       validFrom: '2025-01-01',
+      validUntil: null,
       overnight: 45,
       catering8: 17,
       catering24: 34,
@@ -53,23 +57,23 @@ const FR: Country = {
 
 const AT: Country = {
   _id: 'AT',
-  name: { de: 'Österreich', en: 'Austria' },
+  name: { de: 'Österreich', en: '', fr: '', es: '', ru: '', kk: '' },
   currency: 'EUR',
 
   lumpSums: [
-    { validFrom: '2024-01-01', overnight: 32, catering8: 14, catering24: 28 },
-    { validFrom: '2025-01-01', overnight: 35, catering8: 15, catering24: 30 }
+    { validFrom: '2024-01-01', validUntil: '2024-12-31', overnight: 32, catering8: 14, catering24: 28 },
+    { validFrom: '2025-01-01', validUntil: null, overnight: 35, catering8: 15, catering24: 30 }
   ]
 }
 
 const LU: Country = {
   _id: 'LU',
-  name: { de: 'Luxemburg', en: 'Luxembourg' },
+  name: { de: 'Luxemburg', en: '', fr: '', es: '', ru: '', kk: '' },
   currency: 'EUR',
 
   lumpSums: [
-    { validFrom: '2024-01-01', overnight: 36, catering8: 14, catering24: 28 },
-    { validFrom: '2025-01-01', overnight: 38, catering8: 16, catering24: 32 }
+    { validFrom: '2024-01-01', validUntil: '2024-12-31', overnight: 36, catering8: 14, catering24: 28 },
+    { validFrom: '2025-01-01', validUntil: null, overnight: 38, catering8: 16, catering24: 32 }
   ]
 }
 
@@ -79,6 +83,14 @@ const userSimple1 = { _id: 'u1', name: { familyName: '1', givenName: 'User' }, e
 // const userSimple2 = { _id: 'u2', name: { familyName: '2', givenName: 'User' }, email: 'user2@email.com' }
 const projectSimple1 = { _id: 'p1', name: 'P1', identifier: '1', organisation: 'o1', balance: { amount: 0 } }
 const projectSimple2 = { _id: 'p2', name: 'P2', identifier: '2', organisation: 'o1', balance: { amount: 0 } }
+const category = {
+  _id: 'category',
+  name: 'Travel',
+  for: 'Travel',
+  isDefault: true,
+  style: { color: '#000000', text: 'white' },
+  ledgerAccount: { _id: 'account', identifier: '1', number: 1, name: 'Travel', accountingSettings: 'settings' }
+} as Category<string>
 
 const receipt1: DocumentFile<string, Blob> = {
   _id: 'r1',
@@ -91,6 +103,7 @@ const receipt1: DocumentFile<string, Blob> = {
 const travels = [
   {
     travel: {
+      reference: 1,
       _id: 'T-A',
       isCrossBorder: true,
       a1Certificate: { exactAddress: '10 Rue de Rivoli, 75001 Paris', destinationName: 'Kunde Paris' },
@@ -101,6 +114,7 @@ const travels = [
       endDate: '2025-03-13',
       project: projectSimple1,
       advances: [],
+      bookings: [],
       stages: [
         {
           _id: 'TA-S1',
@@ -194,6 +208,7 @@ const travels = [
   },
   {
     travel: {
+      reference: 2,
       _id: 'T-B',
       isCrossBorder: true,
       professionalShare: 1.0,
@@ -203,6 +218,7 @@ const travels = [
       endDate: '2025-02-03',
       project: projectSimple1,
       advances: [],
+      bookings: [],
       stages: [
         {
           _id: 'TB-S0',
@@ -268,7 +284,7 @@ const travels = [
         }
       ]
     },
-    expectedResult: { expenses: 1275, lumpSums: 33.6 },
+    expectedResult: { expenses: 1277.5, lumpSums: 33.6 },
     edgeCasesCovered: [
       'Flug >24h mit zweiter Mitternacht (AT als Flug-Pauschalland)',
       'Motorrad-Satz angewendet',
@@ -278,6 +294,7 @@ const travels = [
   },
   {
     travel: {
+      reference: 3,
       _id: 'T-C',
       isCrossBorder: true,
       professionalShare: 0.8,
@@ -287,6 +304,7 @@ const travels = [
       endDate: '2025-05-12',
       project: projectSimple1,
       advances: [],
+      bookings: [],
       stages: [
         {
           _id: 'TC-S0',
@@ -356,13 +374,37 @@ const travels = [
 const countries: Record<CountryCode, Country> = { DE, FR, AT, LU }
 const getCountryById = async (id: CountryCode) => countries[id]
 
-const calculator = new TravelCalculator(getCountryById, Object.assign(travelSettings, { _id: 'settings' }) as TravelSettings)
+const calculator = new TravelCalculator(getCountryById, { ...travelSettings, _id: 'settings' })
+
+function migrateLegacyCostsForTest(travel: (typeof travels)[number]['travel']) {
+  const records = [...travel.stages, ...travel.expenses]
+  for (const record of records) {
+    const legacyRecord = record as unknown as {
+      cost: { amount?: number; positions?: unknown[] }
+      project?: typeof projectSimple1
+      transport?: { type: string }
+    }
+    legacyRecord.cost.positions = [
+      {
+        _id: `${record._id}-position`,
+        kind: legacyRecord.transport?.type === 'ownCar' ? 'ownCar' : 'manual',
+        grossAmount: legacyRecord.cost.amount ?? 0,
+        vatRate: 0,
+        project: legacyRecord.project ?? travel.project,
+        category
+      }
+    ]
+    delete legacyRecord.cost.amount
+    delete legacyRecord.project
+  }
+  return travel as unknown as Parameters<typeof calculator.calc>[0]
+}
 
 for (const { travel, expectedResult } of travels) {
   test(`Travel ${travel._id} calculation`, async (t) => {
-    const { result } = await calculator.calc(travel)
+    const { result } = await calculator.calc(migrateLegacyCostsForTest(travel))
     if (result) {
-      const addUpResult = addUp<string, AddUpTravel>(result as AddUpTravel)
+      const addUpResult = addUp<string, AddUpTravel>(result as unknown as AddUpTravel)
       let resLumpSum = 0
       let resExpenses = 0
       for (const addUpRes of addUpResult) {

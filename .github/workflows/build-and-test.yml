@@ -12,15 +12,18 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: copy .env file
-        uses: canastro/copy-file-action@ae66602ce7d214dbd2e298c1db67a81388755a0a # master
-        with:
-          source: '.env.example'
-          target: '.env'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-development-env
       - name: Start dev Environment
-        run: docker compose up -d common db ldap inbucket
+        run: docker compose up -d common db redis ldap inbucket
       - name: Run common tests
         run: docker compose run common npm run test
+        # ensures setup runs without error, prevents migration test from failing in next release
+      - name: Run backend setup
+        run: docker compose run backend npm run setup
       - name: Run backend tests
         run: docker compose run backend npm run test
+      - name: Run frontend tests
+        run: docker compose run frontend npm run test
+      - name: Run frontend production build and bundle budgets
+        run: docker compose run -e NODE_ENV=production frontend npm run build

@@ -6,8 +6,8 @@ import {
   meals,
   TravelSettings
 } from 'abrechnung-common/types.js'
-import { HydratedDocument, model, Schema, Types } from 'mongoose'
-import { approvedTravelsPrinter, reportPrinter, travelCalculator } from '../factory.js'
+import { model, Schema, Types } from 'mongoose'
+import { BACKEND_CACHE } from '../db.js'
 
 export const travelSettingsSchema = () => {
   const distanceRefunds = {} as { [key in DistanceRefundType]: { type: NumberConstructor; min: 0; required: true; label: string } }
@@ -43,10 +43,8 @@ export const travelSettingsSchema = () => {
 
 const schema = travelSettingsSchema()
 
-schema.post('save', function (this: HydratedDocument<TravelSettings<Types.ObjectId>>) {
-  travelCalculator.updateSettings(this)
-  reportPrinter.setDistanceRefunds(this.distanceRefunds)
-  approvedTravelsPrinter.setAllowSpouseRefund(this.allowSpouseRefund)
+schema.post('save', async () => {
+  if (BACKEND_CACHE.initialized) await BACKEND_CACHE.refreshAndPublish()
 })
 
 export default model('TravelSettings', schema)

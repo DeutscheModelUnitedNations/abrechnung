@@ -15,7 +15,7 @@ const ENV = {
   COOKIE_SECRET: 'secret',
   MAGIC_LOGIN_SECRET: 'magic',
   MONGO_URL: 'mongodb://localhost:27017',
-  BACKEND_PORT: '3000',
+  REDIS_URL: 'redis://redis:6379',
   TRUST_PROXY: 'true'
 }
 
@@ -35,7 +35,7 @@ test('cleanFrontendEnv validates and normalizes urls', (t) => {
 
 test('cleanBackendEnv parses numbers and booleans', (t) => {
   const env = cleanBackendEnv(ENV)
-  t.is(env.BACKEND_PORT, 3000)
+  t.is(env.VITE_MAX_FILE_SIZE, 16_000_000)
   t.true(env.TRUST_PROXY)
 })
 

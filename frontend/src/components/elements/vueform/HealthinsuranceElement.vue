@@ -48,41 +48,33 @@
           </slot>
         </template>
 
-        <template v-slot:singlelabel="{ value }">
-          <span class="text-truncate ms-2 me-auto">
-            {{ value.name }}
-          </span>
-        </template>
+        <template v-slot:singlelabel="{ value }"><span class="text-truncate ms-2 me-auto"> {{ value.name }}</span></template>
 
         <template v-slot:multiplelabel="{ values }">
-          <span class="ms-2 mt-1 me-auto">
-            <span v-for="value of values" class="me-3">
-              {{ value.name }}
-            </span>
-          </span>
+          <span class="ms-2 mt-1 me-auto"> <span v-for="value of values" class="me-3"> {{ value.name }}</span> </span>
         </template>
 
         <template v-slot:option="{ option }">
-          <div>
-            {{ option.name }}
-          </div>
+          <div>{{ option.name }}</div>
         </template>
       </Multiselect>
     </template>
 
     <!-- Default element slots -->
-    <template v-for="(component, slot) in elementSlots" #[slot]
-      ><slot :name="slot" :el$="el$"><component :is="component" :el$="el$" /></slot
-    ></template>
+    <template v-for="(component, slot) in elementSlots" #[slot]>
+      <slot :name="slot" :el$="el$">
+        <component :is="component" :el$="el$" />
+      </slot>
+    </template>
   </component>
 </template>
 
 <script>
 import Multiselect from '@vueform/multiselect/src/Multiselect.vue'
 import { defineElement, SelectElement } from '@vueform/vueform'
-import { SelectElement as SelectElementTemplate } from '@vueform/vueform/dist/vueform'
+import { SelectElement as SelectElementTemplate } from '@vueform/vueform/dist/bootstrap'
 import { ref } from 'vue'
-import APP_LOADER from '@/appData.js'
+import APP_LOADER from '@/dataLoader.js'
 
 export default defineElement({
   ...SelectElement, // adding props, mixins, emits

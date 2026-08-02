@@ -1,309 +1,352 @@
-import { detectImageType } from 'abrechnung-common/utils/file.js'
+import countries from 'abrechnung-common/data/countries.json' with { type: 'json' }
+import currencies from 'abrechnung-common/data/currencies.json' with { type: 'json' }
+import { ReportModelName, travelExpenseItems } from 'abrechnung-common/types.js'
 import mongoose from 'mongoose'
 import semver from 'semver'
-import { formatter } from './factory.js'
 import { logger } from './logger.js'
 import Settings from './models/settings.js'
+
+const reportCollections: Record<ReportModelName, string> = {
+  Travel: 'travels',
+  ExpenseReport: 'expensereports',
+  HealthCareCost: 'healthcarecosts',
+  Advance: 'advances'
+}
+
+export async function initializeReferenceCounters() {
+  const counters = mongoose.connection.collection<{ _id: ReportModelName; value: number }>('referencecounters')
+
+  await Promise.all(
+    Object.entries(reportCollections).map(async ([modelName, collectionName]) => {
+      const [reportWithHighestReference] = await mongoose.connection
+        .collection<{ reference?: number; historic?: boolean }>(collectionName)
+        .find({ historic: { $ne: true }, reference: { $exists: true } })
+        .sort({ reference: -1 })
+        .limit(1)
+        .toArray()
+      await counters.updateOne(
+        { _id: modelName as ReportModelName },
+        { $max: { value: reportWithHighestReference?.reference || 0 } },
+        { upsert: true }
+      )
+    })
+  )
+}
 
 export async function checkForMigrations() {
   const settings = await Settings.findOne()
   if (settings?.migrateFrom) {
-    const migrateFrom = settings?.migrateFrom
-    const minVersion = '2.0.0'
+    const migrateFrom = settings.migrateFrom
+    const minVersion = '2.3.3'
     if (semver.lt(migrateFrom, minVersion)) {
       throw new Error(`Migration from v${migrateFrom} to v${settings.version} not supported. Migrate to v${minVersion} first.`)
     }
 
-    if (semver.lte(migrateFrom, '2.0.1')) {
-      logger.info('Apply migration from v2.0.1: add help button settings')
+    if (semver.lte(migrateFrom, '2.3.3')) {
+      logger.info('Apply migration from v2.3.3: update country and currency names')
 
-      await mongoose.connection
-        .collection('displaysettings')
-        .updateOne({}, { $set: { helpButton: { enabled: true, examinersMail: true, examinersMsTeams: true, customOptions: [] } } })
-    }
-
-    if (semver.lte(migrateFrom, '2.0.4')) {
-      logger.info('Apply migration from v2.0.4: rewrite states')
-
-      await mongoose.connection
-        .collection('displaysettings')
-        .updateOne(
-          {},
-          {
-            $set: {
-              stateColors: {
-                '-10': { color: '#E8998D', text: 'black' },
-                '0': { color: '#cae5ff', text: 'black' },
-                '10': { color: '#89BBFE', text: 'black' },
-                '20': { color: '#6f8ab7', text: 'white' },
-                '30': { color: '#615d6c', text: 'white' },
-                '40': { color: '#5E8C61', text: 'white' }
-              }
-            }
-          }
-        )
-      // biome-ignore-start lint/suspicious/noThenProperty: mongodb uses then
-      const switchTravelStates = (field: string) => ({
-        $switch: {
-          branches: [
-            { case: { $eq: [field, 'rejected'] }, then: -10 },
-            { case: { $eq: [field, 'appliedFor'] }, then: 0 },
-            { case: { $eq: [field, 'approved'] }, then: 10 },
-            { case: { $eq: [field, 'underExamination'] }, then: 20 },
-            { case: { $eq: [field, 'refunded'] }, then: 30 }
-          ],
-          default: field
-        }
-      })
-      await mongoose.connection
-        .collection('travels')
-        .updateMany({}, [
-          {
-            $set: {
-              state: switchTravelStates('$state'),
-              comments: {
-                $map: {
-                  input: '$comments',
-                  as: 'comment',
-                  in: { $mergeObjects: ['$$comment', { toState: switchTravelStates('$$comment.toState') }] }
-                }
-              }
-            }
-          }
-        ])
-      const switchExpenseReportStates = (field: string) => ({
-        $switch: {
-          branches: [
-            { case: { $eq: [field, 'inWork'] }, then: 10 },
-            { case: { $eq: [field, 'underExamination'] }, then: 20 },
-            { case: { $eq: [field, 'refunded'] }, then: 30 }
-          ],
-          default: field
-        }
-      })
-      await mongoose.connection
-        .collection('expensereports')
-        .updateMany({}, [
-          {
-            $set: {
-              state: switchExpenseReportStates('$state'),
-              comments: {
-                $map: {
-                  input: '$comments',
-                  as: 'comment',
-                  in: { $mergeObjects: ['$$comment', { toState: switchExpenseReportStates('$$comment.toState') }] }
-                }
-              }
-            }
-          }
-        ])
-      const switchHealthCareCostStates = (field: string) => ({
-        $switch: {
-          branches: [
-            { case: { $eq: [field, 'inWork'] }, then: 10 },
-            { case: { $eq: [field, 'underExamination'] }, then: 20 },
-            { case: { $eq: [field, 'underExaminationByInsurance'] }, then: 30 },
-            { case: { $eq: [field, 'refunded'] }, then: 30 }
-          ],
-          default: field
-        }
-      })
-      await mongoose.connection
-        .collection('healthcarecosts')
-        .updateMany({}, [
-          {
-            $set: {
-              state: switchHealthCareCostStates('$state'),
-              comments: {
-                $map: {
-                  input: '$comments',
-                  as: 'comment',
-                  in: { $mergeObjects: ['$$comment', { toState: switchHealthCareCostStates('$$comment.toState') }] }
-                }
-              }
-            }
-          }
-        ])
-      const switchAdvancesStates = (field: string) => ({
-        $switch: {
-          branches: [
-            { case: { $eq: [field, 'rejected'] }, then: -10 },
-            { case: { $eq: [field, 'appliedFor'] }, then: 0 },
-            { case: { $eq: [field, 'approved'] }, then: 30 },
-            { case: { $eq: [field, 'completed'] }, then: 30 }
-          ],
-          default: field
-        }
-      })
-      await mongoose.connection
-        .collection('advances')
-        .updateMany({}, [
-          {
-            $set: {
-              state: switchAdvancesStates('$state'),
-              comments: {
-                $map: {
-                  input: '$comments',
-                  as: 'comment',
-                  in: { $mergeObjects: ['$$comment', { toState: switchAdvancesStates('$$comment.toState') }] }
-                }
-              },
-              settledOn: '$log.approved.date'
-            }
-          }
-        ])
-      // biome-ignore-end lint/suspicious/noThenProperty: mongodb uses then
-      const logRenameTraAdv = (approvedState = 10) => ({
-        $rename: {
-          'log.rejected': 'log.-10',
-          'log.appliedFor': 'log.0',
-          'log.approved': `log.${approvedState}`,
-          'log.underExamination': 'log.20'
-        }
-      })
-      const logRenameExpHea = {
-        $rename: {
-          'log.inWork': 'log.10',
-          'log.underExamination': 'log.20'
-          // 'log.underExaminationByInsurance' left as is
-        }
+      const countryCol = mongoose.connection.collection<{ name: { [key: string]: string }; _id: string }>('countries')
+      const countryBatch = []
+      for (const country of countries) {
+        countryBatch.push({ updateOne: { filter: { _id: country.code }, update: { $set: { name: country.name } } } })
       }
-      await mongoose.connection.collection('travels').updateMany({}, logRenameTraAdv(10))
-      await mongoose.connection.collection('expensereports').updateMany({}, logRenameExpHea)
-      await mongoose.connection.collection('healthcarecosts').updateMany({}, logRenameExpHea)
-      await mongoose.connection.collection('advances').updateMany({}, logRenameTraAdv(30))
-      await mongoose.connection
-        .collection('users')
-        .updateMany(
-          {},
-          {
-            $rename: {
-              'access.approved/advance': 'access.book/advance',
-              'access.refunded/travel': 'access.book/travel',
-              'access.refunded/expenseReport': 'access.book/expenseReport',
-              'access.refunded/healthCareCost': 'access.book/healthCareCost'
-            }
-          }
-        )
-      await mongoose.connection
-        .collection('displaysettings')
-        .updateMany(
-          {},
-          {
-            $rename: {
-              'accessIcons.approved/advance': 'accessIcons.book/advance',
-              'accessIcons.refunded/travel': 'accessIcons.book/travel',
-              'accessIcons.refunded/expenseReport': 'accessIcons.book/expenseReport',
-              'accessIcons.refunded/healthCareCost': 'accessIcons.book/healthCareCost'
-            }
-          }
-        )
-    }
-    if (semver.lte(migrateFrom, '2.1.0')) {
-      logger.info('Apply migration from v2.1.0: add name display format setting')
+      await countryCol.bulkWrite(countryBatch)
 
-      await mongoose.connection.collection('displaysettings').updateOne({}, { $set: { nameDisplayFormat: 'givenNameFirst' } })
-    }
-    if (semver.lte(migrateFrom, '2.1.2')) {
-      logger.info('Apply migration from v2.1.2: rewrite log')
-
-      const advanceMap = { 0: 30, 30: 40, 40: 40 } as const
-      const otherMap = { 0: 10, 10: 20, 20: 30, 30: 40, 40: 40 } as const
-
-      function rewriteLog(
-        oldLog: {
-          [key in number]?: { date: Date; editor: mongoose.Types.ObjectId }
-        },
-        map: { [key in number]: number }
-      ) {
-        const newLog: { [key in number]?: { on: Date; by: mongoose.Types.ObjectId } } = {}
-        for (const key in oldLog) {
-          if (oldLog[key] && map[key]) {
-            newLog[map[key]] = { on: oldLog[key].date, by: oldLog[key].editor }
-          }
-        }
-        return newLog
+      const currencyCol = mongoose.connection.collection<{ name: { [key: string]: string }; _id: string }>('currencies')
+      const currencyBatch = []
+      for (const currency of currencies) {
+        currencyBatch.push({ updateOne: { filter: { _id: currency.code }, update: { $set: { name: currency.name } } } })
       }
-      async function bulkRewriteLog(collectionName: string) {
-        const docs = mongoose.connection.collection(collectionName).find({})
-        const map = collectionName === 'advances' ? advanceMap : otherMap
-        for await (const doc of docs) {
-          await mongoose.connection.collection(collectionName).updateOne({ _id: doc._id }, { $set: { log: rewriteLog(doc.log, map) } })
-        }
-      }
-      await bulkRewriteLog('travels')
-      await bulkRewriteLog('expensereports')
-      await bulkRewriteLog('healthcarecosts')
-      await bulkRewriteLog('advances')
-    }
+      await currencyCol.bulkWrite(currencyBatch)
 
-    if (semver.lte(migrateFrom, '2.1.3')) {
-      logger.info('Apply migration from v2.1.3: add approved travels')
-
-      await mongoose.connection.collection('travelsettings').updateOne({}, { $set: { defaultLastPlaceOfWork: 'destinationPlace' } })
-
-      const travels = await mongoose.connection
-        .model('Travel')
-        .find({ historic: false, state: { $gte: 10 } })
-        .lean() //APPROVED or higher
-      const approvedTravels = []
-      for (const travel of travels) {
-        try {
-          approvedTravels.push({
-            startDate: travel.startDate,
-            endDate: travel.endDate,
-            reason: travel.reason,
-            destinationPlace: travel.destinationPlace,
-            claimSpouseRefund: travel.claimSpouseRefund,
-            fellowTravelersNames: travel.fellowTravelersNames,
-            traveler: formatter.name(travel.owner.name),
-            approvedBy: formatter.name(travel.log[10]?.by.name), //APPROVED
-            approvedOn: travel.log[10]?.on as Date, //APPROVED
-            appliedForOn: travel.log[0]?.on || travel.createdAt, //APPLIED_FOR
-            reportId: travel._id,
-            organisationId: travel.project.organisation
+      logger.info('Apply migration from v2.3.3: update advance offsetAgainst subject')
+      const advanceCol = mongoose.connection.collection<{ offsetAgainst: Record<string, unknown>[] }>('advances')
+      const advanceBatch = []
+      const cursor = advanceCol.find()
+      for await (const doc of cursor) {
+        const newOffsetAgainst = []
+        for (const offset of doc.offsetAgainst) {
+          let subject = ''
+          if (offset.report) {
+            const report = await mongoose
+              .model<{ name: string }>(offset.type as string)
+              .findOne({ _id: offset.report })
+              .lean()
+            subject = report?.name || ''
+          }
+          newOffsetAgainst.push({
+            reportId: offset.report,
+            type: offset.report ? offset.type : 'offsetEntry',
+            subject,
+            amount: offset.amount
           })
-        } catch (e) {
-          logger.error(`Unable to convert travel (${travel._id}) to approvedTravel: ${e}`)
         }
+        advanceBatch.push({ updateOne: { filter: { _id: doc._id }, update: { $set: { offsetAgainst: newOffsetAgainst } } } })
       }
-      if (approvedTravels.length > 0) {
-        await mongoose.connection.collection('approvedtravels').insertMany(approvedTravels)
+      if (advanceBatch.length > 0) {
+        await advanceCol.bulkWrite(advanceBatch)
       }
     }
-    if (semver.lte(migrateFrom, '2.1.4')) {
-      logger.info('Apply migration from v2.1.4: fix wrong file types in document files')
-      const documentFilesCursor = await mongoose.connection
-        .model('DocumentFile')
-        .find({ type: { $in: ['image/jpeg', 'image/png'] } })
-        .lean()
-        .batchSize(50)
-        .cursor()
-      const bulkOps = []
-      for await (const file of documentFilesCursor) {
-        const detectedType = detectImageType(file.data.buffer)
-        if (detectedType && detectedType !== file.type) {
-          bulkOps.push({ updateOne: { filter: { _id: file._id }, update: { $set: { type: detectedType } } } })
-        }
-        if (bulkOps.length >= 100) {
-          await mongoose.connection.model('DocumentFile').bulkWrite(bulkOps)
-          bulkOps.length = 0
-        }
-      }
-      if (bulkOps.length) {
-        await mongoose.connection.model('DocumentFile').bulkWrite(bulkOps)
-      }
-    }
-    if (semver.lte(migrateFrom, '2.1.7')) {
-      logger.info('Apply migration from v2.1.7: fix typo fallBack to fallback')
+    if (semver.lte(migrateFrom, '2.4.3')) {
+      logger.info('Apply migration from v2.4.3: add oauth2 option to smtp settings')
       await mongoose.connection
-        .collection('travelsettings')
-        .updateMany({}, { $rename: { fallBackLumpSumCountry: 'fallbackLumpSumCountry' } })
-    }
+        .collection('connectionsettings')
+        .updateMany(
+          { smtp: { $exists: true } },
+          { $set: { 'smtp.auth.authType': 'Login' }, $rename: { 'smtp.user': 'smtp.auth.user', 'smtp.password': 'smtp.auth.pass' } }
+        )
 
-    if (settings) {
-      settings.migrateFrom = undefined
-      await settings.save()
+      logger.info('Apply migration from v2.4.3: add bookingRemark option to printer settings')
+      await mongoose.connection
+        .collection('printersettings')
+        .updateMany(
+          {},
+          {
+            $set: {
+              'options.travel.bookingRemark': false,
+              'options.expenseReport.bookingRemark': false,
+              'options.healthCareCost.bookingRemark': false,
+              'options.advance.bookingRemark': false
+            }
+          }
+        )
     }
+    if (semver.lte(migrateFrom, '2.5.0')) {
+      logger.info('Apply migration from v2.5.0: add additionalOwnerDetails option to printer settings')
+      await mongoose.connection
+        .collection('printersettings')
+        .updateMany(
+          {},
+          {
+            $set: {
+              'options.travel.additionalOwnerDetails': true,
+              'options.expenseReport.additionalOwnerDetails': true,
+              'options.healthCareCost.additionalOwnerDetails': true,
+              'options.advance.additionalOwnerDetails': true
+            }
+          }
+        )
+    }
+    if (semver.lte(migrateFrom, '2.5.3')) {
+      logger.info('Apply migration from v2.5.3: move retention policy to integration settings')
+
+      const settingsCol = mongoose.connection.collection('settings')
+      const integrationSettingsCol = mongoose.connection.collection('integrationsettings')
+
+      const currentSettings = await settingsCol.findOne({})
+
+      if (currentSettings && 'retentionPolicy' in currentSettings) {
+        await integrationSettingsCol.updateOne(
+          { integrationKey: 'retentionPolicy' },
+          { $set: { settings: currentSettings.retentionPolicy } }
+        )
+      }
+
+      await settingsCol.updateMany({}, { $unset: { retentionPolicy: '' } })
+    }
+    if (semver.lte(migrateFrom, '2.6.2')) {
+      logger.info('Apply migration from v2.6.2: Drop exchange rate collection')
+      await mongoose.connection.collection('exchangerates').drop()
+      await mongoose.connection.collection('settings').updateMany({}, { $set: { exchangeRateProvider: 'InforEuro' } })
+    }
+    if (semver.lte(migrateFrom, '2.6.3')) {
+      logger.info('Apply migration from v2.6.3: initialize atomic report reference counters')
+      await initializeReferenceCounters()
+    }
+    if (semver.lte(migrateFrom, '2.6.4')) {
+      logger.info('Apply migration from v2.6.4: introduce cost positions and VAT settings')
+      const ledgerAccounts = mongoose.connection.collection('ledgeraccounts')
+      await Promise.all([
+        ledgerAccounts.updateOne(
+          { identifier: '1530' },
+          { $setOnInsert: { identifier: '1530', name: 'Forderungen gegen Personal aus Lohn- und Gehaltsabrechnung' } },
+          { upsert: true }
+        ),
+        ledgerAccounts.updateOne(
+          { identifier: '1740' },
+          { $setOnInsert: { identifier: '1740', name: 'Verbindlichkeiten aus Lohn und Gehalt' } },
+          { upsert: true }
+        ),
+        ledgerAccounts.updateOne(
+          { identifier: '1571' },
+          { $setOnInsert: { identifier: '1571', name: 'Abziehbare Vorsteuer 7 %' } },
+          { upsert: true }
+        ),
+        ledgerAccounts.updateOne(
+          { identifier: '1576' },
+          { $setOnInsert: { identifier: '1576', name: 'Abziehbare Vorsteuer 19 %' } },
+          { upsert: true }
+        ),
+        ledgerAccounts.updateOne(
+          { identifier: '4660' },
+          { $setOnInsert: { identifier: '4660', name: 'Reisekosten Arbeitnehmer' } },
+          { upsert: true }
+        ),
+        ledgerAccounts.updateOne(
+          { identifier: '4900' },
+          { $setOnInsert: { identifier: '4900', name: 'Sonstige betriebliche Aufwendungen' } },
+          { upsert: true }
+        )
+      ])
+      const [account1530, account1740, account1571, account1576, account4660, account4900] = await Promise.all(
+        ['1530', '1740', '1571', '1576', '4660', '4900'].map((identifier) => ledgerAccounts.findOne({ identifier }))
+      )
+      if (!account1530 || !account1740 || !account1571 || !account1576 || !account4660 || !account4900) {
+        throw new Error('Required default ledger accounts for the cost-position migration are missing')
+      }
+
+      const accountMapping = Object.fromEntries(travelExpenseItems.map((item) => [item, account4660._id]))
+
+      await mongoose.connection
+        .collection('organisations')
+        .updateMany(
+          {},
+          {
+            $set: {
+              'accountingSettings.employeeLiabilitiesAccount': account1740._id,
+              'accountingSettings.employeeClaimsAccount': account1530._id,
+              'accountingSettings.accountMapping': accountMapping,
+              'accountingSettings.vatAccountingEnabled': false,
+              'accountingSettings.includeBankBookings': false,
+              'accountingSettings.payoutAccounts': [],
+              'accountingSettings.vatRates': [
+                { rate: 0 },
+                { rate: 7, inputTaxAccount: account1571._id },
+                { rate: 19, inputTaxAccount: account1576._id }
+              ]
+            }
+          }
+        )
+
+      const categories = mongoose.connection.collection('categories')
+      await Promise.all([
+        categories.updateMany({ ledgerAccount: { $exists: false } }, { $set: { ledgerAccount: account4900._id } }),
+        categories.updateMany({ for: { $exists: false } }, { $set: { for: 'ExpenseReport' } })
+      ])
+
+      async function ensureCategory(forType: 'Travel' | 'ExpenseReport', ledgerAccount: mongoose.Types.ObjectId, name: string) {
+        const existing = await categories.findOne({ for: { $in: [forType, 'both'] }, ledgerAccount })
+        if (existing) return existing._id
+        const inserted = await categories.insertOne({
+          name,
+          ledgerAccount,
+          for: forType,
+          isDefault: false,
+          style: { color: '#D8DCFF', text: 'black' }
+        })
+        return inserted.insertedId
+      }
+
+      const expenseDefault =
+        (await categories.findOne({ for: { $in: ['ExpenseReport', 'both'] }, isDefault: true })) ??
+        (await categories.findOne({ for: { $in: ['ExpenseReport', 'both'] } }))
+      const expenseCategoryId = expenseDefault?._id ?? (await ensureCategory('ExpenseReport', account4900._id, 'General'))
+      const travelDefault =
+        (await categories.findOne({ for: { $in: ['Travel', 'both'] }, isDefault: true })) ??
+        (await categories.findOne({ for: { $in: ['Travel', 'both'] } }))
+      const travelCategoryId = travelDefault?._id ?? (await ensureCategory('Travel', account4660._id, 'Travel expenses'))
+
+      const projects = mongoose.connection.collection('projects')
+      const organisations = mongoose.connection.collection('organisations')
+      const travelCategoryByAccount = new Map<string, mongoose.Types.ObjectId>()
+      async function categoryForTravelStage(projectId: mongoose.Types.ObjectId, transportType: string) {
+        const project = await projects.findOne({ _id: projectId })
+        const organisation = project ? await organisations.findOne({ _id: project.organisation }) : null
+        const account = organisation?.accountingSettings?.accountMapping?.[transportType]
+        if (!account) return travelCategoryId
+        const key = account.toString()
+        if (!travelCategoryByAccount.has(key)) {
+          const ledgerAccount = await ledgerAccounts.findOne({ _id: account })
+          travelCategoryByAccount.set(
+            key,
+            await ensureCategory('Travel', account, ledgerAccount?.name ?? `Travel ${ledgerAccount?.identifier ?? ''}`.trim())
+          )
+        }
+        return travelCategoryByAccount.get(key) as mongoose.Types.ObjectId
+      }
+
+      async function migrateReports(collectionName: 'travels' | 'expensereports' | 'healthcarecosts') {
+        const collection = mongoose.connection.collection(collectionName)
+        const cursor = collection.find()
+        for await (const report of cursor) {
+          const expenses = []
+          for (const expense of report.expenses ?? []) {
+            const cost = { ...expense.cost }
+            const project = expense.project ?? report.project
+            const category =
+              collectionName === 'expensereports'
+                ? (report.category ?? expenseCategoryId)
+                : collectionName === 'travels'
+                  ? travelCategoryId
+                  : expenseCategoryId
+            if (!Array.isArray(cost.positions)) {
+              cost.positions = [
+                {
+                  _id: new mongoose.Types.ObjectId(),
+                  kind: 'manual',
+                  description: expense.description,
+                  grossAmount: typeof cost.amount === 'number' ? cost.amount : 0,
+                  vatRate: 0,
+                  project,
+                  category
+                }
+              ]
+            }
+            delete cost.amount
+            if (cost.exchangeRate) delete cost.exchangeRate.amount
+            const migratedExpense = { ...expense, cost }
+            delete migratedExpense.project
+            expenses.push(migratedExpense)
+          }
+
+          const update: Record<string, unknown> = { expenses }
+          if (collectionName === 'travels') {
+            const stages = []
+            for (const stage of report.stages ?? []) {
+              const cost = { ...stage.cost }
+              const project = stage.project ?? report.project
+              if (!Array.isArray(cost.positions)) {
+                const isOwnCar = stage.transport?.type === 'ownCar'
+                const hasCost = isOwnCar || (typeof cost.amount === 'number' && cost.amount !== 0)
+                cost.positions = hasCost
+                  ? [
+                      {
+                        _id: new mongoose.Types.ObjectId(),
+                        kind: isOwnCar ? 'ownCar' : 'manual',
+                        ...(isOwnCar ? {} : { description: stage.transport?.type }),
+                        grossAmount: typeof cost.amount === 'number' ? cost.amount : 0,
+                        vatRate: 0,
+                        project,
+                        category: await categoryForTravelStage(project, stage.transport?.type)
+                      }
+                    ]
+                  : []
+              }
+              delete cost.amount
+              if (cost.exchangeRate) delete cost.exchangeRate.amount
+              const migratedStage = { ...stage, cost }
+              delete migratedStage.project
+              stages.push(migratedStage)
+            }
+            update.stages = stages
+          }
+          await collection.updateOne(
+            { _id: report._id },
+            { $set: update, ...(collectionName === 'expensereports' ? { $unset: { category: '' } } : {}) }
+          )
+        }
+      }
+
+      await migrateReports('travels')
+      await migrateReports('expensereports')
+      await migrateReports('healthcarecosts')
+
+      logger.info('Apply migration from v2.6.4: initialize SEPA payout settings')
+      await mongoose.connection
+        .collection('ledgeraccounts')
+        .updateOne({ identifier: '1200' }, { $setOnInsert: { identifier: '1200', name: 'Bank' } }, { upsert: true })
+    }
+    settings.migrateFrom = undefined
+    await settings.save()
   }
 }

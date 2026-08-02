@@ -8,7 +8,8 @@ import {
   userReplaceCollections
 } from 'abrechnung-common/types.js'
 import mongoose, { HydratedDocument, Model, model, mongo, Query, Schema, Types } from 'mongoose'
-import { getDisplaySettings, getSettings } from '../db.js'
+import { BACKEND_CACHE } from '../db.js'
+import { bankAccountSchema } from './bankAccount.js'
 import { populateAll, populateSelected } from './helper.js'
 
 interface Methods {
@@ -18,23 +19,43 @@ interface Methods {
   addProjects(projects: { assigned?: Types.ObjectId[]; supervised?: Types.ObjectId[] }): Promise<void>
 }
 
-// biome-ignore lint/complexity/noBannedTypes: mongoose uses {} as type
-type UserModel = Model<User<Types.ObjectId, mongo.Binary>, {}, Methods>
-
-export const userSchema = async () => {
-  const settings = await getSettings()
-  const displaySettings = await getDisplaySettings()
-
-  const accessObject: { [key in Access]?: { type: BooleanConstructor; default: boolean; label: string } } = {}
+function createUserSchema(useRuntimeMetadata: boolean) {
+  const snapshot = useRuntimeMetadata ? BACKEND_CACHE.getSnapshot() : undefined
+  const accessObject: { [key in Access]?: { type: BooleanConstructor; default: () => boolean; label: string } } = {}
   for (const access of accesses) {
-    accessObject[access] = { type: Boolean, default: settings.defaultAccess[access], label: `accesses.${access}` }
+    accessObject[access] = {
+      type: Boolean,
+      default: () => BACKEND_CACHE.settings.defaultAccess[access] ?? false,
+      label: `accesses.${access}`
+    }
   }
-  return new Schema<User<Types.ObjectId, mongo.Binary>, UserModel, Methods>({
+  return new Schema<User<Types.ObjectId, mongo.Binary>, Model<User<Types.ObjectId, mongo.Binary>>, Methods>({
     fk: {
       type: {
-        microsoft: { type: String, index: true, unique: true, sparse: true, label: 'Microsoft ID', hide: !displaySettings.auth.microsoft },
-        oidc: { type: String, index: true, unique: true, sparse: true, label: 'OIDC ID', hide: !displaySettings.auth.oidc },
-        ldapauth: { type: String, index: true, unique: true, sparse: true, label: 'LDAP UID', hide: !displaySettings.auth.ldapauth },
+        microsoft: {
+          type: String,
+          index: true,
+          unique: true,
+          sparse: true,
+          label: 'Microsoft ID',
+          meta: snapshot ? !snapshot.displaySettings.auth.microsoft : false
+        },
+        oidc: {
+          type: String,
+          index: true,
+          unique: true,
+          sparse: true,
+          label: 'OIDC ID',
+          meta: snapshot ? !snapshot.displaySettings.auth.oidc : false
+        },
+        ldapauth: {
+          type: String,
+          index: true,
+          unique: true,
+          sparse: true,
+          label: 'LDAP UID',
+          meta: snapshot ? !snapshot.displaySettings.auth.ldapauth : false
+        },
         magiclogin: {
           type: String,
           index: true,
@@ -43,7 +64,7 @@ export const userSchema = async () => {
           validate: emailRegex,
           trim: true,
           label: 'Magic Login Email',
-          hide: !displaySettings.auth.magiclogin
+          meta: snapshot ? !snapshot.displaySettings.auth.magiclogin : false
         },
         httpBearer: { type: String, index: true, unique: true, sparse: true, label: 'API Key Hash' }
       },
@@ -54,8 +75,10 @@ export const userSchema = async () => {
       type: { givenName: { type: String, trim: true, required: true }, familyName: { type: String, trim: true, required: true } },
       required: true
     },
+    additionalDetails: { type: String, multiline: true, trim: true },
+    employeeId: { type: String, index: true, unique: true, sparse: true },
     access: { type: accessObject, default: () => ({}) },
-    loseAccessAt: { type: Date, info: 'info.loseAccessAt' },
+    loseAccessAt: { type: Date, description: 'info.loseAccessAt' },
     projects: {
       type: {
         assigned: { type: [{ type: Schema.Types.ObjectId, ref: 'Project' }], required: true, label: 'labels.assignedProjects' },
@@ -84,23 +107,36 @@ export const userSchema = async () => {
 
     settings: {
       type: {
-        language: { type: String, default: displaySettings.locale.default, enum: locales, required: true },
-        hasUserSetLanguage: { type: Boolean, required: true, default: false, hide: true },
-        lastCurrencies: { type: [{ type: String, ref: 'Currency' }], required: true, hide: true },
-        lastCountries: { type: [{ type: String, ref: 'Country' }], required: true, hide: true },
-        insurance: { type: Schema.Types.ObjectId, ref: 'HealthInsurance', hide: settings.disableReportType.healthCareCost },
+        language: {
+          type: String,
+          default: () => BACKEND_CACHE.displaySettings.locale.default,
+          enum: locales,
+          required: true,
+          translationPrefix: 'languages.'
+        },
+        hasUserSetLanguage: { type: Boolean, required: true, default: false, meta: true },
+        lastCurrencies: { type: [{ type: String, ref: 'Currency' }], required: true, meta: true },
+        lastCountries: { type: [{ type: String, ref: 'Country' }], required: true, meta: true },
+        insurance: {
+          type: Schema.Types.ObjectId,
+          ref: 'HealthInsurance',
+          meta: snapshot?.settings.disableReportType.healthCareCost ?? false
+        },
         organisation: { type: Schema.Types.ObjectId, ref: 'Organisation' },
-        showInstallBanner: { type: Boolean, required: true, default: true, hide: true }
+        bankAccount: { type: bankAccountSchema },
+        showInstallBanner: { type: Boolean, required: true, default: true, meta: true }
       },
       required: true,
       default: () => ({})
     },
     vehicleRegistration: { type: [{ type: Schema.Types.ObjectId, ref: 'DocumentFile' }], hide: true },
-    token: { type: Schema.Types.ObjectId, ref: 'Token' }
+    token: { type: Schema.Types.ObjectId, ref: 'Token', hide: true }
   })
 }
 
-const schema = await userSchema()
+export const userSchema = async () => createUserSchema(true)
+
+const schema = createUserSchema(false)
 
 const populates = {
   settings: [
@@ -121,7 +157,7 @@ schema.pre('save', async function () {
   await populateAll(this, populates)
 })
 
-schema.methods.isActive = async function (this: UserDoc) {
+schema.methods.isActive = async function () {
   if (this.access.user) {
     if (!(this.loseAccessAt && (this.loseAccessAt as Date).valueOf() <= Date.now())) {
       return true
@@ -135,7 +171,7 @@ schema.methods.isActive = async function (this: UserDoc) {
 }
 
 type StringIdMap = Record<string, Types.ObjectId>
-schema.methods.replaceReferences = async function (this: UserDoc, userIdToOverwrite: Types.ObjectId) {
+schema.methods.replaceReferences = async function (userIdToOverwrite: Types.ObjectId) {
   const filter = (path: string) => {
     const filter: StringIdMap = {}
     filter[path] = userIdToOverwrite
@@ -164,12 +200,18 @@ schema.methods.replaceReferences = async function (this: UserDoc, userIdToOverwr
     await mongoose.connection
       .collection(collection)
       .updateMany(filter('comments.author'), update('comments.$[elem].author'), arrayFilter('author'))
+    await mongoose.connection.collection(collection).updateMany(filter('log.-10.by'), update('log.-10.by'))
+    await mongoose.connection.collection(collection).updateMany(filter('log.0.by'), update('log.0.by'))
+    await mongoose.connection.collection(collection).updateMany(filter('log.10.by'), update('log.10.by'))
+    await mongoose.connection.collection(collection).updateMany(filter('log.20.by'), update('log.20.by'))
+    await mongoose.connection.collection(collection).updateMany(filter('log.30.by'), update('log.30.by'))
+    await mongoose.connection.collection(collection).updateMany(filter('log.40.by'), update('log.40.by'))
   }
   result.documentfiles = await mongoose.connection.collection('documentfiles').updateMany(filter('owner'), update('owner'))
   return result
 }
 
-schema.methods.merge = async function (this: UserDoc, userToOverwrite: User<Types.ObjectId, mongo.Binary>, mergeFk: boolean) {
+schema.methods.merge = async function (userToOverwrite: User<Types.ObjectId, mongo.Binary>, mergeFk: boolean) {
   const thisPojo = this.toObject()
   if (mergeFk) {
     Object.assign(this.fk, userToOverwrite.fk, thisPojo.fk)
@@ -203,7 +245,7 @@ schema.methods.merge = async function (this: UserDoc, userToOverwrite: User<Type
   return this.toObject()
 }
 
-schema.methods.addProjects = async function addProjects(projects: { assigned?: Types.ObjectId[]; supervised?: Types.ObjectId[] }) {
+schema.methods.addProjects = async function (projects: { assigned?: Types.ObjectId[]; supervised?: Types.ObjectId[] }) {
   let changed = false
   if (projects.assigned) {
     for (const newProjectId of projects.assigned) {
@@ -223,10 +265,10 @@ schema.methods.addProjects = async function addProjects(projects: { assigned?: T
     }
   }
   if (changed) {
-    this.save()
+    await this.save()
   }
 }
 
-export default model<User<Types.ObjectId, mongo.Binary>, UserModel>('User', schema)
+export default model('User', schema)
 
 export interface UserDoc extends Methods, HydratedDocument<User<Types.ObjectId, mongo.Binary>> {}

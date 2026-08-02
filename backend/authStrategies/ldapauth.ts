@@ -1,11 +1,11 @@
 import { ldapauthSettings } from 'abrechnung-common/types.js'
 import LdapStrategy from 'passport-ldapauth'
-import { getConnectionSettings } from '../db.js'
-import { mapLdapauthConfig } from '../settingsValidator.js'
+import { mapLdapauthConfig } from '../data/settingsValidator.js'
+import { BACKEND_CACHE } from '../db.js'
 import { findOrCreateUser } from './index.js'
 
 export async function getLdapauthStrategy() {
-  const connectionSettings = await getConnectionSettings()
+  const { connectionSettings } = BACKEND_CACHE.getSnapshot()
   if (!connectionSettings.auth.ldapauth) {
     throw new Error('LDAP not configured in Connection Settings')
   }

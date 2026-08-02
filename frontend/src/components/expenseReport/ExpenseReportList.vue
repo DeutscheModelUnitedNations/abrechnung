@@ -12,6 +12,21 @@
     :dbKeyPrefix="props.dbKeyPrefix"
     @update:items-selected="(v) => emits('update:itemsSelected',(v as ExpenseReportSimple[]))"
     @loaded="emits('loaded')">
+    <template #header-reference="header">
+      <div class="filter-column">
+        {{ t(header.text) }}
+        <span class="clickable" @click="(e) => clickFilter('reference', e)">
+          <i v-if="showFilter.reference" class="bi bi-funnel-fill"></i>
+          <i v-else class="bi bi-funnel"></i>
+        </span>
+        <div v-if="showFilter.reference" @click.stop>
+          <input
+            type="text"
+            class="form-control"
+            @input="(event : Event)=> filter.reference = refStringRegexLax.exec((event.target as HTMLInputElement).value)? refStringToNumber((event.target as HTMLInputElement).value).ref : undefined" >
+        </div>
+      </div>
+    </template>
     <template #header-name="header">
       <div class="filter-column">
         {{ t(header.text) }}
@@ -20,7 +35,7 @@
           <i v-else class="bi bi-funnel"></i>
         </span>
         <div v-if="showFilter.name" @click.stop>
-          <input type="text" class="form-control" v-model="(filter.name as any).$regex" />
+          <input type="text" class="form-control" v-model="(filter.name as any).$regex" >
         </div>
       </div>
     </template>
@@ -39,18 +54,6 @@
         </div>
       </div>
     </template>
-    <template #header-category="header">
-      <div class="filter-column">
-        {{ t(header.text) }}
-        <span class="clickable" @click="(e) => clickFilter('category', e)">
-          <i v-if="showFilter.category" class="bi bi-funnel-fill"></i>
-          <i v-else class="bi bi-funnel"></i>
-        </span>
-        <div v-if="showFilter.category" @click.stop>
-          <CategorySelector v-model="filter.category as any"></CategorySelector>
-        </div>
-      </div>
-    </template>
     <template #header-project.identifier="header">
       <div class="filter-column">
         {{ t(header.text) }}
@@ -59,7 +62,7 @@
           <i v-else class="bi bi-funnel"></i>
         </span>
         <div v-if="showFilter.project" @click.stop>
-          <ProjectSelector v-model="(filter.project as any).$in[0]" :orgSelectSplit="5"></ProjectSelector>
+          <ProjectSelector v-model="(filter.project as any).$in[0]" :orgSelectSplit="5" />
         </div>
       </div>
     </template>
@@ -71,7 +74,7 @@
           <i v-else class="bi bi-funnel"></i>
         </span>
         <div v-if="showFilter['project.organisation']" @click.stop>
-          <ProjectsOfOrganisationSelector v-model="(filter.project as any).$in" reduce-to-id></ProjectsOfOrganisationSelector>
+          <ProjectsOfOrganisationSelector v-model="(filter.project as any).$in" reduce-to-id />
         </div>
       </div>
     </template>
@@ -85,7 +88,7 @@
           </span>
         </div>
         <div v-if="showFilter.owner" @click.stop>
-          <UserSelector v-model="(filter.owner as any)"></UserSelector>
+          <UserSelector v-model="(filter.owner as any)" />
         </div>
       </div>
     </template>
@@ -99,14 +102,15 @@
           </span>
         </div>
         <div v-if="showFilter.updatedAt" @click.stop>
-          <DateInput v-model="(filter.updatedAt as any).$gt" :max="new Date()" with-time></DateInput>
+          <DateInput v-model="(filter.updatedAt as any).$gt" :max="new Date()" with-time />
         </div>
       </div>
     </template>
+    <template #item-reference="{reference}">
+      <RefStringBadge :number="reference" type="ExpenseReport" :show-copy="false" />
+    </template>
     <template #item-name="{ name, _id }">
-      <span v-if="props.makeNameNoLink">
-        {{ name }}
-      </span>
+      <span v-if="props.makeNameNoLink"> {{ name }}</span>
       <router-link
         v-else
         :to="'/' + endpoint + '/' + _id"
@@ -115,32 +119,24 @@
       </router-link>
     </template>
     <template #item-editor="{ editor }">
-      <span :title="formatter.name(editor.name)">
-        {{ formatter.name(editor.name, 'short') }}
-      </span>
+      <span :title="formatter.name(editor.name)"> {{ formatter.name(editor.name, 'short') }}</span>
     </template>
-    <template #item-owner="{ owner }">
-      <span :title="formatter.name(owner.name)">
-        {{ formatter.name(owner.name, 'short') }}
-      </span>
-    </template>
+    <template #item-owner="{ owner }"><span :title="formatter.name(owner.name)"> {{ formatter.name(owner.name, 'short') }}</span></template>
     <template #item-state="{ state }">
-      <StateBadge :state="state" :StateEnum="ExpenseReportState" style="display: inline-block"></StateBadge>
-    </template>
-    <template #item-category="{ category }">
-      <Badge :text="category.name" :style="category.style"></Badge>
+      <StateBadge :state="state" :StateEnum="ExpenseReportState" style="display: inline-block" />
     </template>
     <template #item-organisation="{ project }">
       <span v-if="APP_DATA">{{ getById(project.organisation, APP_DATA.organisations)?.name }}</span>
     </template>
-    <template #item-addUp.totalTotal="{ addUp }">
-      {{ formatter.baseCurrency(getTotalTotal(addUp)) }}
+    <template #item-addUp.totalTotal="{ addUp }"><span class="tnum">{{ formatter.baseCurrency(getTotalTotal(addUp)) }}</span></template>
+    <template #item-addUp.totalAdvance="{ addUp }">
+      <span v-if="getTotalAdvance(addUp) > 0" class="tnum">{{ formatter.baseCurrency(getTotalAdvance(addUp)) }}</span>
     </template>
     <template #item-addUp.totalBalance="report">
       <TooltipElement>
-        {{ formatter.baseCurrency(getTotalBalance(report.addUp)) }}
+        <span class="tnum">{{ formatter.baseCurrency(getTotalBalance(report.addUp)) }}</span>
         <template v-if="report.addUp.length > 1 || report.addUp[0].advance.amount > 0" #content>
-          <AddUpTable noBootstrapTable :add-up="report.addUp" :project="report.project" :showAdvanceOverflow="false"></AddUpTable>
+          <AddUpTable noBootstrapTable :add-up="report.addUp" :project="report.project" :showAdvanceOverflow="false" />
         </template>
       </TooltipElement>
     </template>
@@ -156,16 +152,10 @@
         <i v-else class="bi bi-file-earmark-pdf"></i>
       </button>
     </template>
-    <template #item-updatedAt="{ updatedAt }">
-      {{ formatter.dateTime(updatedAt) }}
-    </template>
-    <template #item-bookingRemark="{ bookingRemark }">
-      <span v-if="bookingRemark">
-        <TooltipElement :text="bookingRemark">
-          <i class="bi bi-chat-left-text"></i>
-        </TooltipElement>
-      </span>
-    </template>
+    <template #item-updatedAt="{ updatedAt }">{{ formatter.dateTime(updatedAt) }}</template>
+    <template #item-bookingRemark="{ bookingRemark }"><span v-if="bookingRemark">
+      <TooltipElement :text="bookingRemark"><i class="bi bi-chat-left-text"></i></TooltipElement>
+    </span></template>
     <!-- Standard-Slot weiterleiten -->
 
     <template v-for="(_, slot) in $slots" v-slot:[slot]="scope">
@@ -175,22 +165,21 @@
 </template>
 
 <script lang="ts" setup>
-import { ExpenseReportSimple, ExpenseReportState, expenseReportStates } from 'abrechnung-common/types.js'
-import { getById, getTotalBalance, getTotalTotal } from 'abrechnung-common/utils/scripts.js'
+import { ExpenseReportSimple, ExpenseReportState, expenseReportStates, refStringRegexLax } from 'abrechnung-common/types.js'
+import { getById, getTotalAdvance, getTotalBalance, getTotalTotal, refStringToNumber } from 'abrechnung-common/utils/scripts.js'
 import { ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Header } from 'vue3-easy-data-table'
-import APP_LOADER from '@/appData.js'
 import AddUpTable from '@/components/elements/AddUpTable.vue'
-import Badge from '@/components/elements/Badge.vue'
-import CategorySelector from '@/components/elements/CategorySelector.vue'
 import DateInput from '@/components/elements/DateInput.vue'
 import ListElement, { Filter } from '@/components/elements/ListElement.vue'
 import ProjectSelector from '@/components/elements/ProjectSelector.vue'
 import ProjectsOfOrganisationSelector from '@/components/elements/ProjectsOfOrganisationSelector.vue'
+import RefStringBadge from '@/components/elements/RefStringBadge.vue'
 import StateBadge from '@/components/elements/StateBadge.vue'
 import TooltipElement from '@/components/elements/TooltipElement.vue'
 import UserSelector from '@/components/elements/UserSelector.vue'
+import APP_LOADER from '@/dataLoader.js'
 import { formatter } from '@/formatter.js'
 import { bp, showFile } from '@/helper.js'
 
@@ -223,19 +212,18 @@ await APP_LOADER.loadData()
 const APP_DATA = APP_LOADER.data
 
 const headers: Header[] = [
-  { text: 'labels.name', value: 'name' },
+  { text: 'Ref', value: 'reference' },
+  { text: 'labels.label', value: 'name' },
   { text: 'labels.state', value: 'state' }
 ]
-if (APP_DATA.value && APP_DATA.value.categories.length > 1) {
-  headers.push({ text: 'labels.category', value: 'category' })
-}
 if (window.innerWidth > bp.md) {
   headers.push(
     { text: 'labels.project', value: 'project.identifier' },
     { text: 'labels.organisation', value: 'organisation' },
     { text: 'labels.total', value: 'addUp.totalTotal' },
     { text: 'labels.balance', value: 'addUp.totalBalance' },
-    { text: 'labels.owner', value: 'owner' },
+    { text: 'labels.advance', value: 'addUp.totalAdvance' },
+    { text: 'labels.expensePayer', value: 'owner' },
     { text: 'labels.editor', value: 'editor' },
     { text: 'labels.updatedAt', value: 'updatedAt', sortable: true },
     { text: '', value: 'report', width: 40 },
@@ -252,10 +240,10 @@ if (APP_DATA.value && APP_DATA.value.organisations.length <= 1) {
 
 const getEmptyFilter = () =>
   ({
+    reference: undefined,
     name: { $regex: undefined, $options: 'i' },
     owner: undefined,
     state: undefined,
-    category: undefined,
     project: { $in: [undefined] },
     updatedAt: { $gt: undefined }
   }) as Filter
@@ -267,10 +255,10 @@ if (props.stateFilter !== undefined) {
 }
 
 const showFilter = ref({
+  reference: false,
   name: false,
   owner: false,
   state: false,
-  category: false,
   project: false,
   'project.organisation': false,
   updatedAt: false

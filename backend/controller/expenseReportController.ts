@@ -1,28 +1,84 @@
 import { Readable } from 'node:stream'
+import { Body, Consumes, Delete, Get, Middlewares, Post, Produces, Queries, Query, Request, Route, Security, Tags } from '@tsoa/runtime'
+import { Validator } from 'abrechnung-common/report/validator.js'
 import {
+  BookingExportPackageRequest,
   Expense,
   ExpenseReportState,
   IdDocument,
   ExpenseReport as IExpenseReport,
   User as IUser,
   idDocumentToId,
-  Locale,
   State,
   UserWithName
 } from 'abrechnung-common/types.js'
-import { Condition, mongo, Types } from 'mongoose'
-import { Body, Consumes, Delete, Get, Middlewares, Post, Produces, Queries, Query, Request, Route, Security, Tags } from 'tsoa'
-import ENV from '../env.js'
-import { reportPrinter } from '../factory.js'
-import { checkIfUserIsProjectSupervisor, documentFileHandler, fileHandler, writeToDisk } from '../helper.js'
+import { mongo, QueryFilter, Types } from 'mongoose'
+import { BACKEND_CACHE } from '../db.js'
+import { createOperationServices } from '../factory.js'
+import { checkIfUserIsProjectSupervisor, documentFileHandler, fileHandler } from '../helper.js'
 import i18n from '../i18n.js'
+import { emitIntegrationEvent } from '../integrations/dispatcher.js'
 import ExpenseReport, { ExpenseReportDoc } from '../models/expenseReport.js'
 import User from '../models/user.js'
-import { sendNotification } from '../notifications/notification.js'
-import { sendViaMail, writeToDiskFilePath } from '../pdf/helper.js'
+import { createBookingExportPackage, getBookingExportPreview } from './bookingExport.js'
 import { Controller, checkOwner, GetterQuery, SetterBody } from './controller.js'
-import { AuthorizationError, NotFoundError } from './error.js'
-import { AuthenticatedExpressRequest } from './types.js'
+import { AuthorizationError, NotAllowedError, NotFoundError, ValidationClientError } from './error.js'
+import { AuthenticatedExpressRequest, ExpenseBulkImportPost } from './types.js'
+
+const expenseReportValidator = new Validator({ requireReceipts: true })
+type ExpenseSetterBody = SetterBody<Expense<Types.ObjectId, mongo.Binary>>
+
+function assertExpenseReportCanEnterReview(report: Pick<IExpenseReport, 'expenses'>, language: string) {
+  const reviewSummary = expenseReportValidator.getValidationSummary(report)
+  if (!reviewSummary.canEnterReview) {
+    throw new ValidationClientError(
+      i18n.t('alerts.reviewRequirementsNotMet', { lng: language }),
+      reviewSummary.results.filter((result) => result.severity === 'error').map((result) => ({ path: result.path, message: result.code }))
+    )
+  }
+}
+
+function upsertExpense(expenses: Expense[], requestBody: ExpenseSetterBody) {
+  if (requestBody._id && requestBody._id !== '') {
+    const existingExpense = expenses.find((expense) => (expense._id as Types.ObjectId).equals(requestBody._id as string))
+    if (!existingExpense) {
+      throw new NotFoundError(`No ExpenseReport - expenses for _id: '${requestBody._id}' found.`)
+    }
+    Object.assign(existingExpense, requestBody)
+    return
+  }
+
+  expenses.push(requestBody as Expense)
+}
+
+async function postExpensesBulk(
+  parentId: string,
+  requestBody: ExpenseBulkImportPost[],
+  language: string,
+  checkOldObject: (oldObject: ExpenseReportDoc) => Promise<boolean>
+) {
+  if (requestBody.length < 1) {
+    throw new ValidationClientError(i18n.t('alerts.noData.expense', { lng: language }))
+  }
+
+  const parentObject = await ExpenseReport.findOne({ _id: parentId })
+  if (!parentObject) {
+    throw new NotFoundError(`No ExpenseReport for _id: '${parentId}' found.`)
+  }
+  if (!(await checkOldObject(parentObject))) {
+    throw new NotAllowedError('Not allowed to modify this ExpenseReport - expenses')
+  }
+
+  const expenses = parentObject.expenses as Expense[]
+  for (const expense of requestBody) {
+    upsertExpense(expenses, expense as unknown as ExpenseSetterBody)
+  }
+
+  expenses.sort((a, b) => new Date(a.cost.date || 0).valueOf() - new Date(b.cost.date || 0).valueOf())
+  parentObject.markModified('expenses')
+
+  return { message: 'alerts.successSaving', result: (await parentObject.save()).toObject() }
+}
 
 @Tags('Expense Report')
 @Route('expenseReport')
@@ -33,15 +89,22 @@ export class ExpenseReportController extends Controller {
   public async getOwn(@Queries() query: GetterQuery<IExpenseReport>, @Request() request: AuthenticatedExpressRequest) {
     return await this.getter(ExpenseReport, {
       query,
-      filter: { owner: request.user._id, historic: false },
-      projection: { history: 0, historic: 0, expenses: 0, bookingRemark: 0 },
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter: { owner: request.user._id as any, historic: false },
+      projection: { history: 0, historic: 0, bookings: 0, expenses: 0, bookingRemark: 0 },
       allowedAdditionalFields: ['expenses'],
       sort: { createdAt: -1 }
     })
   }
   @Delete()
   public async deleteOwn(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
-    return await this.deleter(ExpenseReport, { _id: _id, checkOldObject: checkOwner(request.user) })
+    const notAfterReview = BACKEND_CACHE.settings.preventOwnersFromDeletingReportsAfterReviewCompleted
+    return await this.deleter(ExpenseReport, {
+      _id: _id,
+      async checkOldObject(oldObject: ExpenseReportDoc) {
+        return !oldObject.historic && (await checkOwner(request.user)(oldObject)) && (!notAfterReview || oldObject.state < State.BOOKABLE)
+      }
+    })
   }
 
   @Post('expense')
@@ -49,14 +112,9 @@ export class ExpenseReportController extends Controller {
   @Consumes('multipart/form-data')
   public async postExpenseToOwn(
     @Query('parentId') parentId: string,
-    @Body() requestBody: SetterBody<Expense<Types.ObjectId, mongo.Binary>>,
+    @Body() requestBody: ExpenseSetterBody,
     @Request() request: AuthenticatedExpressRequest
   ) {
-    // multipart/form-data does not send null values
-    // so we need to set it to null if the value is an empty string
-    if (requestBody.project?.toString() === '') {
-      requestBody.project = null
-    }
     return await this.setterForArrayElement(ExpenseReport, {
       requestBody: requestBody as Expense,
       parentId,
@@ -71,7 +129,23 @@ export class ExpenseReportController extends Controller {
         }
         return false
       },
-      sortFn: (a: Expense, b) => new Date(a.cost.date).valueOf() - new Date(b.cost.date).valueOf()
+      sortFn: (a: Expense, b) => new Date(a.cost.date || 0).valueOf() - new Date(b.cost.date || 0).valueOf()
+    })
+  }
+
+  @Post('expense/bulk')
+  public async postExpensesToOwn(
+    @Query('parentId') parentId: string,
+    @Body() requestBody: ExpenseBulkImportPost[],
+    @Request() request: AuthenticatedExpressRequest
+  ) {
+    return await postExpensesBulk(parentId, requestBody, request.user.settings.language, async (oldObject) => {
+      if (!oldObject.historic && oldObject.state === State.EDITABLE_BY_OWNER && request.user._id.equals(oldObject.owner._id)) {
+        // biome-ignore lint/suspicious/noExplicitAny: using Types.ObjectId to set IdDocument in backend
+        oldObject.editor = request.user._id as any
+        return true
+      }
+      return false
     })
   }
 
@@ -94,13 +168,7 @@ export class ExpenseReportController extends Controller {
 
   @Post('inWork')
   public async postOwnInWork(
-    @Body() requestBody: {
-      project?: IdDocument<Types.ObjectId>
-      _id?: string
-      name?: string
-      advances?: IdDocument<Types.ObjectId>[]
-      category?: IdDocument<Types.ObjectId>
-    },
+    @Body() requestBody: { project?: IdDocument<Types.ObjectId>; _id?: string; name?: string; advances?: IdDocument<Types.ObjectId>[] },
     @Request() request: AuthenticatedExpressRequest
   ) {
     const extendedBody = Object.assign(requestBody, { state: ExpenseReportState.IN_WORK, editor: request.user._id })
@@ -117,6 +185,7 @@ export class ExpenseReportController extends Controller {
     }
     return await this.setter(ExpenseReport, {
       requestBody: extendedBody,
+      cb: async (e: IExpenseReport<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.draft_saved', report: e }),
       async checkOldObject(oldObject: ExpenseReportDoc) {
         if (oldObject.owner._id.equals(request.user._id)) {
           if (oldObject.state === ExpenseReportState.IN_WORK && request.user.access['inWork:expenseReport']) {
@@ -142,10 +211,11 @@ export class ExpenseReportController extends Controller {
 
     return await this.setter(ExpenseReport, {
       requestBody: extendedBody,
-      cb: sendNotification,
+      cb: async (e: IExpenseReport<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.review_requested', report: e }),
       allowNew: false,
       async checkOldObject(oldObject: ExpenseReportDoc) {
         if (oldObject.owner._id.equals(request.user._id) && oldObject.state === ExpenseReportState.IN_WORK) {
+          assertExpenseReportCanEnterReview(oldObject, request.user.settings.language)
           await oldObject.saveToHistory()
           return true
         }
@@ -159,14 +229,15 @@ export class ExpenseReportController extends Controller {
   public async getReportForOwn(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
     const expenseReport = await ExpenseReport.findOne({
       _id: _id,
-      owner: request.user._id,
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      owner: request.user._id as any,
       historic: false,
       state: { $gte: State.BOOKABLE }
     }).lean()
     if (!expenseReport) {
       throw new NotFoundError(`No expense report with id: '${_id}' found or not allowed`)
     }
-    const report = await reportPrinter.print(expenseReport, request.user.settings.language)
+    const report = await createOperationServices().reportPrinter.print(expenseReport, request.user.settings.language)
     this.setHeader('Content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(expenseReport.name)}.pdf`)
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
@@ -190,14 +261,15 @@ export class ExpenseReportController extends Controller {
 export class ExpenseReportExamineController extends Controller {
   @Get()
   public async getToExamine(@Queries() query: GetterQuery<IExpenseReport>, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<IExpenseReport> = { historic: false }
+    const filter: QueryFilter<IExpenseReport> = { historic: false }
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     return await this.getter(ExpenseReport, {
       query,
       filter,
-      projection: { history: 0, historic: 0, expenses: 0 },
+      projection: { history: 0, historic: 0, bookings: 0, expenses: 0 },
       allowedAdditionalFields: ['expenses'],
       sort: { updatedAt: -1 }
     })
@@ -218,14 +290,9 @@ export class ExpenseReportExamineController extends Controller {
   @Consumes('multipart/form-data')
   public async postExpenseToAny(
     @Query('parentId') parentId: string,
-    @Body() requestBody: SetterBody<Expense<Types.ObjectId, mongo.Binary>>,
+    @Body() requestBody: ExpenseSetterBody,
     @Request() request: AuthenticatedExpressRequest
   ) {
-    // multipart/form-data does not send null values
-    // so we need to set it to null if the value is an empty string
-    if (requestBody.project?.toString() === '') {
-      requestBody.project = null
-    }
     return await this.setterForArrayElement(ExpenseReport, {
       requestBody: requestBody as Expense,
       parentId,
@@ -244,7 +311,27 @@ export class ExpenseReportExamineController extends Controller {
         }
         return false
       },
-      sortFn: (a: Expense, b) => new Date(a.cost.date).valueOf() - new Date(b.cost.date).valueOf()
+      sortFn: (a: Expense, b) => new Date(a.cost.date || 0).valueOf() - new Date(b.cost.date || 0).valueOf()
+    })
+  }
+
+  @Post('expense/bulk')
+  public async postExpensesToAny(
+    @Query('parentId') parentId: string,
+    @Body() requestBody: ExpenseBulkImportPost[],
+    @Request() request: AuthenticatedExpressRequest
+  ) {
+    return await postExpensesBulk(parentId, requestBody, request.user.settings.language, async (oldObject) => {
+      if (
+        !oldObject.historic &&
+        (oldObject.state === State.EDITABLE_BY_OWNER || oldObject.state === State.IN_REVIEW) &&
+        checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
+      ) {
+        // biome-ignore lint/suspicious/noExplicitAny: using Types.ObjectId to set IdDocument in backend
+        oldObject.editor = request.user._id as any
+        return true
+      }
+      return false
     })
   }
 
@@ -271,13 +358,7 @@ export class ExpenseReportExamineController extends Controller {
 
   @Post()
   public async postAny(
-    @Body() requestBody: {
-      project?: IdDocument<Types.ObjectId>
-      _id: string
-      name?: string
-      advances?: IdDocument<Types.ObjectId>[]
-      category?: IdDocument<Types.ObjectId>
-    },
+    @Body() requestBody: { project?: IdDocument<Types.ObjectId>; _id: string; name?: string; advances?: IdDocument<Types.ObjectId>[] },
     @Request() request: AuthenticatedExpressRequest
   ) {
     const extendedBody = Object.assign(requestBody, { editor: request.user._id })
@@ -315,7 +396,11 @@ export class ExpenseReportExamineController extends Controller {
     }
     return await this.setter(ExpenseReport, {
       requestBody: extendedBody,
-      cb: (e: IExpenseReport) => sendNotification(e, extendedBody._id ? 'BACK_TO_IN_REVIEW' : undefined),
+      cb: async (e: IExpenseReport<Types.ObjectId>) => {
+        if (extendedBody._id) {
+          await emitIntegrationEvent({ type: 'report.back_to_in_review', report: e })
+        }
+      },
       allowNew: true,
       async checkOldObject(oldObject: ExpenseReportDoc) {
         if (oldObject.state === ExpenseReportState.REVIEW_COMPLETED && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
@@ -335,7 +420,6 @@ export class ExpenseReportExamineController extends Controller {
       _id?: string
       name?: string
       advances?: IdDocument<Types.ObjectId>[]
-      category?: IdDocument<Types.ObjectId>
       owner?: IdDocument<Types.ObjectId>
       comment?: string
     },
@@ -350,7 +434,8 @@ export class ExpenseReportExamineController extends Controller {
     }
     return await this.setter(ExpenseReport, {
       requestBody: extendedBody,
-      cb: (e: IExpenseReport) => sendNotification(e, extendedBody._id ? 'BACK_TO_IN_WORK' : undefined),
+      cb: async (e: IExpenseReport<Types.ObjectId>) =>
+        emitIntegrationEvent({ type: extendedBody._id ? 'report.back_to_in_work' : 'report.review_requested', report: e }),
       allowNew: true,
       async checkOldObject(oldObject: ExpenseReportDoc) {
         if ((oldObject.state === ExpenseReportState.IN_REVIEW || oldObject.state === ExpenseReportState.REVIEW_COMPLETED) && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
@@ -369,13 +454,7 @@ export class ExpenseReportExamineController extends Controller {
   ) {
     const extendedBody = Object.assign(requestBody, { state: ExpenseReportState.REVIEW_COMPLETED, editor: request.user._id })
 
-    const cb = async (expenseReport: IExpenseReport<Types.ObjectId>) => {
-      sendNotification(expenseReport)
-      sendViaMail(expenseReport)
-      if (ENV.BACKEND_SAVE_REPORTS_ON_DISK) {
-        await writeToDisk(await writeToDiskFilePath(expenseReport), await reportPrinter.print(expenseReport, i18n.language as Locale))
-      }
-    }
+    const cb = async (e: IExpenseReport<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.review_completed', report: e })
 
     return await this.setter(ExpenseReport, {
       requestBody: extendedBody,
@@ -400,10 +479,11 @@ export class ExpenseReportExamineController extends Controller {
 
     return await this.setter(ExpenseReport, {
       requestBody: extendedBody,
-      cb: sendNotification,
+      cb: async (e: IExpenseReport<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.review_requested', report: e }),
       allowNew: false,
       async checkOldObject(oldObject: ExpenseReportDoc) {
         if (oldObject.state === ExpenseReportState.IN_WORK && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
+          assertExpenseReportCanEnterReview(oldObject, request.user.settings.language)
           await oldObject.saveToHistory()
           return true
         }
@@ -415,15 +495,16 @@ export class ExpenseReportExamineController extends Controller {
   @Get('report')
   @Produces('application/pdf')
   public async getReport(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<IExpenseReport> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
+    const filter: QueryFilter<IExpenseReport<Types.ObjectId, mongo.Binary>> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     const expenseReport = await ExpenseReport.findOne(filter).lean()
     if (!expenseReport) {
       throw new NotFoundError(`No expense report with id: '${_id}' found or not allowed`)
     }
-    const report = await reportPrinter.print(expenseReport, request.user.settings.language)
+    const report = await createOperationServices().reportPrinter.print(expenseReport, request.user.settings.language)
     this.setHeader('Content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(expenseReport.name)}.pdf`)
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
@@ -438,14 +519,15 @@ export class ExpenseReportExamineController extends Controller {
 export class ExpenseReportBookableController extends Controller {
   @Get()
   public async getBookable(@Queries() query: GetterQuery<IExpenseReport>, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<IExpenseReport> = { historic: false, state: { $gte: State.BOOKABLE } }
+    const filter: QueryFilter<IExpenseReport> = { historic: false, state: { $gte: State.BOOKABLE } }
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     return await this.getter(ExpenseReport, {
       query,
       filter,
-      projection: { history: 0, historic: 0, expenses: 0 },
+      projection: { history: 0, historic: 0, bookings: 0, expenses: 0 },
       allowedAdditionalFields: ['expenses'],
       sort: { updatedAt: -1 }
     })
@@ -454,19 +536,33 @@ export class ExpenseReportBookableController extends Controller {
   @Get('report')
   @Produces('application/pdf')
   public async getBookableReport(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<IExpenseReport> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
+    const filter: QueryFilter<IExpenseReport<Types.ObjectId, mongo.Binary>> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     const expenseReport = await ExpenseReport.findOne(filter).lean()
     if (!expenseReport) {
       throw new NotFoundError(`No expense report with id: '${_id}' found or not allowed`)
     }
-    const report = await reportPrinter.print(expenseReport, request.user.settings.language)
+    const report = await createOperationServices().reportPrinter.print(expenseReport, request.user.settings.language)
     this.setHeader('Content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(expenseReport.name)}.pdf`)
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
     return Readable.from([report])
+  }
+
+  @Post('bookingExportPreview')
+  public async postBookingExportPreview(@Body() requestBody: IdDocument<string>[], @Request() request: AuthenticatedExpressRequest) {
+    return { result: await getBookingExportPreview(ExpenseReport, 'ExpenseReport', requestBody, request) }
+  }
+
+  @Post('bookingExportPackage')
+  public async postBookingExportPackage(
+    @Body() requestBody: BookingExportPackageRequest<string>,
+    @Request() request: AuthenticatedExpressRequest
+  ) {
+    return { result: await createBookingExportPackage(ExpenseReport, 'ExpenseReport', requestBody, request) }
   }
 
   @Post('booked')

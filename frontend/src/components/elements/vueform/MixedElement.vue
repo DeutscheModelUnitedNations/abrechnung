@@ -1,13 +1,15 @@
 <template>
   <ElementLayout>
     <template #element>
-      <JsonEditorVue v-model="model" :stringified="false" :mainMenuBar="false" :statusBar="false" mode="text" />
+      <JsonEditorVue v-model="value" :stringified="false" :mainMenuBar="false" :statusBar="false" mode="text" />
     </template>
 
     <!-- Default element slots -->
-    <template v-for="(component, slot) in elementSlots" #[slot]
-      ><slot :name="slot" :el$="el$"><component :is="component" :el$="el$" /></slot
-    ></template>
+    <template v-for="(component, slot) in elementSlots" #[slot]>
+      <slot :name="slot" :el$="el$">
+        <component :is="component" :el$="el$" />
+      </slot>
+    </template>
   </ElementLayout>
 </template>
 

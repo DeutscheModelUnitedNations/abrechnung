@@ -1,58 +1,62 @@
 import axios from 'axios'
 import { createRouter, createWebHistory, RouteLocationNormalized } from 'vue-router'
-import AdvanceApprovePage from '@/components/advance/ApprovePage.vue'
-import BookAdvancePage from '@/components/advance/BookPage.vue'
-import BookExpenseReportPage from '@/components/expenseReport/BookPage.vue'
-import ExamineExpenseReportPage from '@/components/expenseReport/ExaminePage.vue'
-import ExpenseReportPage from '@/components/expenseReport/ExpenseReportPage.vue'
-import HomePage from '@/components/HomePage.vue'
-import BookHealthCareCostPage from '@/components/healthCareCost/BookPage.vue'
-import ExamineHealthCareCostPage from '@/components/healthCareCost/ExaminePage.vue'
-import HealthCareCostPage from '@/components/healthCareCost/HealthCareCostPage.vue'
-import LoginPage from '@/components/LoginPage.vue'
-import TravelApprovePage from '@/components/travel/ApprovePage.vue'
-import BookTravelPage from '@/components/travel/BookPage.vue'
-import ExamineTravelPage from '@/components/travel/ExaminePage.vue'
-import TravelPage from '@/components/travel/TravelPage.vue'
-import ENV from '@/env.js'
+import { app } from '@/app.js'
+import { adminSections, defaultAdminSection } from '@/components/settings/adminSections'
+import { registerVueformLanguageChange } from '@/dataLoader.js'
 import { logger } from '@/logger.js'
-import { app } from '@/main.js'
+import { getValidOfflineContext, purgeSession, refreshAuthContext, sessionState } from '@/session.js'
 
 const routes = [
   {
     path: '/login',
-    component: LoginPage,
+    component: () => import('@/components/LoginPage.vue'),
     meta: { requiresAuth: false },
-    beforeEnter: async (to: RouteLocationNormalized) => {
-      if (await auth()) {
-        return { path: typeof to.query.redirect === 'string' ? to.query.redirect : '/user' }
-      }
-      return true
-    }
+    beforeEnter: async (to: RouteLocationNormalized) =>
+      (await auth()) ? { path: typeof to.query.redirect === 'string' ? to.query.redirect : '/user' } : true
   },
+  { path: '/offline-unavailable', component: () => import('@/components/OfflineUnavailablePage.vue'), meta: { requiresAuth: false } },
   {
     path: '/admin',
     component: () => import('@/components/settings/SettingsPage.vue'),
-    meta: { requiresAuth: true, requiresVueform: true }
+    meta: { requiresAuth: true, requiresVueform: true },
+    children: [
+      { path: '', redirect: { name: defaultAdminSection.routeName } },
+      ...adminSections.map((section) => ({
+        path: section.path,
+        name: section.routeName,
+        component: () => import('@/components/settings/AdminSettingsSection.vue'),
+        meta: { adminSectionId: section.id }
+      }))
+    ]
   },
   {
     path: '/approve/advance/:_id([0-9a-fA-F]{24})?',
-    component: AdvanceApprovePage,
+    component: () => import('@/components/advance/ApprovePage.vue'),
     meta: { requiresAuth: true },
     props: (route: RouteLocationNormalized) => ({ _id: route.params._id })
   },
-  { path: '/book/advance', component: BookAdvancePage, meta: { requiresAuth: true } },
+  {
+    path: '/book/advance/:_id([0-9a-fA-F]{24})?',
+    component: () => import('@/components/advance/BookPage.vue'),
+    meta: { requiresAuth: true },
+    props: (route: RouteLocationNormalized) => ({ _id: route.params._id })
+  },
   {
     path: '/approve/travel/:_id([0-9a-fA-F]{24})?',
-    component: TravelApprovePage,
+    component: () => import('@/components/travel/ApprovePage.vue'),
     meta: { requiresAuth: true },
     props: (route: RouteLocationNormalized) => ({ _id: route.params._id })
   },
-  { path: '/book/travel', component: BookTravelPage, meta: { requiresAuth: true } },
-  { path: '/examine/travel', component: ExamineTravelPage, meta: { requiresAuth: true } },
+  {
+    path: '/book/travel/:_id([0-9a-fA-F]{24})?',
+    component: () => import('@/components/travel/BookPage.vue'),
+    meta: { requiresAuth: true },
+    props: (route: RouteLocationNormalized) => ({ _id: route.params._id })
+  },
+  { path: '/examine/travel', component: () => import('@/components/travel/ExaminePage.vue'), meta: { requiresAuth: true } },
   {
     path: '/examine/travel/:_id([0-9a-fA-F]{24})',
-    component: TravelPage,
+    component: () => import('@/components/travel/TravelPage.vue'),
     meta: { requiresAuth: true },
     props: (route: RouteLocationNormalized) => ({
       _id: route.params._id,
@@ -62,15 +66,20 @@ const routes = [
   },
   {
     path: '/travel/:_id([0-9a-fA-F]{24})',
-    component: TravelPage,
-    meta: { requiresAuth: true },
+    component: () => import('@/components/travel/TravelPage.vue'),
+    meta: { requiresAuth: true, offlineCapable: true },
     props: (route: RouteLocationNormalized) => ({ _id: route.params._id, parentPages: [{ link: '/', title: 'headlines.home' }] })
   },
-  { path: '/book/expenseReport', component: BookExpenseReportPage, meta: { requiresAuth: true } },
-  { path: '/examine/expenseReport', component: ExamineExpenseReportPage, meta: { requiresAuth: true } },
+  {
+    path: '/book/expenseReport/:_id([0-9a-fA-F]{24})?',
+    component: () => import('@/components/expenseReport/BookPage.vue'),
+    meta: { requiresAuth: true },
+    props: (route: RouteLocationNormalized) => ({ _id: route.params._id })
+  },
+  { path: '/examine/expenseReport', component: () => import('@/components/expenseReport/ExaminePage.vue'), meta: { requiresAuth: true } },
   {
     path: '/examine/expenseReport/:_id([0-9a-fA-F]{24})',
-    component: ExpenseReportPage,
+    component: () => import('@/components/expenseReport/ExpenseReportPage.vue'),
     meta: { requiresAuth: true },
     props: (route: RouteLocationNormalized) => ({
       _id: route.params._id,
@@ -80,15 +89,20 @@ const routes = [
   },
   {
     path: '/expenseReport/:_id([0-9a-fA-F]{24})',
-    component: ExpenseReportPage,
-    meta: { requiresAuth: true },
+    component: () => import('@/components/expenseReport/ExpenseReportPage.vue'),
+    meta: { requiresAuth: true, offlineCapable: true },
     props: (route: RouteLocationNormalized) => ({ _id: route.params._id, parentPages: [{ link: '/', title: 'headlines.home' }] })
   },
-  { path: '/book/healthCareCost', component: BookHealthCareCostPage, meta: { requiresAuth: true } },
-  { path: '/examine/healthCareCost', component: ExamineHealthCareCostPage, meta: { requiresAuth: true } },
+  {
+    path: '/book/healthCareCost/:_id([0-9a-fA-F]{24})?',
+    component: () => import('@/components/healthCareCost/BookPage.vue'),
+    meta: { requiresAuth: true },
+    props: (route: RouteLocationNormalized) => ({ _id: route.params._id })
+  },
+  { path: '/examine/healthCareCost', component: () => import('@/components/healthCareCost/ExaminePage.vue'), meta: { requiresAuth: true } },
   {
     path: '/examine/healthCareCost/:_id([0-9a-fA-F]{24})',
-    component: HealthCareCostPage,
+    component: () => import('@/components/healthCareCost/HealthCareCostPage.vue'),
     meta: { requiresAuth: true },
     props: (route: RouteLocationNormalized) => ({
       _id: route.params._id,
@@ -98,11 +112,30 @@ const routes = [
   },
   {
     path: '/healthCareCost/:_id([0-9a-fA-F]{24})',
-    component: HealthCareCostPage,
-    meta: { requiresAuth: true },
+    component: () => import('@/components/healthCareCost/HealthCareCostPage.vue'),
+    meta: { requiresAuth: true, offlineCapable: true },
     props: (route: RouteLocationNormalized) => ({ _id: route.params._id, parentPages: [{ link: '/', title: 'headlines.home' }] })
   },
-  { path: '/user', component: HomePage, meta: { requiresAuth: true } },
+  { path: '/user', component: () => import('@/components/HomePage.vue'), meta: { requiresAuth: true, offlineCapable: true } },
+  { path: '/user/settings', component: () => import('@/components/UserSettingsPage.vue'), meta: { requiresAuth: true } },
+  {
+    path: '/user/travel/:_id([0-9a-fA-F]{24})',
+    component: () => import('@/components/HomePage.vue'),
+    meta: { requiresAuth: true, offlineCapable: true },
+    props: (route: RouteLocationNormalized) => ({ reportId: route.params._id, reportType: 'travel' })
+  },
+  {
+    path: '/advance/:_id([0-9a-fA-F]{24})',
+    component: () => import('@/components/HomePage.vue'),
+    meta: { requiresAuth: true, offlineCapable: true },
+    props: (route: RouteLocationNormalized) => ({ reportId: route.params._id, reportType: 'advance' })
+  },
+  {
+    path: '/advance/:_id([0-9a-fA-F]{24})/confirm',
+    component: () => import('@/components/HomePage.vue'),
+    meta: { requiresAuth: true },
+    props: (route: RouteLocationNormalized) => ({ reportId: route.params._id, reportType: 'advance', confirmAdvance: true })
+  },
   { path: '/:pathMatch(.*)*', redirect: '/user' }
 ]
 
@@ -110,43 +143,39 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
   scrollBehavior(to) {
-    if (to.hash) {
-      return { el: to.hash, behavior: 'smooth' }
-    }
+    if (to.hash) return { el: to.hash, behavior: 'smooth' }
   }
 })
 
 export async function auth() {
-  let auth = false
-  if (!navigator.onLine) {
-    return true
-  }
+  if (!navigator.onLine) return Boolean(await getValidOfflineContext())
   try {
-    const res = await axios.get(`${ENV.VITE_BACKEND_URL}/auth/authenticated`, { withCredentials: true })
-    auth = res.status === 204
+    return Boolean(await refreshAuthContext())
   } catch (error: unknown) {
-    if (axios.isAxiosError(error) && error.response && error.response.status !== 401) {
-      logger.error(error)
-    }
+    if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) await purgeSession()
+    else logger.error(error)
+    return false
   }
-  return auth
 }
 
 let vueformLoaded = false
 
-router.beforeEach(async (to, _from, next) => {
-  if (to.meta.requiresAuth && !(await auth())) {
-    next({ path: '/login', query: { redirect: to.fullPath } })
-  }
+router.beforeEach(async (to) => {
+  const offline = !sessionState.isOnline.value
+  if (offline && to.meta.requiresAuth && !to.meta.offlineCapable) return { path: '/offline-unavailable', query: { redirect: to.fullPath } }
+  if (to.meta.requiresAuth && !(await auth())) return { path: '/login', query: { redirect: to.fullPath } }
   if (to.meta.requiresVueform && !vueformLoaded) {
     const [{ default: Vueform }, { default: vueformConfig }] = await Promise.all([
       import('@vueform/vueform'),
       import('@/vueform.config.js')
     ])
     app.use(Vueform, vueformConfig)
+    registerVueformLanguageChange((locale) => {
+      app.config.globalProperties.$vueform.i18n.locale = locale
+    })
     vueformLoaded = true
   }
-  next()
+  return true
 })
 
 export default router

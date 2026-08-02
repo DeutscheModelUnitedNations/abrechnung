@@ -1,7 +1,8 @@
-import { ConnectionSettings, defaultLocale, emailRegex, locales } from 'abrechnung-common/types.js'
-import { HydratedDocument, model, Schema, Types } from 'mongoose'
+import { ConnectionSettings, defaultLocale, emailRegex, locales, smtpAuthTypes } from 'abrechnung-common/types.js'
+import { model, Schema, Types } from 'mongoose'
+import { verifyLdapauthConfig, verifySmtpConfig } from '../data/settingsValidator.js'
+import { BACKEND_CACHE } from '../db.js'
 import ENV from '../env.js'
-import { verifyLdapauthConfig, verifySmtpConfig } from '../settingsValidator.js'
 
 function requiredIf(ifPath: string) {
   return [{ required: [ifPath, 'not_in', [null, '', false]] }, { nullable: [ifPath, 'in', [null, '', false]] }]
@@ -12,7 +13,7 @@ export const connectionSettingsSchema = () =>
     PDFReportsViaEmail: {
       type: {
         sendPDFReportsToOrganisationEmail: { type: Boolean, default: false, required: true },
-        locale: { type: String, enum: locales, required: true, default: defaultLocale }
+        locale: { type: String, enum: locales, required: true, default: defaultLocale, translationPrefix: 'languages.' }
       },
       required: true,
       default: () => ({}),
@@ -21,10 +22,8 @@ export const connectionSettingsSchema = () =>
     smtp: {
       type: {
         host: { type: String, trim: true, required: true, label: 'Host', rules: requiredIf('smtp.user') },
-        port: { type: Number, required: true, min: 1, max: 65535, label: 'Port', rules: requiredIf('smtp.host') },
+        port: { type: Number, required: true, min: 1, max: 65_535, label: 'Port', rules: requiredIf('smtp.host') },
         secure: { type: Boolean, default: true, required: true, label: 'Secure' },
-        user: { type: String, trim: true, required: true, rules: requiredIf('smtp.host') },
-        password: { type: String, trim: true, required: true, rules: requiredIf('smtp.host') },
         senderAddress: {
           type: String,
           trim: true,
@@ -32,6 +31,61 @@ export const connectionSettingsSchema = () =>
           validate: emailRegex,
           label: 'Sender Address',
           rules: requiredIf('smtp.host')
+        },
+        auth: {
+          type: {
+            authType: {
+              type: String,
+              enum: smtpAuthTypes,
+              required: true,
+              default: 'Login',
+              label: 'Auth Type',
+              rules: requiredIf('smtp.host'),
+              translationPrefix: ''
+            },
+            user: { type: String, trim: true, required: true, rules: requiredIf('smtp.host'), label: 'User' },
+            pass: { type: String, trim: true, required: true, conditions: [['smtp.auth.authType', 'Login']], label: 'Password' },
+            clientId: {
+              type: String,
+              trim: true,
+              conditions: [['smtp.auth.authType', 'OAuth2']],
+              label: 'Client ID',
+              description: 'https://nodemailer.com/smtp/OAuth2'
+            },
+            clientSecret: { type: String, trim: true, conditions: [['smtp.auth.authType', 'OAuth2']], label: 'Client Secret' },
+            refreshToken: { type: String, trim: true, conditions: [['smtp.auth.authType', 'OAuth2']], label: 'Refresh Token' },
+            accessUrl: {
+              type: String,
+              trim: true,
+              conditions: [['smtp.auth.authType', 'OAuth2']],
+              label: 'Access URL',
+              description: 'Endpoint for token generation'
+            },
+            accessToken: {
+              type: String,
+              trim: true,
+              conditions: [['smtp.auth.authType', 'OAuth2']],
+              label: 'Access Token',
+              description: 'An existing valid accessToken'
+            },
+            privateKey: { type: String, trim: true, multiline: true, conditions: [['smtp.auth.authType', 'OAuth2']], label: 'Private Key' },
+            expires: {
+              type: Number,
+              conditions: [['smtp.auth.authType', 'OAuth2']],
+              label: 'Token Expire Time',
+              description: 'Access Token expire time in ms'
+            },
+            timeout: {
+              type: Number,
+              conditions: [['smtp.auth.authType', 'OAuth2']],
+              label: 'Timeout',
+              description: 'TTL for Access Token in seconds'
+            },
+            serviceClient: { type: String, trim: true, conditions: [['smtp.auth.authType', 'OAuth2']], label: 'Service Client' }
+          },
+          required: true,
+          default: () => ({}),
+          label: 'SMTP Auth'
         }
       },
       label: 'SMTP'
@@ -131,13 +185,17 @@ export const connectionSettingsSchema = () =>
 
 const schema = connectionSettingsSchema()
 
-schema.pre('validate', async function (this: HydratedDocument<ConnectionSettings<Types.ObjectId>>) {
+schema.pre('validate', async function () {
   if (this.auth.ldapauth?.url) {
     await verifyLdapauthConfig(this.auth.ldapauth)
   }
   if (this.smtp?.host) {
     await verifySmtpConfig(this.smtp)
   }
+})
+
+schema.post('save', async () => {
+  if (BACKEND_CACHE.initialized) await BACKEND_CACHE.refreshAndPublish()
 })
 
 export default model<ConnectionSettings<Types.ObjectId>>('ConnectionSettings', schema)

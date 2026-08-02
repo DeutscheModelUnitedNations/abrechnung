@@ -13,12 +13,13 @@ import {
   TravelState
 } from 'abrechnung-common/types.js'
 import { model, Schema, Types } from 'mongoose'
+import { BACKEND_CACHE } from '../db.js'
 import { colorSchema } from './helper.js'
 
 export const displaySettingsSchema = () => {
-  const overwrites = {} as { [key in Locale]: { type: typeof Schema.Types.Mixed; required: true; default: () => object } }
+  const overwrites = {} as { [key in Locale]: { type: typeof Schema.Types.Mixed; required: true; default: () => object; label: string } }
   for (const locale of locales) {
-    overwrites[locale] = { type: Schema.Types.Mixed, required: true, default: () => ({}) }
+    overwrites[locale] = { type: Schema.Types.Mixed, required: true, default: () => ({}), label: `languages.${locale}` }
   }
 
   const stateColors = {} as {
@@ -68,8 +69,8 @@ export const displaySettingsSchema = () => {
       },
       locale: {
         type: {
-          default: { type: String, enum: locales, required: true, default: defaultLocale },
-          fallback: { type: String, enum: locales, required: true, default: defaultLocale },
+          default: { type: String, enum: locales, required: true, default: defaultLocale, translationPrefix: 'languages.' },
+          fallback: { type: String, enum: locales, required: true, default: defaultLocale, translationPrefix: 'languages.' },
           overwrite: { type: overwrites, required: true, description: 'description.keyFullIdentifier' }
         },
         required: true
@@ -103,4 +104,10 @@ export const displaySettingsSchema = () => {
   )
 }
 
-export default model('DisplaySettings', displaySettingsSchema())
+const schema = displaySettingsSchema()
+
+schema.post('save', async () => {
+  if (BACKEND_CACHE.initialized) await BACKEND_CACHE.refreshAndPublish()
+})
+
+export default model('DisplaySettings', schema)

@@ -1,4 +1,6 @@
+import { Body, Consumes, Delete, Get, Middlewares, Post, Queries, Query, Request, Route, Security, Tags } from '@tsoa/runtime'
 import {
+  BankAccount,
   DocumentFile,
   IdDocument,
   Token as IToken,
@@ -9,22 +11,24 @@ import {
 } from 'abrechnung-common/types.js'
 import { DeleteResult } from 'mongodb'
 import { mongo, Types } from 'mongoose'
-import { Body, Consumes, Delete, Get, Middlewares, Post, Queries, Query, Request, Route, Security, Tags } from 'tsoa'
 import { PushSubscription } from 'web-push'
 import { generateBearerToken, hashToken } from '../authStrategies/http-bearer.js'
 import ENV from '../env.js'
 import { documentFileHandler, fileHandler } from '../helper.js'
 import i18n from '../i18n.js'
+import { enqueueMail } from '../integrations/notifications/email.js'
+import Advance from '../models/advance.js'
 import ExpenseReport from '../models/expenseReport.js'
 import HealthCareCost from '../models/healthCareCost.js'
 import Token from '../models/token.js'
 import Travel from '../models/travel.js'
 import User, { userSchema } from '../models/user.js'
 import { mongooseSchemaToVueformSchema } from '../models/vueformGenerator.js'
-import { sendMail } from '../notifications/mail.js'
 import { Controller, GetterQuery, SetterBody } from './controller.js'
 import { NotAllowedError, NotFoundError } from './error.js'
 import { AuthenticatedExpressRequest, File } from './types.js'
+
+type UserSettingsBody = Omit<SetterBody<IUser['settings']>, 'bankAccount'> & { bankAccount?: BankAccount | null }
 
 @Tags('User')
 @Route('user')
@@ -56,7 +60,7 @@ export class UserController extends Controller {
   }
 
   @Post('settings')
-  public async postSettings(@Body() requestBody: SetterBody<IUser['settings']>, @Request() request: AuthenticatedExpressRequest) {
+  public async postSettings(@Body() requestBody: UserSettingsBody, @Request() request: AuthenticatedExpressRequest) {
     Object.assign(request.user.settings, requestBody)
     request.user.markModified('settings')
     const result = (await request.user.save()).toObject()
@@ -67,11 +71,11 @@ export class UserController extends Controller {
   @Middlewares(fileHandler.any())
   @Consumes('multipart/form-data')
   public async postVehicleRegistration(
-    @Body() requestBody: { vehicleRegistration: File[] },
+    @Body() requestBody: { vehicleRegistration?: File[] },
     @Request() request: AuthenticatedExpressRequest
   ) {
     await documentFileHandler(['vehicleRegistration'])(request)
-    request.user.vehicleRegistration = requestBody.vehicleRegistration as unknown as DocumentFile<Types.ObjectId, mongo.Binary>[]
+    request.user.vehicleRegistration = (requestBody.vehicleRegistration ?? []) as unknown as DocumentFile<Types.ObjectId, mongo.Binary>[]
     request.user.markModified('vehicleRegistration')
     const result = await request.user.save()
     return { message: 'alerts.successSaving', result: result }
@@ -119,14 +123,14 @@ export class UsersController extends Controller {
   public async getNamesAndProjects(@Queries() query: GetterQuery<IUser>) {
     return await this.getter(User, {
       query,
-      projection: { name: 1, projects: 1 },
+      projection: { name: 1, projects: 1, email: 1 },
       filter: { 'fk.magiclogin': { $ne: tokenAdminUser.fk.magiclogin } }
     })
   }
 }
 
-function sendNewMagicloginMail(user: IUser) {
-  sendMail(
+async function sendNewMagicloginMail(user: IUser) {
+  await enqueueMail(
     [user],
     i18n.t('mail.newMagiclogin.subject', { lng: user.settings.language }),
     i18n.t('mail.newMagiclogin.paragraph', { lng: user.settings.language }),
@@ -183,9 +187,9 @@ export class UserAdminController extends Controller {
         newMagicloginUsers.push(i)
       }
     }
-    const cb = (users: IUser[]) => {
+    const cb = async (users: IUser[]) => {
       for (const index of newMagicloginUsers) {
-        sendNewMagicloginMail(users[index])
+        await sendNewMagicloginMail(users[index])
       }
     }
     return await this.insertMany(User, { requestBody, cb })
@@ -196,9 +200,26 @@ export class UserAdminController extends Controller {
     return await this.deleter(User, {
       _id,
       referenceChecks: [
-        { model: Travel, paths: ['owner', 'editor', 'comments.author'], conditions: { historic: false } },
-        { model: ExpenseReport, paths: ['owner', 'editor', 'comments.author'], conditions: { historic: false } },
-        { model: HealthCareCost, paths: ['owner', 'editor', 'comments.author'], conditions: { historic: false } }
+        {
+          model: Travel,
+          paths: ['owner', 'editor', 'comments.author', 'log.-10.by', 'log.0.by', 'log.10.by', 'log.20.by', 'log.30.by', 'log.40.by'],
+          conditions: { historic: false }
+        },
+        {
+          model: ExpenseReport,
+          paths: ['owner', 'editor', 'comments.author', 'log.10.by', 'log.20.by', 'log.30.by', 'log.40.by'],
+          conditions: { historic: false }
+        },
+        {
+          model: HealthCareCost,
+          paths: ['owner', 'editor', 'comments.author', 'log.10.by', 'log.20.by', 'log.30.by', 'log.40.by'],
+          conditions: { historic: false }
+        },
+        {
+          model: Advance,
+          paths: ['owner', 'editor', 'comments.author', 'log.-10.by', 'log.0.by', 'log.30.by', 'log.40.by'],
+          conditions: { historic: false }
+        }
       ]
     })
   }
