@@ -9,23 +9,28 @@ import {
   transportTypes,
   travelStates
 } from 'abrechnung-common/types.js'
-import { addUp } from 'abrechnung-common/utils/scripts.js'
+import { addUp, getCostGrossAmount } from 'abrechnung-common/utils/scripts.js'
 import mongoose, { HydratedDocument, Model, model, mongo, Query, Schema, Types } from 'mongoose'
-import { travelCalculator } from '../factory.js'
+import { BACKEND_CACHE } from '../db.js'
+import { createOperationServices } from '../factory.js'
 import ApprovedTravel from './approvedTravel.js'
 import DocumentFile from './documentFile.js'
-import { addExchangeRate } from './exchangeRate.js'
 import {
+  addHistoryEntry,
+  addReferenceOnNewDocs,
   addToProjectBalance,
   costObject,
+  getCostPositionValidationIssues,
   offsetAdvance,
   place,
   populateAll,
   populateSelected,
+  positionedCostObject,
   requestBaseSchema,
   setLog,
   travelBaseSchema
 } from './helper.js'
+import ReportUsage from './reportUsage.js'
 import User from './user.js'
 
 interface Methods {
@@ -34,11 +39,8 @@ interface Methods {
   addComment(): void
 }
 
-// biome-ignore lint/complexity/noBannedTypes: mongoose uses {} as type
-type TravelModel = Model<Travel<Types.ObjectId, mongo.Binary>, {}, Methods>
-
 const travelSchema = () =>
-  new Schema<Travel<Types.ObjectId, mongo.Binary>, TravelModel, Methods>(
+  new Schema<Travel<Types.ObjectId, mongo.Binary>, Model<Travel<Types.ObjectId, mongo.Binary>>, Methods>(
     Object.assign(requestBaseSchema(travelStates, TravelState.APPLIED_FOR, 'Travel'), travelBaseSchema(), {
       isCrossBorder: { type: Boolean },
       a1Certificate: { type: { exactAddress: { type: String, required: true }, destinationName: { type: String, required: true } } },
@@ -57,18 +59,16 @@ const travelSchema = () =>
             distanceRefundType: { type: String, enum: distanceRefundTypes, default: distanceRefundTypes[0] },
             type: { type: String, enum: transportTypes, required: true }
           },
-          cost: costObject(true, true, false),
+          cost: positionedCostObject({ required: false, min: 0, receiptsRequired: false }),
           purpose: { type: String, enum: ['professional', 'mixed', 'private'], required: true, default: 'professional' },
-          project: { type: Schema.Types.ObjectId, ref: 'Project' },
           note: { type: String }
         }
       ],
       expenses: [
         {
           description: { type: String, required: true },
-          cost: costObject(true, true, true),
+          cost: positionedCostObject({ required: true, receiptsRequired: false }),
           purpose: { type: String, enum: ['professional', 'mixed'], required: true, default: 'professional' },
-          project: { type: Schema.Types.ObjectId, ref: 'Project' },
           note: { type: String }
         }
       ],
@@ -85,9 +85,9 @@ const travelSchema = () =>
           overnightRefund: { type: Boolean, default: true },
           purpose: { type: String, enum: ['professional', 'private'], default: 'professional' },
           lumpSums: {
-            overnight: { refund: costObject(false, false, true) },
+            overnight: { refund: costObject({ exchangeRate: false, receipts: false, required: true, min: 0 }) },
             catering: {
-              refund: costObject(false, false, true),
+              refund: costObject({ exchangeRate: false, receipts: false, required: true, min: 0 }),
               type: { type: String, enum: cateringTypes, required: true, default: 'catering8' }
             }
           }
@@ -109,17 +109,20 @@ const populates = {
     { path: 'stages.startLocation.country', select: { name: 1, flag: 1, currency: 1 } },
     { path: 'stages.endLocation.country', select: { name: 1, flag: 1, currency: 1 } },
     { path: 'stages.midnightCountries.country', select: { name: 1, flag: 1, currency: 1 } },
-    { path: 'stages.project', select: { identifier: 1, organisation: 1 } }
+    { path: 'stages.cost.positions.project', select: { identifier: 1, organisation: 1 } },
+    { path: 'stages.cost.positions.category' }
   ],
   expenses: [
     { path: 'expenses.cost.currency' },
     { path: 'expenses.cost.receipts', select: { name: 1, type: 1 } },
-    { path: 'expenses.project', select: { identifier: 1, organisation: 1 } }
+    { path: 'expenses.cost.positions.project', select: { identifier: 1, organisation: 1 } },
+    { path: 'expenses.cost.positions.category' }
   ],
   addUp: [{ path: 'addUp.project', select: { identifier: 1, organisation: 1 } }],
   advances: [{ path: 'advances', select: { name: 1, balance: 1, budget: 1, state: 1, project: 1 } }],
+  bookings: [{ path: 'bookings.ledgerAccount' }, { path: 'bookings.project', select: { identifier: 1, organisation: 1 } }],
   project: [{ path: 'project' }],
-  owner: [{ path: 'owner', select: { name: 1, email: 1 } }],
+  owner: [{ path: 'owner', select: { name: 1, email: 1, additionalDetails: 1 } }],
   editor: [{ path: 'editor', select: { name: 1, email: 1 } }],
   log: travelStates.map((state) => ({ path: `log.${state}.by`, select: { name: 1, email: 1 } })),
   comments: [{ path: 'comments.author', select: { name: 1, email: 1 } }]
@@ -132,39 +135,29 @@ schema.pre(
   }
 )
 
-schema.pre('deleteOne', { document: true, query: false }, function (this: TravelDoc) {
-  for (const historyId of this.history) {
-    model('Travel').deleteOne({ _id: historyId }).exec()
-  }
-  function deleteReceipts(records: TravelRecord[]) {
+schema.pre('deleteOne', { document: true, query: false }, async function () {
+  const receiptIds: (string | Types.ObjectId)[] = []
+  function collectReceipts(records: TravelRecord[]) {
     for (const record of records) {
       if (record.cost) {
         for (const receipt of record.cost.receipts) {
-          model('DocumentFile').deleteOne({ _id: receipt._id }).exec()
+          receiptIds.push(receipt._id)
         }
       }
     }
   }
-  deleteReceipts(this.stages)
-  deleteReceipts(this.expenses)
+  collectReceipts(this.stages)
+  collectReceipts(this.expenses)
+  await Promise.all([
+    model('Travel').deleteMany({ _id: { $in: this.history } }),
+    model('DocumentFile').deleteMany({ _id: { $in: receiptIds } })
+  ])
 })
 
-schema.methods.saveToHistory = async function (this: TravelDoc) {
-  const m = model<Travel<Types.ObjectId, mongo.Binary>, TravelModel>('Travel')
-  const doc = await m.findOne({ _id: this._id }, { history: 0 }).lean()
-  if (!doc) {
-    throw new Error('Travel not found')
-  }
-  doc._id = new mongoose.Types.ObjectId()
-  doc.updatedAt = new Date()
-  doc.historic = true
-  const old = new m(doc)
-  old.$locals.SKIP_POST_SAFE_HOOK = true
-  await old.save({ timestamps: false })
-  this.history.push(old._id)
-  this.markModified('history')
+schema.methods.saveToHistory = async function () {
+  await addHistoryEntry(this, 'Travel')
 
-  if (this.state === TravelState.APPROVED) {
+  if (this.state === TravelState.APPROVED && BACKEND_CACHE.travelSettings.vehicleRegistrationWhenUsingOwnCar !== 'none') {
     // move vehicle registration of owner as receipt to 'ownCar' stages
     const receipts = []
     for (const stage of this.stages) {
@@ -189,33 +182,80 @@ schema.methods.saveToHistory = async function (this: TravelDoc) {
   this.$locals.SKIP_POST_SAFE_HOOK = false
 }
 
-schema.methods.calculateExchangeRates = async function (this: TravelDoc) {
+schema.methods.calculateExchangeRates = async function () {
+  const { currencyConverter } = createOperationServices()
   const promiseList = []
   for (const stage of this.stages) {
-    promiseList.push(addExchangeRate(stage.cost, stage.cost.date))
+    if (stage.cost.positions.length > 0 && stage.cost.date) {
+      promiseList.push(currencyConverter.addCostExchangeRate(stage.cost, stage.cost.date))
+    }
   }
   for (const expense of this.expenses) {
-    promiseList.push(addExchangeRate(expense.cost, expense.cost.date))
+    promiseList.push(currencyConverter.addCostExchangeRate(expense.cost, expense.cost.date as Date))
   }
-  await Promise.allSettled(promiseList)
+  await Promise.all(promiseList)
 }
 
-schema.methods.addComment = function (this: TravelDoc) {
+schema.methods.addComment = function () {
   if (this.comment) {
     this.comments.push({ text: this.comment, author: this.editor, toState: this.state } as Comment<Types.ObjectId, TravelState>)
     this.comment = undefined
   }
 }
 
-schema.pre('validate', async function (this: TravelDoc) {
+schema.pre('validate', async function () {
+  const validateExpensePositions = this.isNew || this.isModified('expenses')
+  const validateStagePositions = this.isNew || this.isModified('stages')
   this.addComment()
 
   await populateAll(this, populates)
 
+  const { travelCalculator } = createOperationServices()
   const { conflicts } = await travelCalculator.calc(this)
+  const [expenseIssues, stageIssues] = await Promise.all([
+    validateExpensePositions
+      ? getCostPositionValidationIssues(
+          this.expenses.map(({ cost }) => cost),
+          'Travel',
+          true,
+          false
+        )
+      : [],
+    validateStagePositions
+      ? getCostPositionValidationIssues(
+          this.stages.map(({ cost }) => cost),
+          'Travel',
+          false,
+          true
+        )
+      : []
+  ])
+  for (const issue of expenseIssues) {
+    this.invalidate(`expenses.${issue.path.replace(/^(\d+)\./, '$1.cost.')}`, issue.message)
+  }
+  for (const issue of stageIssues) {
+    this.invalidate(`stages.${issue.path.replace(/^(\d+)\./, '$1.cost.')}`, issue.message)
+  }
+  for (const [index, stage] of this.stages.entries()) {
+    const ownCarPositions = stage.cost.positions.filter(({ kind }) => kind === 'ownCar')
+    if (stage.transport.type === 'ownCar' && (stage.cost.positions.length !== 1 || ownCarPositions.length !== 1)) {
+      this.invalidate(`stages.${index}.cost.positions`, 'invalidOwnCarPosition')
+    }
+    if (stage.transport.type !== 'ownCar' && ownCarPositions.length > 0) {
+      this.invalidate(`stages.${index}.cost.positions`, 'invalidOwnCarPosition')
+    }
+    if (getCostGrossAmount(stage.cost) !== 0 && stage.transport.type !== 'ownCar' && !stage.cost.date) {
+      this.invalidate(`stages.${index}.cost.date`, 'required')
+    }
+  }
+  const shouldInvalidateConflicts = this.state >= TravelState.IN_REVIEW
 
-  for (const conflict of conflicts) {
-    this.invalidate(conflict.path, conflict.err, conflict.val)
+  if (shouldInvalidateConflicts) {
+    for (const conflict of conflicts) {
+      if (conflict.path) {
+        this.invalidate(conflict.path, conflict.code)
+      }
+    }
   }
 
   await this.calculateExchangeRates()
@@ -223,22 +263,32 @@ schema.pre('validate', async function (this: TravelDoc) {
   await populateAll(this, populates)
 })
 
-schema.pre('save', async function (this: TravelDoc) {
+schema.pre('save', async function () {
   setLog(this)
+  await addReferenceOnNewDocs(this, 'Travel')
+  if (!this.historic && this.state < TravelState.REVIEW_COMPLETED) {
+    this.bookings = []
+  }
 })
 
-schema.post('save', async function (this: TravelDoc) {
+schema.post('save', async function () {
   if (this.$locals.SKIP_POST_SAFE_HOOK) {
     return
   }
   if (this.state === TravelState.REVIEW_COMPLETED) {
     await addToProjectBalance(this)
     await offsetAdvance(this, 'Travel')
+    await ReportUsage.addOrUpdate(this)
   } else if (this.state === TravelState.APPROVED) {
     await ApprovedTravel.addOrUpdate(this)
   }
 })
 
-export default model<Travel<Types.ObjectId, mongo.Binary>, TravelModel>('Travel', schema)
+schema.index(
+  { name: 'text', 'comments.text': 'text', reason: 'text', 'destinationPlace.place': 'text', 'expenses.description': 'text' },
+  { weights: { name: 10, reason: 6, 'destinationPlace.place': 4, 'expenses.description': 4, 'comments.text': 3 } }
+)
+
+export default model('Travel', schema)
 
 export interface TravelDoc extends Methods, HydratedDocument<Travel<Types.ObjectId, mongo.Binary>> {}

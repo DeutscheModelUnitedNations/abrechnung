@@ -1,18 +1,18 @@
 <template>
-  <div v-if="travel._id">
-    <StatePipeline class="mb-3" :state="travel.state" :StateEnum="TravelState"></StatePipeline>
+  <div v-if="props.travel._id">
+    <StatePipeline class="mb-3" :state="props.travel.state" :StateEnum="TravelState" />
     <table class="table">
       <tbody>
         <tr v-for="key of keys" :key="key">
           <template v-if="displayKey(key)">
-            <th>{{ $t('labels.' + key) }}</th>
+            <th>{{ t('labels.' + key) }}</th>
             <td>{{ displayKey(key) }}</td>
           </template>
         </tr>
         <tr>
-          <th>{{ $t('labels.destinationPlace') }}</th>
+          <th>{{ t('labels.destinationPlace') }}</th>
           <td>
-            <PlaceElement :place="travel.destinationPlace"></PlaceElement>
+            <PlaceElement :place="props.travel.destinationPlace" />
           </td>
         </tr>
       </tbody>
@@ -20,16 +20,17 @@
   </div>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
 import { TravelSimple, TravelState } from 'abrechnung-common/types.js'
 import { getDiffInDays } from 'abrechnung-common/utils/scripts.js'
-import { defineComponent, PropType } from 'vue'
+import { PropType } from 'vue'
+import { useI18n } from 'vue-i18n'
 import PlaceElement from '@/components/elements/PlaceElement.vue'
 import StatePipeline from '@/components/elements/StatePipeline.vue'
 import { formatter } from '@/formatter.js'
 
-const keys: (keyof TravelSimple)[] = [
-  'owner',
+const keys = [
+  'traveler',
   'project',
   'reason',
   'startDate',
@@ -40,71 +41,60 @@ const keys: (keyof TravelSimple)[] = [
   'claimSpouseRefund',
   'fellowTravelersNames',
   'a1Certificate'
-]
-export default defineComponent({
-  name: 'TravelApply',
-  data() {
-    return { keys, TravelState }
-  },
-  components: { StatePipeline, PlaceElement },
-  props: { travel: { type: Object as PropType<TravelSimple>, required: true } },
-  methods: {
-    displayKey(key: keyof TravelSimple): string {
-      switch (key) {
-        case 'startDate':
-          return formatter.date(this.travel[key])
-        case 'endDate': {
-          const dif = getDiffInDays(this.travel.startDate, this.travel.endDate) + 1
-          return `${formatter.date(this.travel[key])} (${dif} ${this.$t(`labels.${dif === 1 ? 'day' : 'days'}`)})`
-        }
-        case 'state':
-          return this.$t(`states.${this.travel[key]}`)
-        case 'editor':
-          if (this.travel.owner._id === this.travel.editor._id) {
-            return ''
-          }
-          return formatter.name(this.travel[key].name)
-        case 'owner':
-          return formatter.name(this.travel[key].name)
-        case 'comments':
-          if (this.travel.comments.length > 0) {
-            const c = this.travel.comments[this.travel.comments.length - 1]
-            return `${c.author.name.givenName}: "${c.text}"`
-          }
-          return ''
-        case 'a1Certificate':
-          if (this.travel.a1Certificate) {
-            return `${this.travel.a1Certificate.destinationName} - ${this.travel.a1Certificate.exactAddress}`
-          }
-          return ''
-        case 'advances':
-          if (this.travel.advances.length > 0) {
-            return this.travel.advances
-              .map(
-                (a) =>
-                  `${a.name} - ${formatter.money(a.balance)} ${
-                    a.budget.amount !== a.balance.amount ? `(${formatter.money(a.budget)})` : ''
-                  }`
-              )
-              .join('\n')
-          }
-          return ''
-        case 'project':
-          return `${this.travel.project.identifier} - ${this.travel.project.name || ''}`
+] as const
+const { t } = useI18n()
 
-        default:
-          if (typeof this.travel[key] === 'boolean') {
-            return this.travel[key] ? '✅' : ''
-          }
-          if (this.travel[key]) {
-            return this.travel[key]?.toString()
-          }
-          return ''
-      }
+const props = defineProps({ travel: { type: Object as PropType<TravelSimple>, required: true } })
+
+function displayKey(key: (typeof keys)[number]): string {
+  switch (key) {
+    case 'startDate':
+      return formatter.date(props.travel[key])
+    case 'endDate': {
+      const dif = getDiffInDays(props.travel.startDate, props.travel.endDate) + 1
+      return `${formatter.date(props.travel[key])} (${dif} ${t(`labels.${dif === 1 ? 'day' : 'days'}`)})`
     }
-  },
-  mounted() {}
-})
+    case 'editor':
+      if (props.travel.owner._id === props.travel.editor._id) {
+        return ''
+      }
+      return formatter.name(props.travel[key].name)
+    case 'traveler':
+      return formatter.name(props.travel.owner.name)
+    case 'comments':
+      if (props.travel.comments.length > 0) {
+        const c = props.travel.comments[props.travel.comments.length - 1]
+        return `${c.author.name.givenName}: "${c.text}"`
+      }
+      return ''
+    case 'a1Certificate':
+      if (props.travel.a1Certificate) {
+        return `${props.travel.a1Certificate.destinationName} - ${props.travel.a1Certificate.exactAddress}`
+      }
+      return ''
+    case 'advances':
+      if (props.travel.advances.length > 0) {
+        return props.travel.advances
+          .map(
+            (a) =>
+              `${a.name} - ${formatter.money(a.balance)} ${a.budget.amount !== a.balance.amount ? `(${formatter.money(a.budget)})` : ''}`
+          )
+          .join('\n')
+      }
+      return ''
+    case 'project':
+      return `${props.travel.project.identifier} - ${props.travel.project.name || ''}`
+
+    default:
+      if (typeof props.travel[key] === 'boolean') {
+        return props.travel[key] ? '✅' : ''
+      }
+      if (props.travel[key]) {
+        return props.travel[key]?.toString()
+      }
+      return ''
+  }
+}
 </script>
 
 <style></style>

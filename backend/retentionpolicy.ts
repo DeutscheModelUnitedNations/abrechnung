@@ -1,29 +1,33 @@
 import {
-  AnyState,
   ExpenseReportState,
   HealthCareCostState,
   ExpenseReport as IExpenseReport,
   HealthCareCost as IHealthCareCost,
   Travel as ITravel,
   Locale,
+  ReportModelNameWithoutAdvance,
   ReportType,
   RetentionType,
   reportIsHealthCareCost,
   reportIsTravel,
   State,
-  schemaNames,
   TravelState
 } from 'abrechnung-common/types.js'
 import { model } from 'mongoose'
-import { getSettings } from './db.js'
 import ENV from './env.js'
-import { formatter } from './factory.js'
+import { createOperationServices } from './factory.js'
 import i18n from './i18n.js'
+import { enqueueMail } from './integrations/notifications/email.js'
+import { getIntegrationSettings } from './integrations/settings.js'
 import { logger } from './logger.js'
 import User from './models/user.js'
-import { sendMail } from './notifications/mail.js'
 
-async function getForRetentionPolicy(schema: schemaNames, date: Date, state: AnyState, startDate?: Date) {
+async function getForRetentionPolicy(
+  schema: ReportModelNameWithoutAdvance,
+  date: Date,
+  state: TravelState | ExpenseReportState | HealthCareCostState,
+  startDate?: Date
+) {
   let res: Array<ITravel | IExpenseReport | IHealthCareCost>
   if (startDate) {
     res = await model<ITravel | IExpenseReport | IHealthCareCost>(schema)
@@ -46,15 +50,22 @@ function getDateThreshold(days: number) {
 }
 
 async function getPolicyElements(retentionPolicy: { [key in RetentionType]: number }) {
-  const elements: { schema: schemaNames; state: AnyState; deletionPeriod: number }[] = [
-    { schema: 'Travel', state: State.BOOKED, deletionPeriod: retentionPolicy.deleteBookedAfterXDays },
-    { schema: 'Travel', state: State.EDITABLE_BY_OWNER, deletionPeriod: retentionPolicy.deleteApprovedTravelAfterXDaysUnused },
-    { schema: 'ExpenseReport', state: State.BOOKED, deletionPeriod: retentionPolicy.deleteBookedAfterXDays },
-    { schema: 'ExpenseReport', state: State.EDITABLE_BY_OWNER, deletionPeriod: retentionPolicy.deleteInWorkReportsAfterXDaysUnused },
-    { schema: 'HealthCareCost', state: State.BOOKED, deletionPeriod: retentionPolicy.deleteBookedAfterXDays },
-    { schema: 'HealthCareCost', state: State.EDITABLE_BY_OWNER, deletionPeriod: retentionPolicy.deleteInWorkReportsAfterXDaysUnused }
+  return [
+    { schema: 'Travel' as const, state: State.BOOKED, deletionPeriod: retentionPolicy.deleteBookedAfterXDays },
+    { schema: 'Travel' as const, state: State.EDITABLE_BY_OWNER, deletionPeriod: retentionPolicy.deleteApprovedTravelAfterXDaysUnused },
+    { schema: 'ExpenseReport' as const, state: State.BOOKED, deletionPeriod: retentionPolicy.deleteBookedAfterXDays },
+    {
+      schema: 'ExpenseReport' as const,
+      state: State.EDITABLE_BY_OWNER,
+      deletionPeriod: retentionPolicy.deleteInWorkReportsAfterXDaysUnused
+    },
+    { schema: 'HealthCareCost' as const, state: State.BOOKED, deletionPeriod: retentionPolicy.deleteBookedAfterXDays },
+    {
+      schema: 'HealthCareCost' as const,
+      state: State.EDITABLE_BY_OWNER,
+      deletionPeriod: retentionPolicy.deleteInWorkReportsAfterXDaysUnused
+    }
   ]
-  return elements
 }
 
 async function triggerDeletion(retentionPolicy: { [key in RetentionType]: number }) {
@@ -70,7 +81,8 @@ async function triggerDeletion(retentionPolicy: { [key in RetentionType]: number
   }
 }
 
-async function deleteAny(reports: Array<ITravel | IExpenseReport | IHealthCareCost>, schema: schemaNames) {
+async function deleteAny(reports: Array<ITravel | IExpenseReport | IHealthCareCost>, schema: ReportModelNameWithoutAdvance) {
+  const { formatter } = createOperationServices()
   for (let i = 0; i < reports.length; i++) {
     const result = await model(schema).deleteOne({ _id: reports[i]._id })
     if (result && result.deletedCount === 1) {
@@ -138,14 +150,13 @@ async function sendNotificationMails(report: ITravel | IExpenseReport | IHealthC
 
       const subject = i18n.t(`mail.${reportType}.${stateLabel}_getsDeletedSoon.subject`, interpolation)
       const paragraph = i18n.t(`mail.${reportType}.${stateLabel}_getsDeletedSoon.paragraph`, interpolation)
-      await sendMail(recipients, subject, paragraph, button)
+      await enqueueMail(recipients, subject, paragraph, button)
     }
   }
 }
 
-export async function retentionPolicy() {
-  const settings = await getSettings()
-
-  await notificationMailForDeletions(settings.retentionPolicy)
-  await triggerDeletion(settings.retentionPolicy)
+export async function applyRetentionPolicy() {
+  const retentionPolicy = (await getIntegrationSettings('retentionPolicy')).settings
+  await notificationMailForDeletions(retentionPolicy)
+  await triggerDeletion(retentionPolicy)
 }

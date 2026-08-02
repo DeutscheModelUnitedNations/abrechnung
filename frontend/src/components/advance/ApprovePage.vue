@@ -4,6 +4,10 @@
       :header="modalAdvance.state ? modalAdvance.name : t('labels.newX', { X: t('labels.advance') })"
       ref="modalComp"
       @afterClose="modalMode === 'view' ? resetModal() : null">
+      <template #header="{header}">
+        <h5 class="modal-title">{{ header }}</h5>
+        <RefStringBadge v-if="modalAdvance.reference" class="ms-2" :number="modalAdvance.reference" type="Advance" />
+      </template>
       <div v-if="modalAdvance">
         <template v-if="modalMode === 'view'">
           <template v-if="modalAdvance._id">
@@ -12,35 +16,59 @@
               :advance="(modalAdvance as AdvanceSimple<string>)"
               :loading="modalFormIsLoading"
               @cancel="resetAndHide()"
-              @decision="(d, c, br) => approveAdvance((modalAdvance as AdvanceSimple<string>), d, c, br)"></AdvanceApproveForm>
+              @decision="(d, c, br) => approveAdvance((modalAdvance as AdvanceSimple<string>), d, c, br)" />
             <template v-else>
-              <Advance :advance="(modalAdvance as AdvanceSimple<string>)" endpointPrefix="approve/"></Advance>
-              <template v-if="!modalAdvance.settledOn">
-                <form class="mb-2 mt-3" v-if="showOffsetForm" @submit.prevent="offsetAdvance(modalAdvance._id, offsetAmount)">
-                  <div class="row">
-                    <label for="amount" class="col-form-label col-auto"> {{ t('labels.amount') }}<span class="text-danger">*</span> </label>
-                    <div class="col-auto">
-                      <input type="number" class="form-control" id="amount" step="0.01" v-model="offsetAmount" required />
-                    </div>
-                    <div class="col-auto">
-                      <div class="mb-1 d-flex align-items-center">
-                        <button type="submit" class="btn btn-primary me-2" :disabled="modalFormIsLoading">
-                          {{ t('labels.offset') }}
-                        </button>
-                        <span v-if="modalFormIsLoading" class="spinner-border spinner-border-sm ms-1 me-3"></span>
-                        <button type="button" class="btn btn-light" @click="resetAndHide()">
-                          {{ t('labels.cancel') }}
-                        </button>
-                      </div>
+              <Advance :advance="(modalAdvance as AdvanceSimple<string>)" endpointPrefix="approve/">
+                <template #buttons>
+                  <button
+                    v-if="!modalAdvance.settledOn && !isOffsetFormVisible"
+                    type="button"
+                    class="btn btn-secondary"
+                    @click="isOffsetFormVisible = true">
+                    {{ t('labels.addX', {X: t('labels.offsetEntry')}) }}
+                  </button>
+                  <button
+                    v-if="canDeleteAdvance(modalAdvance as AdvanceSimple<string>)"
+                    type="button"
+                    class="btn btn-danger ms-2"
+                    @click="deleteAdvance((modalAdvance as AdvanceSimple<string>)._id)">
+                    {{ t('labels.delete') }}
+                  </button>
+                </template>
+              </Advance>
+              <div v-if="canWithdrawApproval(modalAdvance as AdvanceSimple<string>)" class="mt-3">
+                <label for="withdrawAdvanceApprovalComment" class="form-label">{{ t('labels.comment') }}</label>
+                <CTextArea id="withdrawAdvanceApprovalComment" v-model="withdrawalComment" />
+                <button type="button" class="btn btn-danger mt-3" :disabled="modalFormIsLoading" @click="withdrawApproval()">
+                  <span v-if="modalFormIsLoading" class="spinner-border spinner-border-sm"></span>
+                  {{ t('labels.withdrawApproval') }}
+                </button>
+              </div>
+              <form class="mb-2 mt-3" v-if="isOffsetFormVisible" @submit.prevent="offsetAdvance(modalAdvance._id, offsetAmount)">
+                <div class="row gy-3">
+                  <label for="amount" class="col-form-label col-auto">
+                    {{ t('labels.amount') }}
+                    <span class="text-danger">*</span>
+                  </label>
+                  <div class="col-auto">
+                    <input type="number" class="form-control" id="amount" step="0.01" v-model="offsetAmount" required >
+                  </div>
+                  <label for="subject" class="col-form-label col-auto">
+                    {{ t('labels.subject') }}
+                    <span class="text-danger">*</span>
+                  </label>
+                  <div class="col-auto">
+                    <input type="text" class="form-control" id="subject" v-model="offsetSubject" required >
+                  </div>
+                  <div class="col-auto">
+                    <div class="mb-1 d-flex align-items-center">
+                      <button type="submit" class="btn btn-primary me-2" :disabled="modalFormIsLoading">{{ t('labels.offset') }}</button>
+                      <span v-if="modalFormIsLoading" class="spinner-border spinner-border-sm ms-1 me-3"></span>
+                      <button type="button" class="btn btn-light" @click="isOffsetFormVisible = false">{{ t('labels.cancel') }}</button>
                     </div>
                   </div>
-                </form>
-                <div class="mb-2 d-flex" v-else>
-                  <button type="button" class="btn btn-link pt-0 ms-auto" @click="showOffsetForm = true">
-                    {{ t('labels.addOffsetEntry') }}
-                  </button>
                 </div>
-              </template>
+              </form>
             </template>
           </template>
         </template>
@@ -52,8 +80,7 @@
           askOwner
           askBookingRemark
           :loading="modalFormIsLoading"
-          @add="(t) => approveAdvance(t as AdvanceSimple, 'approved')">
-        </AdvanceForm>
+          @add="(t) => approveAdvance(t as AdvanceSimple, 'approved')" />
       </div>
     </ModalComponent>
     <div class="container py-3">
@@ -74,27 +101,29 @@
         endpoint="approve/advance"
         :stateFilter="AdvanceState.APPLIED_FOR"
         @clicked="(a) => router.push(`/approve/advance/${a._id}`)"
-        :columns-to-hide="['balance', 'state', 'editor', 'report', 'organisation', 'bookingRemark', 'log.30.on']"
-        dbKeyPrefix="approve"></AdvanceList>
+        :columns-to-hide="['balance', 'state', 'receivedOn', 'editor', 'report', 'organisation', 'bookingRemark', 'log.30.on', 'reference']"
+        dbKeyPrefix="approve" />
       <button v-if="!show" type="button" class="btn btn-light" @click="show = AdvanceState.APPROVED">
-        {{ t('labels.show') }} <StateBadge :state="AdvanceState.APPROVED" :StateEnum="AdvanceState"></StateBadge>
+        {{ t('labels.show') }}
+        <StateBadge :state="AdvanceState.APPROVED" :StateEnum="AdvanceState" />
         <i class="bi bi-chevron-down"></i>
       </button>
       <template v-else>
         <button type="button" class="btn btn-light" @click="show = null">
-          {{ t('labels.hide') }} <StateBadge :state="show" :StateEnum="AdvanceState"></StateBadge> <i class="bi bi-chevron-up"></i>
+          {{ t('labels.hide') }}
+          <StateBadge :state="show" :StateEnum="AdvanceState" />
+          <i class="bi bi-chevron-up"></i>
         </button>
-        <hr class="hr" />
+        <hr class="hr" >
         <AdvanceList
           ref="approvedAdvanceList"
           endpoint="approve/advance"
           :stateFilter="{ $gte: AdvanceState.APPROVED }"
-          :columns-to-hide="['updatedAt', 'report', 'organisation']"
+          :columns-to-hide="['updatedAt', 'report', 'organisation', 'reference']"
           @clicked="(a) => router.push(`/approve/advance/${a._id}`)"
           sort-by="log.30.on"
           sort-type="desc"
-          dbKeyPrefix="approved">
-        </AdvanceList>
+          dbKeyPrefix="approved" />
       </template>
     </div>
   </div>
@@ -111,7 +140,9 @@ import AdvanceList from '@/components/advance/AdvanceList.vue'
 import AdvanceApproveForm from '@/components/advance/forms/AdvanceApproveForm.vue'
 import AdvanceForm from '@/components/advance/forms/AdvanceForm.vue'
 import ModalComponent from '@/components/elements/ModalComponent.vue'
+import RefStringBadge from '@/components/elements/RefStringBadge.vue'
 import StateBadge from '@/components/elements/StateBadge.vue'
+import CTextArea from '@/components/elements/TextArea.vue'
 
 const props = defineProps<{ _id?: string }>()
 const router = useRouter()
@@ -121,8 +152,10 @@ const modalAdvance = ref<Partial<AdvanceSimple<string>>>({})
 const modalMode = ref<'view' | 'add'>('view')
 const show = ref<null | AdvanceState.APPROVED>(null)
 const modalFormIsLoading = ref(false)
-const showOffsetForm = ref(false)
+const isOffsetFormVisible = ref(false)
 const offsetAmount = ref(0)
+const offsetSubject = ref('')
+const withdrawalComment = ref('')
 
 const modalComp = useTemplateRef('modalComp')
 const advanceList = useTemplateRef('advanceList')
@@ -144,12 +177,23 @@ function hideModal() {
 function resetModal() {
   modalAdvance.value = {}
   modalMode.value = 'view'
-  showOffsetForm.value = false
+  isOffsetFormVisible.value = false
+  offsetAmount.value = 0
+  offsetSubject.value = ''
+  withdrawalComment.value = ''
   router.push('/approve/advance')
 }
 function resetAndHide() {
   resetModal()
   hideModal()
+}
+
+function canDeleteAdvance(advance: AdvanceSimple<string>) {
+  return advance.state === AdvanceState.APPROVED && !advance.receivedOn && advance.offsetAgainst.length === 0
+}
+
+function canWithdrawApproval(advance: AdvanceSimple<string>) {
+  return advance.state === AdvanceState.APPROVED && !advance.receivedOn && advance.offsetAgainst.length === 0
 }
 
 async function approveAdvance(
@@ -177,12 +221,43 @@ async function approveAdvance(
 async function offsetAdvance(advanceId: string, amount: number) {
   if (advanceId && amount) {
     modalFormIsLoading.value = true
-    const result = await API.setter<AdvanceSimple<string>>('approve/advance/offset', { advanceId, amount })
+    const result = await API.setter<AdvanceSimple<string>>('approve/advance/offset', { advanceId, amount, subject: offsetSubject.value })
     modalFormIsLoading.value = false
     if (result.ok) {
       showModal('view', result.ok)
       approvedAdvanceList.value?.loadFromServer()
+      offsetSubject.value = ''
+      offsetAmount.value = 0
+      isOffsetFormVisible.value = false
     }
+  }
+}
+
+async function deleteAdvance(_id: string) {
+  modalFormIsLoading.value = true
+  const result = await API.deleter('approve/advance', { _id })
+  modalFormIsLoading.value = false
+  if (result) {
+    advanceList.value?.loadFromServer()
+    approvedAdvanceList.value?.loadFromServer()
+    resetAndHide()
+  }
+}
+
+async function withdrawApproval() {
+  if (!modalAdvance.value._id || !confirm(t('alerts.areYouSureWithdrawApproval'))) {
+    return
+  }
+  modalFormIsLoading.value = true
+  const result = await API.setter<AdvanceSimple<string>>('approve/advance/withdrawApproval', {
+    _id: modalAdvance.value._id,
+    comment: withdrawalComment.value || undefined
+  })
+  modalFormIsLoading.value = false
+  if (result.ok) {
+    advanceList.value?.loadFromServer()
+    approvedAdvanceList.value?.loadFromServer()
+    resetAndHide()
   }
 }
 

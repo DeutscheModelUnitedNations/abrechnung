@@ -1,6 +1,6 @@
+import { Body, Get, Post, Route, Security, Tags } from '@tsoa/runtime'
 import { Settings as ISettings, locales } from 'abrechnung-common/types.js'
 import { Types } from 'mongoose'
-import { Body, Get, Post, Route, Security, Tags } from 'tsoa'
 import Settings, { settingsSchema } from '../models/settings.js'
 import { mongooseSchemaToVueformSchema } from '../models/vueformGenerator.js'
 import { Controller, SetterBody } from './controller.js'
@@ -22,8 +22,8 @@ export class SettingsController extends Controller {
 @Security('httpBearer', ['admin'])
 export class SettingsAdminController extends Controller {
   @Post()
-  public async post(@Body() requestBody: SetterBody<Omit<ISettings<Types.ObjectId>, 'version' | 'migrateFrom'>>) {
-    return await this.setter(Settings, { requestBody: requestBody, allowNew: false })
+  public async post(@Body() requestBody: SetterBody<Omit<ISettings<Types.ObjectId>, 'version' | 'migrateFrom' | 'isReadOnly'>>) {
+    return await this.setter(Settings, { requestBody, allowNew: false })
   }
   @Get('form')
   public async getForm() {

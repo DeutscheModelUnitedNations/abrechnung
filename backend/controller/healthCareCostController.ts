@@ -1,5 +1,8 @@
 import { Readable } from 'node:stream'
+import { Body, Consumes, Delete, Get, Middlewares, Post, Produces, Queries, Query, Request, Route, Security, Tags } from '@tsoa/runtime'
+import { Validator } from 'abrechnung-common/report/validator.js'
 import {
+  BookingExportPackageRequest,
   Expense,
   HealthCareCostState,
   IdDocument,
@@ -7,24 +10,34 @@ import {
   Organisation as IOrganisation,
   User as IUser,
   idDocumentToId,
-  Locale,
   State,
   UserWithName
 } from 'abrechnung-common/types.js'
-import { Condition, mongo, Types } from 'mongoose'
-import { Body, Consumes, Delete, Get, Middlewares, Post, Produces, Queries, Query, Request, Route, Security, Tags } from 'tsoa'
-import ENV from '../env.js'
-import { reportPrinter } from '../factory.js'
-import { checkIfUserIsProjectSupervisor, documentFileHandler, fileHandler, writeToDisk } from '../helper.js'
+import { mongo, QueryFilter, Types } from 'mongoose'
+import { BACKEND_CACHE } from '../db.js'
+import { createOperationServices } from '../factory.js'
+import { checkIfUserIsProjectSupervisor, documentFileHandler, fileHandler } from '../helper.js'
 import i18n from '../i18n.js'
+import { emitIntegrationEvent } from '../integrations/dispatcher.js'
 import HealthCareCost, { HealthCareCostDoc } from '../models/healthCareCost.js'
 import Organisation from '../models/organisation.js'
 import User from '../models/user.js'
-import { sendNotification } from '../notifications/notification.js'
-import { sendViaMail, writeToDiskFilePath } from '../pdf/helper.js'
+import { createBookingExportPackage, getBookingExportPreview } from './bookingExport.js'
 import { Controller, checkOwner, GetterQuery, SetterBody } from './controller.js'
-import { AuthorizationError, NotFoundError } from './error.js'
+import { AuthorizationError, NotFoundError, ValidationClientError } from './error.js'
 import { AuthenticatedExpressRequest } from './types.js'
+
+const healthCareCostValidator = new Validator({ requireReceipts: true })
+
+function assertHealthCareCostCanEnterReview(report: Pick<IHealthCareCost, 'expenses'>, language: string) {
+  const reviewSummary = healthCareCostValidator.getValidationSummary(report)
+  if (!reviewSummary.canEnterReview) {
+    throw new ValidationClientError(
+      i18n.t('alerts.reviewRequirementsNotMet', { lng: language }),
+      reviewSummary.results.filter((result) => result.severity === 'error').map((result) => ({ path: result.path, message: result.code }))
+    )
+  }
+}
 
 @Tags('Health Care Cost')
 @Route('healthCareCost')
@@ -35,15 +48,23 @@ export class HealthCareCostController extends Controller {
   public async getOwn(@Queries() query: GetterQuery<IHealthCareCost>, @Request() request: AuthenticatedExpressRequest) {
     return await this.getter(HealthCareCost, {
       query,
-      filter: { owner: request.user._id, historic: false },
-      projection: { history: 0, historic: 0, expenses: 0, bookingRemark: 0 },
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter: { owner: request.user._id as any, historic: false },
+      projection: { history: 0, historic: 0, bookings: 0, expenses: 0, bookingRemark: 0 },
       allowedAdditionalFields: ['expenses'],
       sort: { createdAt: -1 }
     })
   }
+
   @Delete()
   public async deleteOwn(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
-    return await this.deleter(HealthCareCost, { _id: _id, checkOldObject: checkOwner(request.user) })
+    const notAfterReview = BACKEND_CACHE.settings.preventOwnersFromDeletingReportsAfterReviewCompleted
+    return await this.deleter(HealthCareCost, {
+      _id: _id,
+      async checkOldObject(oldObject: HealthCareCostDoc) {
+        return !oldObject.historic && (await checkOwner(request.user)(oldObject)) && (!notAfterReview || oldObject.state < State.BOOKABLE)
+      }
+    })
   }
 
   @Post('expense')
@@ -54,11 +75,6 @@ export class HealthCareCostController extends Controller {
     @Body() requestBody: SetterBody<Expense<Types.ObjectId, mongo.Binary>>,
     @Request() request: AuthenticatedExpressRequest
   ) {
-    // multipart/form-data does not send null values
-    // so we need to set it to null if the value is an empty string
-    if (requestBody.project?.toString() === '') {
-      requestBody.project = null
-    }
     return await this.setterForArrayElement(HealthCareCost, {
       requestBody: requestBody as Expense,
       parentId,
@@ -73,7 +89,7 @@ export class HealthCareCostController extends Controller {
         }
         return false
       },
-      sortFn: (a: Expense, b) => new Date(a.cost.date).valueOf() - new Date(b.cost.date).valueOf()
+      sortFn: (a: Expense, b) => new Date(a.cost.date || 0).valueOf() - new Date(b.cost.date || 0).valueOf()
     })
   }
 
@@ -120,7 +136,7 @@ export class HealthCareCostController extends Controller {
     }
     return await this.setter(HealthCareCost, {
       requestBody: extendedBody,
-
+      cb: async (h: IHealthCareCost<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.draft_saved', report: h }),
       async checkOldObject(oldObject: HealthCareCostDoc) {
         if (oldObject.owner._id.equals(request.user._id)) {
           if (oldObject.state === HealthCareCostState.IN_WORK && request.user.access['inWork:healthCareCost']) {
@@ -146,10 +162,11 @@ export class HealthCareCostController extends Controller {
 
     return await this.setter(HealthCareCost, {
       requestBody: extendedBody,
-      cb: sendNotification,
+      cb: async (h: IHealthCareCost<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.review_requested', report: h }),
       allowNew: false,
       async checkOldObject(oldObject: HealthCareCostDoc) {
         if (oldObject.owner._id.equals(request.user._id) && oldObject.state === HealthCareCostState.IN_WORK) {
+          assertHealthCareCostCanEnterReview(oldObject, request.user.settings.language)
           await oldObject.saveToHistory()
           return true
         }
@@ -162,12 +179,16 @@ export class HealthCareCostController extends Controller {
   @Produces('application/pdf')
   public async getReportFromOwn(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
     const healthCareCost = await HealthCareCost.findOne({
-      $and: [{ _id, owner: request.user._id, historic: false, state: { $gte: State.BOOKABLE } }]
+      _id,
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      owner: request.user._id as any,
+      historic: false,
+      state: { $gte: State.BOOKABLE }
     }).lean()
     if (!healthCareCost) {
       throw new NotFoundError(`No health care cost with id: '${_id}' found or not allowed`)
     }
-    const report = await reportPrinter.print(healthCareCost, request.user.settings.language)
+    const report = await createOperationServices().reportPrinter.print(healthCareCost, request.user.settings.language)
     this.setHeader('Content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(healthCareCost.name)}.pdf`)
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
@@ -191,14 +212,15 @@ export class HealthCareCostController extends Controller {
 export class HealthCareCostExamineController extends Controller {
   @Get()
   public async getToExamine(@Queries() query: GetterQuery<IHealthCareCost>, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<IHealthCareCost> = { historic: false }
+    const filter: QueryFilter<IHealthCareCost> = { historic: false }
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     return await this.getter(HealthCareCost, {
       query,
       filter,
-      projection: { history: 0, historic: 0, expenses: 0 },
+      projection: { history: 0, historic: 0, bookings: 0, expenses: 0 },
       allowedAdditionalFields: ['expenses'],
       sort: { updatedAt: -1 }
     })
@@ -222,11 +244,6 @@ export class HealthCareCostExamineController extends Controller {
     @Body() requestBody: SetterBody<Expense<Types.ObjectId, mongo.Binary>>,
     @Request() request: AuthenticatedExpressRequest
   ) {
-    // multipart/form-data does not send null values
-    // so we need to set it to null if the value is an empty string
-    if (requestBody.project?.toString() === '') {
-      requestBody.project = null
-    }
     return await this.setterForArrayElement(HealthCareCost, {
       requestBody: requestBody as Expense,
       parentId,
@@ -245,7 +262,7 @@ export class HealthCareCostExamineController extends Controller {
         }
         return false
       },
-      sortFn: (a: Expense, b) => new Date(a.cost.date).valueOf() - new Date(b.cost.date).valueOf()
+      sortFn: (a: Expense, b) => new Date(a.cost.date || 0).valueOf() - new Date(b.cost.date || 0).valueOf()
     })
   }
 
@@ -317,7 +334,8 @@ export class HealthCareCostExamineController extends Controller {
     }
     return await this.setter(HealthCareCost, {
       requestBody: extendedBody,
-      cb: (e: IHealthCareCost) => sendNotification(e, extendedBody._id ? 'BACK_TO_IN_WORK' : undefined),
+      cb: async (h: IHealthCareCost<Types.ObjectId>) =>
+        emitIntegrationEvent({ type: extendedBody._id ? 'report.back_to_in_work' : 'report.review_requested', report: h }),
       allowNew: true,
       async checkOldObject(oldObject: HealthCareCostDoc) {
         if (oldObject.state === HealthCareCostState.IN_REVIEW && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
@@ -336,13 +354,7 @@ export class HealthCareCostExamineController extends Controller {
   ) {
     const extendedBody = Object.assign(requestBody, { state: HealthCareCostState.REVIEW_COMPLETED, editor: request.user._id })
 
-    const cb = async (healthCareCost: IHealthCareCost<Types.ObjectId>) => {
-      sendNotification(healthCareCost)
-      sendViaMail(healthCareCost)
-      if (ENV.BACKEND_SAVE_REPORTS_ON_DISK) {
-        await writeToDisk(await writeToDiskFilePath(healthCareCost), await reportPrinter.print(healthCareCost, i18n.language as Locale))
-      }
-    }
+    const cb = async (h: IHealthCareCost<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.review_completed', report: h })
 
     return await this.setter(HealthCareCost, {
       requestBody: extendedBody,
@@ -350,6 +362,7 @@ export class HealthCareCostExamineController extends Controller {
       allowNew: false,
       async checkOldObject(oldObject: HealthCareCostDoc) {
         if (oldObject.state === HealthCareCostState.IN_REVIEW && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
+          assertHealthCareCostCanEnterReview(oldObject, request.user.settings.language)
           await oldObject.saveToHistory()
           return true
         }
@@ -367,10 +380,11 @@ export class HealthCareCostExamineController extends Controller {
 
     return await this.setter(HealthCareCost, {
       requestBody: extendedBody,
-      cb: sendNotification,
+      cb: async (h: IHealthCareCost<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.review_requested', report: h }),
       allowNew: false,
       async checkOldObject(oldObject: HealthCareCostDoc) {
         if (oldObject.state === HealthCareCostState.IN_WORK && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
+          assertHealthCareCostCanEnterReview(oldObject, request.user.settings.language)
           await oldObject.saveToHistory()
           return true
         }
@@ -382,15 +396,16 @@ export class HealthCareCostExamineController extends Controller {
   @Get('report')
   @Produces('application/pdf')
   public async getReport(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<IHealthCareCost> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
+    const filter: QueryFilter<IHealthCareCost<Types.ObjectId, mongo.Binary>> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     const healthCareCost = await HealthCareCost.findOne(filter).lean()
     if (!healthCareCost) {
       throw new NotFoundError(`No health care cost with id: '${_id}' found or not allowed`)
     }
-    const report = await reportPrinter.print(healthCareCost, request.user.settings.language)
+    const report = await createOperationServices().reportPrinter.print(healthCareCost, request.user.settings.language)
     this.setHeader('Content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(healthCareCost.name)}.pdf`)
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
@@ -410,15 +425,16 @@ export class HealthCareCostExamineController extends Controller {
 export class HealthCareCostBookableController extends Controller {
   @Get()
   public async getBookable(@Queries() query: GetterQuery<IHealthCareCost>, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<IHealthCareCost> = { historic: false, state: { $gte: State.BOOKABLE } }
+    const filter: QueryFilter<IHealthCareCost> = { historic: false, state: { $gte: State.BOOKABLE } }
 
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     return await this.getter(HealthCareCost, {
       query,
       filter,
-      projection: { history: 0, historic: 0, expenses: 0 },
+      projection: { history: 0, historic: 0, bookings: 0, expenses: 0 },
       allowedAdditionalFields: ['expenses'],
       sort: { updatedAt: -1 }
     })
@@ -427,20 +443,34 @@ export class HealthCareCostBookableController extends Controller {
   @Get('report')
   @Produces('application/pdf')
   public async getBookableReport(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<IHealthCareCost> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
+    const filter: QueryFilter<IHealthCareCost<Types.ObjectId, mongo.Binary>> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
 
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     const healthCareCost = await HealthCareCost.findOne(filter).lean()
     if (!healthCareCost) {
       throw new NotFoundError(`No health care cost with id: '${_id}' found or not allowed`)
     }
-    const report = await reportPrinter.print(healthCareCost, request.user.settings.language)
+    const report = await createOperationServices().reportPrinter.print(healthCareCost, request.user.settings.language)
     this.setHeader('Content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(healthCareCost.name)}.pdf`)
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
     return Readable.from([report])
+  }
+
+  @Post('bookingExportPreview')
+  public async postBookingExportPreview(@Body() requestBody: IdDocument<string>[], @Request() request: AuthenticatedExpressRequest) {
+    return { result: await getBookingExportPreview(HealthCareCost, 'HealthCareCost', requestBody, request) }
+  }
+
+  @Post('bookingExportPackage')
+  public async postBookingExportPackage(
+    @Body() requestBody: BookingExportPackageRequest<string>,
+    @Request() request: AuthenticatedExpressRequest
+  ) {
+    return { result: await createBookingExportPackage(HealthCareCost, 'HealthCareCost', requestBody, request) }
   }
 
   @Post('booked')

@@ -1,304 +1,285 @@
 <template>
-  <div>
-    <OfflineBanner v-if="isOffline"></OfflineBanner>
-    <ModalComponent v-if="APP_DATA" header="API Key" ref="modalComp" @afterClose=";($refs.apiKeyForm as any).resetForm()">
-      <ApiKeyForm :user="APP_DATA.user" endpoint="user/httpBearer" @cancel=";($refs.modalComp as any).hideModal()" ref="apiKeyForm">
-      </ApiKeyForm>
-    </ModalComponent>
-    <nav class="navbar navbar-expand-lg border-bottom py-1">
-      <div class="container d-flex" id="navBarContent">
-        <a href="/" class="navbar-brand link-body-emphasis d-flex align-items-center py-0">
-          <i class="fs-3 bi bi-receipt"></i>
-          <span class="fs-4 ms-1">{{ $t('headlines.title') }}</span>
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse justify-content-end" id="navbarSupportedContent">
-          <template v-if="APP_DATA">
-            <ul class="navbar-nav" style="flex-wrap: wrap">
-              <template v-for="access of accesses" :key="access">
-                <template v-if="access.indexOf(':') === -1 && APP_DATA.user.access[access]">
-                  <li class="nav-item d-flex align-items-center">
-                    <router-link :to="'/' + access" class="nav-link link-body-emphasis d-flex align-items-center">
-                      <i v-for="icon of APP_DATA.displaySettings.accessIcons[access]" :class="'bi bi-' + icon"></i>
-                      <span class="ms-1">{{ $t('accesses.' + access) }}</span>
-                    </router-link>
-                  </li>
-                </template>
-              </template>
-              <li class="nav-item dropdown">
-                <a
-                  class="nav-link link-body-emphasis d-flex align-items-center dropdown-toggle"
-                  data-bs-toggle="dropdown"
-                  href="#"
-                  role="button">
-                  <i class="fs-4 bi bi-person-circle"></i>
-                  <span class="ms-1">{{ APP_DATA.user.name.givenName }}</span>
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end">
-                  <li>
-                    <select class="form-select mx-auto" v-model="$i18n.locale" style="max-width: 68px" @change="updateLanguage()">
-                      <option v-for="lang of locales" :key="lang" :value="lang" :title="$t('labels.' + lang)">
-                        {{ lang !== 'en' ? getFlagEmoji(lang) : '🇬🇧' }}
-                      </option>
-                    </select>
-                  </li>
-                  <li>
-                    <hr class="dropdown-divider" />
-                  </li>
-                  <li>
-                    <button @click=";($refs.modalComp as any).modal.show()" class="d-flex align-items-center dropdown-item">
-                      <i class="fs-4 bi bi-key"></i>
-                      <span class="ms-1">API Key</span>
-                    </button>
-                  </li>
-                  <template v-if="mobile && !alreadyInstalled && !isOffline">
-                    <li>
-                      <hr class="dropdown-divider" />
-                    </li>
-                    <li>
-                      <button @click="showInstallBanner" class="d-flex align-items-center dropdown-item">
-                        <i class="fs-4 bi bi-box-arrow-down"></i>
-                        <span class="ms-1">{{ $t('labels.installApp') }}</span>
-                      </button>
-                    </li>
-                  </template>
-                  <li>
-                    <hr class="dropdown-divider" />
-                  </li>
-                  <li>
-                    <a class="d-flex align-items-center dropdown-item" href="#" @click="logout">
-                      <i class="fs-4 bi bi-box-arrow-left"></i>
-                      <span class="ms-1">{{ $t('headlines.logout') }}</span>
-                    </a>
-                  </li>
-                </ul>
-              </li>
-            </ul>
+  <ReadOnlyBanner />
+  <OfflineBanner ref="offlineBanner" />
+  <template v-if="APP_DATA">
+    <ModalComponent :header="'🔍 ' +t('labels.search')+ ': ' + searchInput" ref="searchResultModal">
+      <Suspense>
+        <TableElement
+          :items="searchResult"
+          :headers="[{text: 'labels.type', value: '_reportModelName'},{text: 'labels.label', value: 'name'}, {text: 'labels.state', value: 'state'}, {text: 'labels.owner', value: 'owner'} ]"
+          body-row-class-name="clickable"
+          @click-row="(r) => clickSearchResult((r as SearchResult & { _reportModelName: ReportModelName }))">
+          <template #customize-headers></template>
+          <template #item-_reportModelName="{_reportModelName}">
+            <span :title="t(`labels.${getReportTypeFromModelName(_reportModelName)}`)">
+              <i
+                v-if="APP_DATA"
+                v-for="icon in APP_DATA.displaySettings.reportTypeIcons[getReportTypeFromModelName(_reportModelName)]"
+                :class="`bi bi-${icon} me-1`"></i>
+            </span>
           </template>
-          <div v-else>
-            <router-link to="/login" class="nav-link link-body-emphasis d-flex align-items-center">
-              <i class="fs-4 bi bi-box-arrow-in-right"></i>
-              <span class="ms-1">{{ $t('headlines.login') }}</span>
-            </router-link>
-          </div>
-        </div>
-      </div>
-    </nav>
+          <template #item-state="result">
+            <StateBadge :state="result.state" :StateEnum="getStateEnumFromModelName(result._reportModelName)" />
+          </template>
+          <template #item-owner="{owner}">{{ getNameFromUserId(idDocumentToId(owner)) }}</template>
+        </TableElement>
+      </Suspense>
+    </ModalComponent>
+  </template>
 
-    <div v-if="loadState !== 'LOADED'" class="position-absolute top-50 start-50 translate-middle">
-      <div class="spinner-grow me-3" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-      <div class="spinner-grow me-3" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-      <div class="spinner-grow" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-    </div>
-    <div class="position-relative">
-      <div class="position-absolute top-0 end-0" style="height: 100%">
-        <div class="position-sticky top-0 pt-2 pe-2" style="z-index: 1100">
-          <div
-            v-for="(alert, index) of alerts"
-            :key="alert.id"
-            :class="'alert alert-' + alert.type + ' alert-dismissible ms-auto'"
-            role="alert"
-            style="z-index: 1100; max-width: 250px; max-height: 150px; overflow-y: hidden">
-            <strong>
-              <i v-if="alert.type === 'danger'" class="bi bi-x-octagon-fill"></i>
-              <i v-else-if="alert.type === 'success'" class="bi bi-check-circle-fill"></i>
-              {{ alert.title }}{{ alert.title && alert.message ? ': ' : '' }}
-            </strong>
-            {{ alert.message }}
-            <div class="progress position-absolute top-0 end-0" style="height: 5px; width: 100%">
-              <div
-                :class="'progress-bar bg-' + alert.type"
-                role="progressbar"
-                id="alert-progress"
-                aria-label="Danger example"
-                :style="'animation-duration: ' + (alert.ttl ? alert.ttl : 5000) + 'ms;'"></div>
+  <HeaderComponent :language="APP_LOGIN_DATA?.language" @update:language="updateLanguage">
+    <template v-if="APP_DATA">
+      <li class=" nav-item ms-lg-auto me-lg-auto">
+        <form @submit.prevent="search">
+          <div class="position-relative">
+            <div v-if="loadingSearch" class="z-1 position-absolute top-50 end-0 translate-middle-y">
+              <span class="spinner-border spinner-border-sm me-2"></span>
             </div>
-            <button type="button" class="btn-close" @click="alerts.splice(index, 1)"></button>
+            <input type="text" class="form-control" :placeholder="'🔍 ' + t('labels.search') + '...'" v-model="searchInput" >
           </div>
-        </div>
-      </div>
-
-      <router-view :class="loadState === 'LOADED' ? 'd-block' : 'd-none'" v-slot="{ Component }">
-        <template v-if="Component">
-          <Suspense>
-            <template #default>
-              <component :is="Component"></component>
-            </template>
-            <template #fallback> </template>
-          </Suspense>
+        </form>
+      </li>
+      <template v-if="flatAccessList.length <= 2">
+        <template v-for="access of flatAccessList" :key="access">
+          <li class="nav-item d-flex align-items-center">
+            <router-link :to="'/' + access" class="nav-link link-body-emphasis d-flex align-items-center">
+              <i v-for="icon of APP_DATA.displaySettings.accessIcons[access]" :class="'bi bi-' + icon"></i>
+              <span class="ms-1">{{ t('accesses.' + access) }}</span>
+            </router-link>
+          </li>
         </template>
-      </router-view>
-    </div>
+      </template>
+      <template v-else>
+        <li class="nav-item dropdown me-2">
+          <a
+            class="nav-link link-body-emphasis d-flex align-items-center dropdown-toggle clickable"
+            role="button"
+            data-bs-toggle="dropdown">
+            <i class="fs-4 bi bi-menu-down"></i><span class="ms-1">{{ t('labels.menu') }}</span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <template v-for="(accesses,i) of orderdAccessList">
+              <li v-for="access of accesses" :key="access">
+                <router-link :to="'/' + access" class="d-flex align-items-center dropdown-item">
+                  <i v-for="icon of APP_DATA.displaySettings.accessIcons[access]" :class="'fs-5 bi bi-' + icon"></i>
+                  <span class="ms-1">{{ t('accesses.' + access) }}</span>
+                </router-link>
+              </li>
+              <li v-if="i !== orderdAccessList.length - 1">
+                <hr class="dropdown-divider" >
+              </li>
+            </template>
+          </ul>
+        </li>
+      </template>
 
-    <footer class="py-3 border-top">
-      <div class="container">
-        <div class="d-flex align-items-center lh-1">
-          <i class="fs-3 bi bi-receipt"></i>
+      <li class="nav-item dropdown me-2">
+        <a class="nav-link link-body-emphasis d-flex align-items-center dropdown-toggle clickable" data-bs-toggle="dropdown" role="button">
+          <i class="fs-4 bi bi-person-circle"></i>
+          <span class="ms-1">{{ APP_DATA.user.name.givenName }}</span>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <router-link to="/user/settings" class="d-flex align-items-center dropdown-item">
+              <i class="fs-4 bi bi-gear"></i>
+              <span class="ms-1">{{ t('labels.userSettings') }}</span>
+            </router-link>
+          </li>
+          <template v-if="isMobile && !alreadyInstalled && !offlineBannerRef?.isOffline">
+            <li>
+              <hr class="dropdown-divider" >
+            </li>
+            <li>
+              <button @click="showInstallBanner" class="d-flex align-items-center dropdown-item">
+                <i class="fs-4 bi bi-box-arrow-down"></i>
+                <span class="ms-1">{{ t('labels.installApp') }}</span>
+              </button>
+            </li>
+          </template>
+          <li>
+            <hr class="dropdown-divider" >
+          </li>
+          <li><a class="d-flex align-items-center dropdown-item clickable" @click="logout">
+            <i class="fs-4 bi bi-box-arrow-left"></i>
+            <span class="ms-1">{{ t('headlines.logout') }}</span>
+          </a></li>
+        </ul>
+      </li>
+    </template>
+  </HeaderComponent>
 
-          <span class="ps-2 text-secondary">
-            © {{ new Date().getFullYear() }} abrechnung
-            <small v-if="APP_DATA?.settings.version"
-              ><a
-                class="text-decoration-none link-secondary"
-                target="_blank"
-                :href="'https://github.com/david-loe/abrechnung/releases/tag/v' + APP_DATA.settings.version"
-                >v{{ APP_DATA.settings.version }}</a
-              ></small
-            >
-          </span>
-        </div>
-      </div>
-    </footer>
+  <div v-if="loadState !== 'LOADED'" class="position-absolute top-50 start-50 translate-middle">
+    <div class="spinner-grow me-3" role="status"><span class="visually-hidden">Loading...</span></div>
+    <div class="spinner-grow me-3" role="status"><span class="visually-hidden">Loading...</span></div>
+    <div class="spinner-grow" role="status"><span class="visually-hidden">Loading...</span></div>
   </div>
-  <Installation ref="InstallBanner" v-if="loadState === 'LOADED' && APP_DATA?.user && !isOffline && !alreadyInstalled"></Installation>
+  <div class="position-relative">
+    <AlertComponent />
+    <router-view :class="loadState === 'LOADED' ? 'd-block' : 'd-none'" v-slot="{ Component }">
+      <template v-if="Component">
+        <Suspense>
+          <template #default>
+            <component :is="Component"></component>
+          </template>
+          <template #fallback></template>
+        </Suspense>
+      </template>
+    </router-view>
+  </div>
+  <FooterComponent :version="APP_DATA?.settings.version" />
+  <Suspense>
+    <template #default>
+      <InstallationBanner
+        ref="installBanner"
+        v-if="loadState === 'LOADED' && APP_DATA?.user && !offlineBannerRef?.isOffline && !alreadyInstalled" />
+    </template>
+    <template #fallback>Loading.. </template>
+  </Suspense>
 </template>
 
-<script lang="ts">
-import { accesses, CountrySimple, Currency, Locale, locales, User } from 'abrechnung-common/types.js'
-import { getFlagEmoji } from 'abrechnung-common/utils/scripts.js'
-import { defineComponent } from 'vue'
+<script lang="ts" setup>
+import {
+  Access,
+  AnyState,
+  accesses,
+  getReportTypeFromModelName,
+  getStateEnumFromModelName,
+  IdDocument,
+  idDocumentToId,
+  Locale,
+  Name,
+  ReportModelName,
+  refStringRegexLax,
+  User
+} from 'abrechnung-common/types.js'
+import { getById, refStringToNumber } from 'abrechnung-common/utils/scripts.js'
+import { computed, onMounted, ref, useTemplateRef } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import API from '@/api.js'
-import APP_LOADER from '@/appData.js'
-import ApiKeyForm from '@/components/elements/ApiKeyForm.vue'
-import Installation from '@/components/elements/Installation.vue'
+import AlertComponent from '@/components/elements/AlertComponent.vue'
+import FooterComponent from '@/components/elements/FooterComponent.vue'
+import HeaderComponent from '@/components/elements/HeaderComponent.vue'
+import InstallationBanner from '@/components/elements/InstallationBanner.vue'
 import ModalComponent from '@/components/elements/ModalComponent.vue'
 import OfflineBanner from '@/components/elements/OfflineBanner.vue'
-import { subscribeToPush } from '@/helper.js'
-import { clearStore } from './indexedDB'
+import ReadOnlyBanner from '@/components/elements/ReadOnlyBanner.vue'
+import StateBadge from '@/components/elements/StateBadge.vue'
+import TableElement from '@/components/elements/TableElement.vue'
+import APP_LOADER from '@/dataLoader.js'
+import { getRouteForReport, isMobile, subscribeToPush } from '@/helper.js'
+import { beginLogout, completeLogout, sessionState } from './session.js'
 
-export default defineComponent({
-  data() {
-    return {
-      alerts: API.alerts,
-      APP_DATA: APP_LOADER.data,
-      loadState: APP_LOADER.state,
-      locales,
-      accesses,
-      isOffline: !navigator.onLine,
-      alreadyInstalled: window.matchMedia('(display-mode: standalone)').matches,
-      mobile: /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-    }
-  },
-  components: { OfflineBanner, Installation, ModalComponent, ApiKeyForm },
-  methods: {
-    async logout() {
-      const success = await API.deleter('auth/logout', {}, false, { success: false, error: true })
-      if (success) {
-        this.APP_DATA = null
-        clearStore('urls')
-        this.$router.push({ path: '/login' })
-      }
-    },
-    async updateLanguage() {
-      if (this.$vueform) {
-        this.$vueform.i18n.locale = this.$i18n.locale as Locale
-      }
-      this.$formatter.setLocale(this.$i18n.locale as Locale)
-      if (this.APP_DATA) {
-        this.APP_DATA.user.settings.language = this.$i18n.locale as Locale
-        this.APP_DATA.user.settings.hasUserSetLanguage = true
-        await API.setter('user/settings', { language: this.$i18n.locale, hasUserSetLanguage: true } as Partial<User['settings']>, {}, false)
-      }
-    },
-    setLastCurrency(currency: Currency) {
-      if (this.APP_DATA) {
-        this.setLast(currency, this.APP_DATA.user.settings.lastCurrencies)
-        API.setter('user/settings', { lastCurrencies: this.APP_DATA.user.settings.lastCurrencies.map((c) => c._id) }, {}, false)
-      }
-    },
-    setLastCountry(country: CountrySimple) {
-      if (this.APP_DATA) {
-        this.setLast(country, this.APP_DATA.user.settings.lastCountries)
-        API.setter('user/settings', { lastCountries: this.APP_DATA.user.settings.lastCountries.map((c) => c._id) }, {}, false)
-      }
-    },
-    setLast<T>(item: T, list: T[], limit = 3) {
-      const index = list.indexOf(item)
-      if (index !== -1) {
-        list.splice(index, 1)
-      }
-      const length = list.unshift(item)
-      if (length > limit) {
-        list.pop()
-      }
-    },
-    getFlagEmoji,
-    updateConnectionStatus() {
-      this.isOffline = !window.navigator.onLine
-    },
-    showInstallBanner() {
-      if (this.$refs.InstallBanner as typeof Installation) {
-        ;(this.$refs.InstallBanner as typeof Installation).showBanner()
+const router = useRouter()
+const { t } = useI18n()
+
+const APP_DATA = APP_LOADER.data
+const APP_LOGIN_DATA = APP_LOADER.loginData
+const loadState = APP_LOADER.state
+const alreadyInstalled = window.matchMedia('(display-mode: standalone)').matches
+
+const installationBannerRef = useTemplateRef('installBanner')
+const offlineBannerRef = useTemplateRef('offlineBanner')
+
+async function logout() {
+  await beginLogout()
+  if (sessionState.isOnline.value) {
+    const success = await API.deleter('auth/logout', {}, false, { success: false, error: true })
+    if (success) await completeLogout()
+  }
+  await router.replace({ path: '/login' })
+}
+async function updateLanguage(locale: Locale) {
+  if (APP_LOGIN_DATA.value) {
+    APP_LOGIN_DATA.value.language = locale
+  }
+  if (APP_DATA.value) {
+    APP_DATA.value.user.settings.language = locale
+    APP_DATA.value.user.settings.hasUserSetLanguage = true
+    await API.setter('user/settings', { language: locale, hasUserSetLanguage: true } as Partial<User['settings']>, {}, false)
+  }
+}
+
+// Group user accesses by prefix (e.g., "approve/travel" and "approve/advance" → "approve" group)
+// Excludes colon-based accesses (e.g., "appliedFor:advance") as they are derived permissions
+const orderdAccessList = computed(() => {
+  const groups: Record<string, Access[]> = {}
+  if (APP_DATA.value) {
+    for (const access of accesses) {
+      if (APP_DATA.value.user.access[access] && access.indexOf(':') === -1) {
+        const prefix = access.split('/')[0]
+        if (!groups[prefix]) groups[prefix] = []
+        groups[prefix].push(access)
       }
     }
-  },
-  mounted() {
-    window.addEventListener('online', this.updateConnectionStatus)
-    window.addEventListener('offline', this.updateConnectionStatus)
-    if (!this.isOffline) {
-      subscribeToPush()
+  }
+  return Object.values(groups)
+})
+const flatAccessList = computed(() => orderdAccessList.value.flat())
+
+function showInstallBanner() {
+  if (installationBannerRef.value) {
+    installationBannerRef.value.showBanner()
+  }
+}
+
+type SearchResult = { state: AnyState; _id: string; name: string; owner: IdDocument<string> }
+const searchInput = ref('')
+const searchResult = ref([] as SearchResult[])
+const loadingSearch = ref(false)
+
+const searchResultModalRef = useTemplateRef('searchResultModal')
+
+async function search() {
+  const term = searchInput.value.trim()
+  if (APP_DATA.value && term) {
+    loadingSearch.value = true
+    if (refStringRegexLax.exec(term)) {
+      const params = refStringToNumber(term)
+      const result = await API.getter<SearchResult>('search/ref', params)
+      if (result.ok) {
+        const route = getRouteForReport(APP_DATA.value?.user, result.ok.data, params.type)
+        router.push(route)
+        searchInput.value = ''
+      }
+    } else {
+      const result = await API.getter<SearchResult[]>('search', { term, limit: 50 })
+      if (result.ok) {
+        searchResult.value = result.ok.data
+        searchResultModalRef.value?.modal?.show()
+      }
     }
+    loadingSearch.value = false
+  }
+}
+
+function clickSearchResult(result: SearchResult & { _reportModelName: ReportModelName }) {
+  if (APP_DATA.value) {
+    const route = getRouteForReport(APP_DATA.value?.user, result, result._reportModelName)
+    router.push(route)
+    searchResultModalRef.value?.hideModal()
+    searchInput.value = ''
+  }
+}
+
+function getNameFromUserId(userId: string) {
+  if (APP_DATA.value) {
+    let name: Name | undefined
+    if (userId === APP_DATA.value.user._id) {
+      name = APP_DATA.value.user.name
+    } else if (APP_DATA.value.users) {
+      name = getById(userId, APP_DATA.value.users)?.name
+    }
+    return APP_DATA.value.formatter.name(name, 'short')
+  }
+  return ''
+}
+
+onMounted(() => {
+  if (!offlineBannerRef.value?.isOffline) {
+    subscribeToPush()
   }
 })
 </script>
 
-<style>
-body {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.win {
-  font-family: 'Twemoji Country Flags', Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
-}
-
-body {
-  margin-bottom: 60px !important;
-  /* Margin bottom by footer height */
-}
-
-footer {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  height: 60px;
-  /* Set the fixed height of the footer here */
-  /* z-index: -999; */
-}
-
-@keyframes run {
-  0% {
-    width: 0%;
-  }
-
-  100% {
-    width: 100%;
-  }
-}
-
-#alert-progress {
-  animation-name: run;
-  animation-timing-function: linear;
-}
-
-.router-link-active {
-  font-weight: bold !important;
-}
-</style>
+<style></style>

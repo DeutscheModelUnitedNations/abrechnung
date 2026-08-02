@@ -7,12 +7,16 @@ import i18n from '../i18n.js'
 export function mongooseSchemaToVueformSchema(
   mongooseSchema: SchemaDefinition | any,
   language: Locale | readonly Locale[],
-  assignment = {}
+  assignment = {},
+  addId = true
 ) {
   const vueformSchema: any = {}
   for (const path in mongooseSchema) {
     const prop = mongooseSchema[path] as SchemaTypeOptions<any>
     vueformSchema[path] = mapSchemaTypeToVueformElement(prop, language, path, assignment)
+  }
+  if (addId && !Object.hasOwn(vueformSchema, '_id')) {
+    Object.assign(vueformSchema, { _id: { type: 'hidden', meta: true } })
   }
 
   return vueformSchema
@@ -26,6 +30,9 @@ function mapSchemaTypeToVueformElement(
 ) {
   if (schemaType.hide) {
     return
+  }
+  if (schemaType.meta) {
+    return { type: 'hidden', meta: true, ...assignment }
   }
   const rules: any[] = ['nullable']
   if (schemaType.rules && Array.isArray(schemaType.rules)) {
@@ -73,7 +80,7 @@ function mapSchemaTypeToVueformElement(
     vueformElement.default = schemaType.default
   }
 
-  if (!vueformElement.columns && isNotNested(schemaType)) {
+  if (!vueformElement.columns && isNotNested(schemaType) && !schemaType.noColumn) {
     vueformElement.columns = { md: 6 }
   }
 
@@ -83,6 +90,8 @@ function mapSchemaTypeToVueformElement(
       vueformElement.placeholder = vueformElement.label
       vueformElement.label = undefined
     }
+  } else if (schemaType.specialType) {
+    vueformElement.type = schemaType.specialType
   } else if (schemaType.type === String) {
     vueformElement.placeholder = vueformElement.label
     vueformElement.label = undefined
@@ -91,7 +100,7 @@ function mapSchemaTypeToVueformElement(
       const items: any = {}
       for (const value of schemaType.enum) {
         if (value) {
-          items[value] = translate(`labels.${value}`, language)
+          items[value] = translate(`${schemaType.translationPrefix ?? 'labels.'}${value}`, language)
         }
       }
       vueformElement.items = items
@@ -138,7 +147,7 @@ function mapSchemaTypeToVueformElement(
     } else if (!isFlatType(schemaType.type[0].type)) {
       // Array of Objects
       vueformElement.type = 'list'
-      vueformElement.object = { schema: mongooseSchemaToVueformSchema(schemaType.type[0].type, language) }
+      vueformElement.object = { schema: mongooseSchemaToVueformSchema(schemaType.type[0].type, language, {}, false) }
     } else {
       vueformElement.type = 'list'
       vueformElement.element = mapSchemaTypeToVueformElement(schemaType.type[0], language, labelStr, { columns: 12 })
@@ -150,15 +159,19 @@ function mapSchemaTypeToVueformElement(
       vueformElement.rules.push('min:0')
     }
   } else if (typeof schemaType.type === 'object') {
-    const keys = Object.keys(schemaType.type).filter((key) => !schemaType.type[key].hide)
+    const nestedSchema = schemaType.type instanceof Schema ? schemaType.type.obj : schemaType.type
+    const keys = Object.keys(nestedSchema).filter((key) => !nestedSchema[key].hide && !nestedSchema[key].meta)
     vueformElement.type = 'object'
     vueformElement.addClasses = { ElementLabel: { wrapper: 'h5' }, ElementLayout: { container: 'mb-2' } }
-    if (keys.length > 1 && isNotNestedObject(schemaType.type)) {
-      vueformElement.schema = mongooseSchemaToVueformSchema(schemaType.type, language, {
-        columns: { xl: 12 / (keys.length > 3 ? 4 : keys.length), lg: 12 / (keys.length > 2 ? 3 : keys.length), sm: 6 }
-      })
+    if (keys.length > 1 && isNotNestedObject(nestedSchema)) {
+      vueformElement.schema = mongooseSchemaToVueformSchema(
+        nestedSchema,
+        language,
+        { columns: { xl: 12 / (keys.length > 3 ? 4 : keys.length), lg: 12 / (keys.length > 2 ? 3 : keys.length), sm: 6 } },
+        false
+      )
     } else {
-      vueformElement.schema = mongooseSchemaToVueformSchema(schemaType.type, language)
+      vueformElement.schema = mongooseSchemaToVueformSchema(nestedSchema, language, {}, false)
     }
   } else {
     throw new Error(`No Type for conversion found for: ${labelStr} (${schemaType.type})`)

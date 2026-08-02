@@ -1,29 +1,43 @@
 import { Readable } from 'node:stream'
+import { Body, Consumes, Delete, Get, Middlewares, Post, Produces, Queries, Query, Request, Route, Security, Tags } from '@tsoa/runtime'
 import {
+  BookingExportPackageRequest,
   IdDocument,
   Travel as ITravel,
   User as IUser,
   idDocumentToId,
-  Locale,
   Stage,
   State,
   TravelExpense,
   TravelState,
   UserWithName
 } from 'abrechnung-common/types.js'
-import { Condition, mongo, Types } from 'mongoose'
-import { Body, Consumes, Delete, Get, Middlewares, Post, Produces, Queries, Query, Request, Route, Security, Tags } from 'tsoa'
-import ENV from '../env.js'
-import { reportPrinter } from '../factory.js'
-import { checkIfUserIsProjectSupervisor, documentFileHandler, fileHandler, writeToDisk } from '../helper.js'
+import { mongo, QueryFilter, Types } from 'mongoose'
+import { BACKEND_CACHE } from '../db.js'
+import { createOperationServices } from '../factory.js'
+import { checkIfUserIsProjectSupervisor, documentFileHandler, fileHandler } from '../helper.js'
 import i18n from '../i18n.js'
+import { emitIntegrationEvent } from '../integrations/dispatcher.js'
+import ApprovedTravel from '../models/approvedTravel.js'
 import Travel, { TravelDoc } from '../models/travel.js'
 import User from '../models/user.js'
-import { sendA1Notification, sendNotification } from '../notifications/notification.js'
-import { sendViaMail, writeToDiskFilePath } from '../pdf/helper.js'
-import { Controller, GetterQuery, SetterBody } from './controller.js'
-import { AuthorizationError, NotFoundError } from './error.js'
+import { createBookingExportPackage, getBookingExportPreview } from './bookingExport.js'
+import { Controller, checkOwner, GetterQuery, SetterBody } from './controller.js'
+import { AuthorizationError, NotFoundError, ValidationClientError } from './error.js'
 import { AuthenticatedExpressRequest, TravelApplication, TravelPost } from './types.js'
+
+async function assertTravelCanEnterReview(report: ITravel<Types.ObjectId, mongo.Binary>, language: string) {
+  const owner = await User.findOne({ _id: report.owner._id }, { vehicleRegistration: 1 }).lean()
+  const reviewSummary = createOperationServices().travelCalculator.validator.getValidationSummary(report, {
+    vehicleRegistration: owner?.vehicleRegistration
+  })
+  if (!reviewSummary.canEnterReview) {
+    throw new ValidationClientError(
+      i18n.t('alerts.reviewRequirementsNotMet', { lng: language }),
+      reviewSummary.results.filter((result) => result.severity === 'error').map((result) => ({ path: result.path, message: result.code }))
+    )
+  }
+}
 
 @Tags('Travel')
 @Route('travel')
@@ -34,17 +48,21 @@ export class TravelController extends Controller {
   public async getOwn(@Queries() query: GetterQuery<ITravel>, @Request() request: AuthenticatedExpressRequest) {
     return await this.getter(Travel, {
       query,
-      filter: { owner: request.user._id, historic: false },
-      projection: { history: 0, historic: 0, expenses: 0, stages: 0, days: 0, bookingRemark: 0 },
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter: { owner: request.user._id as any, historic: false },
+      projection: { history: 0, historic: 0, bookings: 0, expenses: 0, stages: 0, days: 0, bookingRemark: 0 },
       allowedAdditionalFields: ['expenses', 'stages', 'days'],
       sort: { startDate: -1 }
     })
   }
+
   @Delete()
   public async deleteOwn(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
+    const notAfterReview = BACKEND_CACHE.settings.preventOwnersFromDeletingReportsAfterReviewCompleted
     return await this.deleter(Travel, {
       _id: _id,
-      checkOldObject: async (oldObject: TravelDoc) => !oldObject.historic && oldObject.owner._id.equals(request.user._id)
+      checkOldObject: async (oldObject: TravelDoc) =>
+        !oldObject.historic && (await checkOwner(request.user)(oldObject)) && (!notAfterReview || oldObject.state < State.BOOKABLE)
     })
   }
 
@@ -70,11 +88,6 @@ export class TravelController extends Controller {
     @Body() requestBody: SetterBody<TravelExpense<Types.ObjectId, mongo.Binary>>,
     @Request() request: AuthenticatedExpressRequest
   ) {
-    // multipart/form-data does not send null values
-    // so we need to set it to null if the value is an empty string
-    if (requestBody.project?.toString() === '') {
-      requestBody.project = null
-    }
     return await this.setterForArrayElement(Travel, {
       requestBody: requestBody as TravelExpense,
       parentId,
@@ -89,7 +102,7 @@ export class TravelController extends Controller {
         }
         return false
       },
-      sortFn: (a: TravelExpense, b) => new Date(a.cost.date).valueOf() - new Date(b.cost.date).valueOf()
+      sortFn: (a: TravelExpense, b) => new Date(a.cost.date || 0).valueOf() - new Date(b.cost.date || 0).valueOf()
     })
   }
 
@@ -101,11 +114,6 @@ export class TravelController extends Controller {
     @Body() requestBody: SetterBody<Stage<Types.ObjectId, mongo.Binary>>,
     @Request() request: AuthenticatedExpressRequest
   ) {
-    // multipart/form-data does not send null values
-    // so we need to set it to null if the value is an empty string
-    if (requestBody.project?.toString() === '') {
-      requestBody.project = null
-    }
     return await this.setterForArrayElement(Travel, {
       requestBody: requestBody as Stage,
       parentId,
@@ -174,7 +182,7 @@ export class TravelController extends Controller {
     }
     return await this.setter(Travel, {
       requestBody: extendedBody,
-      cb: sendNotification,
+      cb: async (t: ITravel<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.submitted', report: t }),
       checkOldObject: async (oldObject: TravelDoc) =>
         !oldObject.historic &&
         oldObject.state <= TravelState.APPROVED &&
@@ -199,9 +207,9 @@ export class TravelController extends Controller {
         const date = new Date(extendedBody.startDate)
         extendedBody.name = `${extendedBody.destinationPlace?.place} ${i18n.t(`monthsShort.${date.getUTCMonth()}`, { lng: request.user.settings.language })} ${date.getUTCFullYear()}`
       }
-      cb = (travel: ITravel) => {
-        if (travel.isCrossBorder && travel.destinationPlace.country.needsA1Certificate) {
-          sendA1Notification(travel)
+      cb = async (t: ITravel<Types.ObjectId>) => {
+        if (!extendedBody._id) {
+          await emitIntegrationEvent({ type: 'travel.directly_approved', report: t })
         }
       }
       Object.assign(extendedBody, { state: TravelState.APPROVED, editor: request.user._id, owner: request.user._id })
@@ -233,10 +241,11 @@ export class TravelController extends Controller {
 
     return await this.setter(Travel, {
       requestBody: extendedBody,
-      cb: sendNotification,
+      cb: async (t: ITravel<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.review_requested', report: t }),
       allowNew: false,
       async checkOldObject(oldObject: TravelDoc) {
         if (oldObject.owner._id.equals(request.user._id) && oldObject.state === TravelState.APPROVED) {
+          await assertTravelCanEnterReview(oldObject, request.user.settings.language)
           await oldObject.saveToHistory()
           return true
         }
@@ -248,11 +257,17 @@ export class TravelController extends Controller {
   @Get('report')
   @Produces('application/pdf')
   public async getOwnReport(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
-    const travel = await Travel.findOne({ _id: _id, owner: request.user._id, historic: false, state: { $gte: State.BOOKABLE } }).lean()
+    const travel = await Travel.findOne({
+      _id: _id,
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      owner: request.user._id as any,
+      historic: false,
+      state: { $gte: State.BOOKABLE }
+    }).lean()
     if (!travel) {
       throw new NotFoundError(`No travel with id: '${_id}' found or not allowed`)
     }
-    const report = await reportPrinter.print(travel, request.user.settings.language)
+    const report = await createOperationServices().reportPrinter.print(travel, request.user.settings.language)
     this.setHeader('Content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(travel.name)}.pdf`)
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
@@ -276,20 +291,21 @@ export class TravelController extends Controller {
 export class TravelApproveController extends Controller {
   @Get()
   public async getToApprove(@Queries() query: GetterQuery<ITravel>, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<ITravel> = { $and: [{ historic: false, state: { $gte: State.APPLIED_FOR, $lt: State.IN_REVIEW } }] }
+    const filter: QueryFilter<ITravel> = { $and: [{ historic: false, state: { $gte: State.APPLIED_FOR, $lt: State.IN_REVIEW } }] }
     if (request.user.projects.supervised.length > 0) {
-      filter.$and.push({ project: { $in: request.user.projects.supervised } })
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.$and?.push({ project: { $in: request.user.projects.supervised as any } })
     }
     return await this.getter(Travel, {
       query,
       filter,
-      projection: { history: 0, historic: 0, expenses: 0, stages: 0, days: 0 },
+      projection: { history: 0, historic: 0, bookings: 0, expenses: 0, stages: 0, days: 0 },
       sort: { updatedAt: -1 }
     })
   }
 
   @Post('approved')
-  public async postAnyBackApproved(
+  public async postAnyApproved(
     @Body() requestBody: ((TravelApplication & { owner: IdDocument }) | { _id: string }) & { comment?: string },
     @Request() request: AuthenticatedExpressRequest
   ) {
@@ -301,16 +317,10 @@ export class TravelApproveController extends Controller {
         travelApplication.name = `${travelApplication.destinationPlace?.place} ${i18n.t(`monthsShort.${date.getUTCMonth()}`, { lng: request.user.settings.language })} ${date.getUTCFullYear()}`
       }
     }
-    const cb = async (travel: ITravel) => {
-      sendNotification(travel)
-      if (travel.isCrossBorder && travel.destinationPlace.country.needsA1Certificate) {
-        sendA1Notification(travel)
-      }
-    }
 
     return await this.setter(Travel, {
       requestBody: extendedBody,
-      cb,
+      cb: async (t: ITravel<Types.ObjectId>) => emitIntegrationEvent({ type: 'travel.approved', report: t }),
       allowNew: true,
       async checkOldObject(oldObject: TravelDoc) {
         if (oldObject.state === TravelState.APPLIED_FOR && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
@@ -322,13 +332,37 @@ export class TravelApproveController extends Controller {
     })
   }
 
+  @Post('withdrawApproval')
+  public async withdrawApproval(@Body() requestBody: { _id: string; comment?: string }, @Request() request: AuthenticatedExpressRequest) {
+    const extendedBody = Object.assign(requestBody, { state: TravelState.REJECTED, editor: request.user._id })
+
+    const result = await this.setter(Travel, {
+      requestBody: extendedBody,
+      allowNew: false,
+      async checkOldObject(oldObject: TravelDoc) {
+        if (oldObject.state !== TravelState.APPROVED || !checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
+          return false
+        }
+        await oldObject.saveToHistory()
+        oldObject.log[TravelState.REJECTED] = undefined
+        oldObject.log[TravelState.APPROVED] = undefined
+        oldObject.markModified('log')
+        return true
+      }
+    })
+
+    await ApprovedTravel.deleteOne({ reportId: result.result._id })
+    await emitIntegrationEvent({ type: 'report.approval_withdrawn', report: result.result })
+    return result
+  }
+
   @Post('rejected')
   public async postAnyRejected(@Body() requestBody: { _id: string; comment?: string }, @Request() request: AuthenticatedExpressRequest) {
     const extendedBody = Object.assign(requestBody, { state: TravelState.REJECTED, editor: request.user._id })
 
     return await this.setter(Travel, {
       requestBody: extendedBody,
-      cb: sendNotification,
+      cb: async (t: ITravel<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.rejected', report: t }),
       allowNew: false,
       checkOldObject: async (oldObject: TravelDoc) =>
         oldObject.state === TravelState.APPLIED_FOR && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
@@ -343,14 +377,15 @@ export class TravelApproveController extends Controller {
 export class TravelExamineController extends Controller {
   @Get()
   public async getToExamine(@Queries() query: GetterQuery<ITravel>, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<ITravel> = { $and: [{ historic: false, state: { $gte: State.EDITABLE_BY_OWNER } }] }
+    const filter: QueryFilter<ITravel> = { $and: [{ historic: false, state: { $gte: State.EDITABLE_BY_OWNER } }] }
     if (request.user.projects.supervised.length > 0) {
-      filter.$and.push({ project: { $in: request.user.projects.supervised } })
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.$and?.push({ project: { $in: request.user.projects.supervised as any } })
     }
     return await this.getter(Travel, {
       query,
       filter,
-      projection: { history: 0, historic: 0, expenses: 0, stages: 0, days: 0 },
+      projection: { history: 0, historic: 0, bookings: 0, expenses: 0, stages: 0, days: 0 },
       allowedAdditionalFields: ['expenses', 'stages', 'days'],
       sort: { updatedAt: -1 }
     })
@@ -388,11 +423,6 @@ export class TravelExamineController extends Controller {
     @Body() requestBody: SetterBody<TravelExpense<Types.ObjectId, mongo.Binary>>,
     @Request() request: AuthenticatedExpressRequest
   ) {
-    // multipart/form-data does not send null values
-    // so we need to set it to null if the value is an empty string
-    if (requestBody.project?.toString() === '') {
-      requestBody.project = null
-    }
     return await this.setterForArrayElement(Travel, {
       requestBody: requestBody as TravelExpense,
       parentId,
@@ -411,7 +441,7 @@ export class TravelExamineController extends Controller {
         }
         return false
       },
-      sortFn: (a: TravelExpense, b) => new Date(a.cost.date).valueOf() - new Date(b.cost.date).valueOf()
+      sortFn: (a: TravelExpense, b) => new Date(a.cost.date || 0).valueOf() - new Date(b.cost.date || 0).valueOf()
     })
   }
 
@@ -423,11 +453,6 @@ export class TravelExamineController extends Controller {
     @Body() requestBody: SetterBody<Stage<Types.ObjectId, mongo.Binary>>,
     @Request() request: AuthenticatedExpressRequest
   ) {
-    // multipart/form-data does not send null values
-    // so we need to set it to null if the value is an empty string
-    if (requestBody.project?.toString() === '') {
-      requestBody.project = null
-    }
     return await this.setterForArrayElement(Travel, {
       requestBody: requestBody as Stage,
       parentId,
@@ -499,13 +524,7 @@ export class TravelExamineController extends Controller {
   ) {
     const extendedBody = Object.assign(requestBody, { state: TravelState.REVIEW_COMPLETED, editor: request.user._id })
 
-    const cb = async (travel: ITravel<Types.ObjectId>) => {
-      sendNotification(travel)
-      sendViaMail(travel)
-      if (ENV.BACKEND_SAVE_REPORTS_ON_DISK) {
-        await writeToDisk(await writeToDiskFilePath(travel), await reportPrinter.print(travel, i18n.language as Locale))
-      }
-    }
+    const cb = async (t: ITravel<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.review_completed', report: t })
 
     return await this.setter(Travel, {
       requestBody: extendedBody,
@@ -517,6 +536,7 @@ export class TravelExamineController extends Controller {
           oldObject.state === TravelState.IN_REVIEW &&
           checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
         ) {
+          await assertTravelCanEnterReview(oldObject, request.user.settings.language)
           await oldObject.saveToHistory()
           return true
         }
@@ -525,16 +545,19 @@ export class TravelExamineController extends Controller {
     })
   }
 
-    @Post('inReview')
+  @Post('inReview')
   public async postinReview(@Body() requestBody: { _id: string; comment?: string }, @Request() request: AuthenticatedExpressRequest) {
     const extendedBody = Object.assign(requestBody, { state: TravelState.IN_REVIEW, editor: request.user._id })
 
     return await this.setter(Travel, {
       requestBody: extendedBody,
       allowNew: false,
-      cb: (e: ITravel) => sendNotification(e, 'BACK_TO_IN_REVIEW'),
+      cb: async (t: ITravel<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.back_to_in_review', report: t }),
       async checkOldObject(oldObject: TravelDoc) {
-        if ((oldObject.state === TravelState.IN_REVIEW || oldObject.state === TravelState.REVIEW_COMPLETED) && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
+        if (
+          (oldObject.state === TravelState.IN_REVIEW || oldObject.state === TravelState.REVIEW_COMPLETED) &&
+          checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
+        ) {
           await oldObject.saveToHistory()
           return true
         }
@@ -550,7 +573,7 @@ export class TravelExamineController extends Controller {
     return await this.setter(Travel, {
       requestBody: extendedBody,
       allowNew: false,
-      cb: (e: ITravel) => sendNotification(e, 'BACK_TO_APPROVED'),
+      cb: (e: ITravel) => emitIntegrationEvent({ type: 'travel.back_to_approved', report: e }),
       async checkOldObject(oldObject: TravelDoc) {
         if ((oldObject.state === TravelState.IN_REVIEW || oldObject.state === TravelState.REVIEW_COMPLETED) && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
           await oldObject.saveToHistory()
@@ -570,10 +593,11 @@ export class TravelExamineController extends Controller {
 
     return await this.setter(Travel, {
       requestBody: extendedBody,
-      cb: sendNotification,
+      cb: async (t: ITravel<Types.ObjectId>) => emitIntegrationEvent({ type: 'report.review_requested', report: t }),
       allowNew: false,
       async checkOldObject(oldObject: TravelDoc) {
         if (oldObject.state === TravelState.APPROVED && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
+          await assertTravelCanEnterReview(oldObject, request.user.settings.language)
           await oldObject.saveToHistory()
           return true
         }
@@ -585,15 +609,16 @@ export class TravelExamineController extends Controller {
   @Get('report')
   @Produces('application/pdf')
   public async getReport(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<ITravel> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
+    const filter: QueryFilter<ITravel<Types.ObjectId, mongo.Binary>> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     const travel = await Travel.findOne(filter).lean()
     if (!travel) {
       throw new NotFoundError(`No travel with id: '${_id}' found or not allowed`)
     }
-    const report = await reportPrinter.print(travel, request.user.settings.language)
+    const report = await createOperationServices().reportPrinter.print(travel, request.user.settings.language)
     this.setHeader('Content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(travel.name)}.pdf`)
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
@@ -608,14 +633,15 @@ export class TravelExamineController extends Controller {
 export class TravelBookableController extends Controller {
   @Get()
   public async getBookable(@Queries() query: GetterQuery<ITravel>, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<ITravel> = { historic: false, state: { $gte: State.BOOKABLE } }
+    const filter: QueryFilter<ITravel> = { historic: false, state: { $gte: State.BOOKABLE } }
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     return await this.getter(Travel, {
       query,
       filter,
-      projection: { history: 0, historic: 0, expenses: 0 },
+      projection: { history: 0, historic: 0, bookings: 0, expenses: 0 },
       allowedAdditionalFields: ['expenses'],
       sort: { updatedAt: -1 }
     })
@@ -624,19 +650,33 @@ export class TravelBookableController extends Controller {
   @Get('report')
   @Produces('application/pdf')
   public async getBookableReport(@Query() _id: string, @Request() request: AuthenticatedExpressRequest) {
-    const filter: Condition<ITravel> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
+    const filter: QueryFilter<ITravel<Types.ObjectId, mongo.Binary>> = { _id, historic: false, state: { $gte: State.BOOKABLE } }
     if (request.user.projects.supervised.length > 0) {
-      filter.project = { $in: request.user.projects.supervised }
+      // biome-ignore lint/suspicious/noExplicitAny: Populated path has to be queried with ObjectId
+      filter.project = { $in: request.user.projects.supervised as any }
     }
     const travel = await Travel.findOne(filter).lean()
     if (!travel) {
       throw new NotFoundError(`No travel with id: '${_id}' found or not allowed`)
     }
-    const report = await reportPrinter.print(travel, request.user.settings.language)
+    const report = await createOperationServices().reportPrinter.print(travel, request.user.settings.language)
     this.setHeader('Content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(travel.name)}.pdf`)
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
     return Readable.from([report])
+  }
+
+  @Post('bookingExportPreview')
+  public async postBookingExportPreview(@Body() requestBody: IdDocument<string>[], @Request() request: AuthenticatedExpressRequest) {
+    return { result: await getBookingExportPreview(Travel, 'Travel', requestBody, request) }
+  }
+
+  @Post('bookingExportPackage')
+  public async postBookingExportPackage(
+    @Body() requestBody: BookingExportPackageRequest<string>,
+    @Request() request: AuthenticatedExpressRequest
+  ) {
+    return { result: await createBookingExportPackage(Travel, 'Travel', requestBody, request) }
   }
 
   @Post('booked')

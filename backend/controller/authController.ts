@@ -1,14 +1,29 @@
-import { tokenAdminUser } from 'abrechnung-common/types.js'
+import { createHmac } from 'node:crypto'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Middlewares,
+  Post,
+  Query,
+  Request,
+  Response,
+  Route,
+  Security,
+  SuccessResponse,
+  Tags
+} from '@tsoa/runtime'
+import { AuthContext, idDocumentToId, tokenAdminUser } from 'abrechnung-common/types.js'
 import { escapeRegExp } from 'abrechnung-common/utils/scripts.js'
 import { Request as ExRequest, Response as ExResponse, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 import passport from 'passport'
-import { Body, Controller, Delete, Get, Middlewares, Post, Query, Request, Response, Route, Security, SuccessResponse, Tags } from 'tsoa'
 import { getLdapauthStrategy } from '../authStrategies/ldapauth.js'
 import magiclogin from '../authStrategies/magiclogin.js'
 import { getMicrosoftStrategy } from '../authStrategies/microsoft.js'
 import { getOidcStrategy } from '../authStrategies/oidc.js'
-import { getDisplaySettings } from '../db.js'
+import { BACKEND_CACHE } from '../db.js'
 import ENV from '../env.js'
 import User from '../models/user.js'
 import { NotAllowedError, NotImplementedError } from './error.js'
@@ -21,7 +36,7 @@ const NotImplementedMiddleware = (_req: ExRequest, _res: ExResponse, _next: Next
 }
 
 const ldapauthHandler = async (req: ExRequest, res: ExResponse, next: NextFunction) => {
-  if ((await getDisplaySettings()).auth.ldapauth) {
+  if (BACKEND_CACHE.displaySettings.auth.ldapauth) {
     passport.authenticate(await getLdapauthStrategy(), { session: true })(req, res, next)
   } else {
     NotImplementedMiddleware(req, res, next)
@@ -29,7 +44,7 @@ const ldapauthHandler = async (req: ExRequest, res: ExResponse, next: NextFuncti
 }
 
 const microsoftHandler = async (req: ExRequest, res: ExResponse, next: NextFunction) => {
-  if ((await getDisplaySettings()).auth.microsoft) {
+  if (BACKEND_CACHE.displaySettings.auth.microsoft) {
     if (req.query.redirect && typeof req.query.redirect === 'string') {
       req.session.redirect = req.query.redirect
     }
@@ -40,7 +55,7 @@ const microsoftHandler = async (req: ExRequest, res: ExResponse, next: NextFunct
 }
 
 const microsoftCallbackHandler = async (req: ExRequest, res: ExResponse, next: NextFunction) => {
-  if ((await getDisplaySettings()).auth.microsoft) {
+  if (BACKEND_CACHE.displaySettings.auth.microsoft) {
     const successRedirect = req.session.redirect ? ENV.VITE_FRONTEND_URL + req.session.redirect : ENV.VITE_FRONTEND_URL
     passport.authenticate(await getMicrosoftStrategy(), { successRedirect })(req, res, next)
   } else {
@@ -49,7 +64,7 @@ const microsoftCallbackHandler = async (req: ExRequest, res: ExResponse, next: N
 }
 
 const magicloginHandler = async (req: ExRequest, res: ExResponse, next: NextFunction) => {
-  if ((await getDisplaySettings()).auth.magiclogin) {
+  if (BACKEND_CACHE.displaySettings.auth.magiclogin) {
     const user = await User.findOne({ 'fk.magiclogin': { $regex: new RegExp(`^${escapeRegExp(req.body.destination)}$`, 'i') } })
     if (!user || !(await user.isActive())) {
       throw new NotAllowedError(`No magiclogin user found for e-mail: ${req.body.destination}`)
@@ -61,7 +76,7 @@ const magicloginHandler = async (req: ExRequest, res: ExResponse, next: NextFunc
 }
 
 const oidcHandler = async (req: ExRequest, res: ExResponse, next: NextFunction) => {
-  if ((await getDisplaySettings()).auth.oidc) {
+  if (BACKEND_CACHE.displaySettings.auth.oidc) {
     if (req.query.redirect && typeof req.query.redirect === 'string') {
       req.session.redirect = req.query.redirect
     }
@@ -72,7 +87,7 @@ const oidcHandler = async (req: ExRequest, res: ExResponse, next: NextFunction) 
 }
 
 const oidcCallbackHandler = async (req: ExRequest, res: ExResponse, next: NextFunction) => {
-  if ((await getDisplaySettings()).auth.oidc) {
+  if (BACKEND_CACHE.displaySettings.auth.oidc) {
     const successRedirect = req.session.redirect ? ENV.VITE_FRONTEND_URL + req.session.redirect : ENV.VITE_FRONTEND_URL
     passport.authenticate(await getOidcStrategy(), { successRedirect })(req, res, next)
   } else {
@@ -91,7 +106,7 @@ const magicloginCallbackHandler = async (req: ExRequest, res: ExResponse, next: 
       redirect = redirectPath
     }
   }
-  if ((await getDisplaySettings()).auth.magiclogin || tokenAdmin) {
+  if (BACKEND_CACHE.displaySettings.auth.magiclogin || tokenAdmin) {
     passport.authenticate(magiclogin, { failureRedirect: `${ENV.VITE_FRONTEND_URL}/login${redirect ? `?redirect=${redirect}` : ''}` })(
       req,
       res,
@@ -103,9 +118,13 @@ const magicloginCallbackHandler = async (req: ExRequest, res: ExResponse, next: 
 }
 
 const logoutMiddleware = async (req: AuthenticatedExpressRequest, _res: ExResponse, next: NextFunction) => {
-  req.logout((err) => {
-    next(err)
-  })
+  try {
+    await new Promise<void>((resolve, reject) => req.logout((error) => (error ? reject(error) : resolve())))
+    await new Promise<void>((resolve, reject) => req.session.destroy((error) => (error ? reject(error) : resolve())))
+    next()
+  } catch (error) {
+    next(error)
+  }
 }
 
 @Tags('Auth')
@@ -197,13 +216,24 @@ export class AuthController extends Controller {
   @Middlewares(logoutMiddleware)
   public logout() {}
 
-  /**
-   * Empty method
-   * @summary Check if request is authenticated
-   */
+  /** @summary Return the current authentication and offline-cache context */
   @Get('authenticated')
   @Security('cookieAuth')
   @Security('httpBearer')
+  @SuccessResponse(200, 'Authenticated')
   @Response(401, 'Unauthorized')
-  public authenticated(): void {}
+  public authenticated(@Request() req: AuthenticatedExpressRequest): AuthContext {
+    const userId = String(req.user._id)
+    const sessionExpiresAt = req.session.cookie.expires ?? new Date(Date.now() + ENV.COOKIE_MAX_AGE_DAYS * 86_400_000)
+    const accessExpiresAt = req.user.loseAccessAt ? new Date(req.user.loseAccessAt) : sessionExpiresAt
+    const expiresAt = accessExpiresAt < sessionExpiresAt ? accessExpiresAt : sessionExpiresAt
+    const permissions = req.user.access
+    const projectIds = [
+      ...req.user.projects.assigned.map((project) => String(idDocumentToId(project))),
+      ...req.user.projects.supervised.map((project) => String(idDocumentToId(project)))
+    ].sort()
+    const scopeInput = JSON.stringify({ sessionId: req.sessionID, userId, permissions, projectIds })
+    const cacheScope = createHmac('sha256', ENV.COOKIE_SECRET).update(scopeInput).digest('base64url')
+    return { userId, cacheScope, expiresAt: expiresAt.toISOString(), permissions }
+  }
 }

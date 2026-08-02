@@ -1,3 +1,4 @@
+import Big from 'big.js'
 import {
   _id,
   AddUp,
@@ -6,6 +7,8 @@ import {
   BaseCurrencyMoney,
   baseCurrency,
   binary,
+  Cost,
+  CostPosition,
   ExpenseReport,
   FlatAddUp,
   HealthCareCost,
@@ -15,17 +18,23 @@ import {
   Money,
   Place,
   ProjectSimple,
+  ReportModelName,
   reportIsTravel,
   Travel,
   TravelDay
 } from '../types.js'
+import { Base32 } from './encoding.js'
 import Formatter from './formatter.js'
 
-export function PlaceToString(place: Place, language?: Locale) {
+export function placeToString(place: Place, language?: Locale) {
   return `${place.place}, ${language ? place.country.name[language] : place.country._id}${place.country.flag ? ` ${place.country.flag}` : ''}`
 }
 
-export function getById<T extends { _id: string }>(id: string, array: T[]): T | null {
+export function placeToSimpleString(place: Place) {
+  return `${place.place}${place.country.flag ? ` ${place.country.flag}` : ''}`
+}
+
+export function getById<T extends { _id: string }>(id: string, array: readonly T[]): T | null {
   for (const item of array) {
     if (item._id === id) {
       return item
@@ -78,8 +87,19 @@ export function getFlagEmoji(countryCode: string): string | null {
     .slice(0, 2)
     .toUpperCase()
     .split('')
-    .map((char) => 127397 + char.charCodeAt(0))
+    .map((char) => 127_397 + char.charCodeAt(0))
   return String.fromCodePoint(...codePoints)
+}
+
+export function getFlagEmojiFromLocale(locale: Locale): string | null {
+  switch (locale) {
+    case 'en':
+      return '🇬🇧'
+    case 'kk':
+      return '🇰🇿'
+    default:
+      return getFlagEmoji(locale)
+  }
 }
 
 export function isValidDate(date: Date | string | number): Date | null {
@@ -112,7 +132,7 @@ export function datetimeToDatetimeString(datetime: Date | string | number): stri
 export function htmlInputStringToDateTime(dateTimeStr: string): Date | null {
   const date = isValidDate(dateTimeStr)
   if (date) {
-    return new Date(date.valueOf() - date.getTimezoneOffset() * 60 * 1000)
+    return new Date(date.valueOf() - date.getTimezoneOffset() * 60_000)
   }
   return null
 }
@@ -124,13 +144,13 @@ export function datetimeToDate(datetime: Date | string | number): Date {
 export function getDiffInDays(startDate: Date | string | number, endDate: Date | string | number): number {
   const firstDay = datetimeToDate(startDate)
   const lastDay = datetimeToDate(endDate)
-  return (lastDay.valueOf() - firstDay.valueOf()) / (1000 * 60 * 60 * 24)
+  return (lastDay.valueOf() - firstDay.valueOf()) / 86_400_000
 }
 
 export function getDayList(startDate: Date | string | number, endDate: Date | string | number): Date[] {
   const days: Date[] = []
   for (let i = 0; i < getDiffInDays(startDate, endDate) + 1; i++) {
-    days.push(new Date(datetimeToDate(startDate).valueOf() + i * 1000 * 60 * 60 * 24))
+    days.push(new Date(datetimeToDate(startDate).valueOf() + i * 86_400_000))
   }
   return days
 }
@@ -139,21 +159,71 @@ export function baseCurrencyMoneyToMoney(basic: BaseCurrencyMoney): Money {
   return Object.assign({ currency: baseCurrency }, basic)
 }
 
+function normalizeRoundedAmount(amount: Big.BigSource) {
+  const rounded = new Big(amount).round(2, Big.roundHalfUp).toNumber()
+  return Object.is(rounded, -0) ? 0 : rounded
+}
+
+export function roundAmount(amount: number) {
+  if (!Number.isFinite(amount)) {
+    return amount
+  }
+  return normalizeRoundedAmount(amount)
+}
+
+export function multiplyAmount(left: number, right: number) {
+  if (!Number.isFinite(left) || !Number.isFinite(right)) {
+    return left * right
+  }
+  return new Big(left).times(right).toNumber()
+}
+
+export function multiplyAmountAndRound(left: number, right: number) {
+  if (!Number.isFinite(left) || !Number.isFinite(right)) {
+    return left * right
+  }
+  return normalizeRoundedAmount(new Big(left).times(right))
+}
+
+export function sumAmounts(...amounts: number[]) {
+  if (amounts.some((amount) => !Number.isFinite(amount))) {
+    return amounts.reduce((sum, amount) => sum + amount, 0)
+  }
+  return amounts.reduce((sum, amount) => sum.plus(amount), new Big(0)).toNumber()
+}
+
+export function subtractAmounts(left: number, right: number) {
+  if (!Number.isFinite(left) || !Number.isFinite(right)) {
+    return left - right
+  }
+  return new Big(left).minus(right).toNumber()
+}
+
 export function getLumpSumsSum(days: TravelDay<_id>[]) {
   let sum = 0
   for (const day of days) {
-    sum += day.lumpSums.overnight.refund.amount
-    sum += day.lumpSums.catering.refund.amount
+    const overnightAmount = day.lumpSums?.overnight?.refund?.amount
+    const cateringAmount = day.lumpSums?.catering?.refund?.amount
+
+    if (typeof overnightAmount !== 'number' || typeof cateringAmount !== 'number') {
+      return { amount: Number.NaN }
+    }
+
+    sum = sumAmounts(sum, overnightAmount, cateringAmount)
   }
-  return { amount: sum }
+  return { amount: roundAmount(sum) }
 }
 
 export function getTotalBalance(addUps: FlatAddUp<_id>[]) {
-  return addUps.reduce((sum, a) => sum + a.balance.amount, 0)
+  return roundAmount(addUps.reduce((sum, a) => sumAmounts(sum, a.balance.amount), 0))
 }
 
 export function getTotalTotal(addUps: FlatAddUp<_id>[]) {
-  return addUps.reduce((sum, a) => sum + a.total.amount, 0)
+  return roundAmount(addUps.reduce((sum, a) => sumAmounts(sum, a.total.amount), 0))
+}
+
+export function getTotalAdvance(addUps: FlatAddUp<_id>[]) {
+  return roundAmount(addUps.reduce((sum, a) => sumAmounts(sum, a.advance.amount), 0))
 }
 
 export function getAddUpTableData(formatter: Formatter, addUps: AddUp<_id>[], withLumpSums = false) {
@@ -209,6 +279,36 @@ export function getBaseCurrencyAmount(a: Money): number {
   return amount
 }
 
+export function getCostGrossAmount(cost: Pick<Cost, 'positions'>) {
+  return roundAmount(cost.positions.reduce((sum, position) => sumAmounts(sum, position.grossAmount), 0))
+}
+
+export function getEffectiveCostPositionVatRate(position: Pick<CostPosition, 'vatRate'>, vatAccountingEnabled: boolean) {
+  return vatAccountingEnabled ? position.vatRate : 0
+}
+
+export function getCostPositionVatAmount(position: Pick<CostPosition, 'grossAmount' | 'vatRate'>, vatAccountingEnabled: boolean) {
+  const vatRate = getEffectiveCostPositionVatRate(position, vatAccountingEnabled)
+  if (vatRate === 0) return 0
+  return roundAmount(new Big(position.grossAmount).times(vatRate).div(new Big(100).plus(vatRate)).toNumber())
+}
+
+export function getCostPositionNetAmount(position: Pick<CostPosition, 'grossAmount' | 'vatRate'>, vatAccountingEnabled: boolean) {
+  return roundAmount(subtractAmounts(position.grossAmount, getCostPositionVatAmount(position, vatAccountingEnabled)))
+}
+
+export function getCostPositionBaseCurrencyAmount(
+  cost: Pick<Cost, 'currency' | 'exchangeRate'>,
+  position: Pick<CostPosition, 'grossAmount'>
+) {
+  if (idDocumentToId(cost.currency) === baseCurrency._id) return position.grossAmount
+  return cost.exchangeRate ? multiplyAmountAndRound(position.grossAmount, cost.exchangeRate.rate) : 0
+}
+
+export function getCostBaseCurrencyAmount(cost: Pick<Cost, 'currency' | 'exchangeRate' | 'positions'>) {
+  return roundAmount(cost.positions.reduce((sum, position) => sumAmounts(sum, getCostPositionBaseCurrencyAmount(cost, position)), 0))
+}
+
 function defaultAddUp<idType extends _id>(projectId: idType, withLumpSums: true): FlatAddUp<idType, Travel<idType, binary>>
 function defaultAddUp<idType extends _id>(
   projectId: idType,
@@ -223,55 +323,65 @@ function defaultAddUp<idType extends _id>(projectId: idType, withLumpSums = fals
     advance: { amount: 0 },
     expenses: { amount: 0 },
     ...(withLumpSums && { lumpSums: { amount: 0 } }),
-    advanceOverflow: false
+    advanceOverflow: false,
+    negativeTotal: false
   }
 }
 
 function addToAddUps<idType extends _id>(
   addUps: FlatAddUp<idType>[],
   add: number,
-  key: 'balance' | 'total' | 'advance' | 'expenses' | 'lumpSums',
+  key: 'advance' | 'expenses' | 'lumpSums',
   project: ProjectSimple<idType> | undefined | null,
   isTravel = false
 ): void {
   if (project) {
     const projectId = idDocumentToId(project)
-    const addUp = addUps.find((addUp) => idDocumentToId<idType>(addUp.project).toString() === projectId.toString())
+    const addUp = addUps.find((addUp) => idDocumentToId(addUp.project).toString() === projectId.toString())
     if (addUp) {
       if (key in addUp) {
-        ;(addUp as FlatAddUp<idType, Travel<_id, binary>>)[key].amount += add
+        ;(addUp as FlatAddUp<idType, Travel<_id, binary>>)[key].amount = sumAmounts(
+          (addUp as FlatAddUp<idType, Travel<_id, binary>>)[key].amount,
+          add
+        )
       }
     } else {
       const newAddUp = defaultAddUp(projectId, isTravel)
       if (key in newAddUp) {
-        ;(newAddUp as FlatAddUp<idType, Travel<_id, binary>>)[key].amount += add
+        ;(newAddUp as FlatAddUp<idType, Travel<_id, binary>>)[key].amount = sumAmounts(
+          (newAddUp as FlatAddUp<idType, Travel<_id, binary>>)[key].amount,
+          add
+        )
       }
       addUps.push(newAddUp)
     }
   } else {
     if (key in addUps[0]) {
-      ;(addUps[0] as FlatAddUp<idType, Travel<_id, binary>>)[key].amount += add
+      ;(addUps[0] as FlatAddUp<idType, Travel<_id, binary>>)[key].amount = sumAmounts(
+        (addUps[0] as FlatAddUp<idType, Travel<_id, binary>>)[key].amount,
+        add
+      )
     }
   }
 }
 
 function addTravelExpensesSum<idType extends _id>(travel: AddUpTravel, addUps: FlatAddUp<idType, AddUpTravel>[]) {
   for (const stage of travel.stages) {
-    if (stage.cost && stage.cost.amount !== null) {
-      let add = getBaseCurrencyAmount(stage.cost)
+    for (const position of stage.cost.positions) {
+      let add = getCostPositionBaseCurrencyAmount(stage.cost, position)
       if (stage.purpose === 'mixed' && travel.professionalShare) {
-        add = add * travel.professionalShare
+        add = multiplyAmount(add, travel.professionalShare)
       }
-      addToAddUps(addUps, add, 'expenses', stage.project, true)
+      addToAddUps(addUps, add, 'expenses', position.project, true)
     }
   }
   for (const expense of travel.expenses) {
-    if (expense.cost && expense.cost.amount !== null) {
-      let add = getBaseCurrencyAmount(expense.cost)
+    for (const position of expense.cost.positions) {
+      let add = getCostPositionBaseCurrencyAmount(expense.cost, position)
       if (expense.purpose === 'mixed' && travel.professionalShare) {
-        add = add * travel.professionalShare
+        add = multiplyAmount(add, travel.professionalShare)
       }
-      addToAddUps(addUps, add, 'expenses', expense.project, true)
+      addToAddUps(addUps, add, 'expenses', position.project, true)
     }
   }
 }
@@ -284,15 +394,26 @@ export function addUp<idType extends _id, T extends AddUpTravel | AddUpReport>(r
     addTravelExpensesSum(report, addUps as FlatAddUp<idType, Travel<_id, binary>>[])
   } else {
     for (const expense of report.expenses) {
-      addToAddUps(addUps, getBaseCurrencyAmount(expense.cost), 'expenses', expense.project, isTravel)
+      for (const position of expense.cost.positions) {
+        addToAddUps(addUps, getCostPositionBaseCurrencyAmount(expense.cost, position), 'expenses', position.project, isTravel)
+      }
     }
   }
   for (const approvedAdvance of report.advances) {
     addToAddUps(addUps, approvedAdvance.balance.amount, 'advance', approvedAdvance.project, isTravel)
   }
   for (const addUp of addUps) {
-    addUp.total.amount = addUp.expenses.amount + ((addUp as FlatAddUp<idType, Travel<_id, binary>>).lumpSums?.amount || 0)
-    let balanceAmount = addUp.total.amount - addUp.advance.amount
+    const lumpSumsAmount = (addUp as FlatAddUp<idType, Travel<_id, binary>>).lumpSums?.amount
+    let totalAmount = roundAmount(
+      sumAmounts(addUp.expenses.amount, typeof lumpSumsAmount === 'number' && !Number.isNaN(lumpSumsAmount) ? lumpSumsAmount : 0)
+    )
+    if (totalAmount < 0) {
+      addUp.negativeTotal = true
+      totalAmount = 0
+    }
+    addUp.total.amount = totalAmount
+
+    let balanceAmount = roundAmount(subtractAmounts(addUp.total.amount, addUp.advance.amount))
     if (balanceAmount < 0) {
       addUp.advanceOverflow = true
       balanceAmount = 0
@@ -314,133 +435,42 @@ export function sanitizeFilename(filename: string) {
   return finalName
 }
 
-// biome-ignore lint/complexity/noStaticOnlyClass: This class is intentionally static-only to provide utility methods without requiring instantiation
-export class Base64 {
-  static #keyStr = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/='
-
-  static encode(input: string): string {
-    let output = ''
-    let chr1: number
-    let chr2: number
-    let chr3: number
-    let enc1: number
-    let enc2: number
-    let enc3: number
-    let enc4: number
-    let i = 0
-
-    const inputUTF8Save = Base64.#utf8_encode(input)
-
-    while (i < inputUTF8Save.length) {
-      chr1 = inputUTF8Save.charCodeAt(i++)
-      chr2 = inputUTF8Save.charCodeAt(i++)
-      chr3 = inputUTF8Save.charCodeAt(i++)
-
-      enc1 = chr1 >> 2
-      enc2 = ((chr1 & 3) << 4) | (chr2 >> 4)
-      enc3 = ((chr2 & 15) << 2) | (chr3 >> 6)
-      enc4 = chr3 & 63
-
-      if (Number.isNaN(chr2)) {
-        enc3 = enc4 = 64
-      } else if (Number.isNaN(chr3)) {
-        enc4 = 64
-      }
-
-      output =
-        output + Base64.#keyStr.charAt(enc1) + Base64.#keyStr.charAt(enc2) + Base64.#keyStr.charAt(enc3) + Base64.#keyStr.charAt(enc4)
-    }
-
-    return output
+export function refStringToNumber(input: string): { ref: number; type: ReportModelName } {
+  const refStr = input.trim().toUpperCase()
+  let reportType: ReportModelName
+  switch (refStr[0]) {
+    case 'T':
+      reportType = 'Travel'
+      break
+    case 'E':
+      reportType = 'ExpenseReport'
+      break
+    case 'H':
+      reportType = 'HealthCareCost'
+      break
+    case 'A':
+      reportType = 'Advance'
+      break
+    default:
+      throw new Error('Invalid reference string')
   }
+  const base32Str = refStr.slice(1).replace(/[IL]/g, '1').replace(/[O]/g, '0').replace(/-/g, '')
 
-  static decode(input: string): string {
-    let output = ''
-    let chr1: number
-    let chr2: number
-    let chr3: number
-    let enc1: number
-    let enc2: number
-    let enc3: number
-    let enc4: number
-    let i = 0
+  return { type: reportType, ref: Base32.decode(base32Str) }
+}
 
-    const validBase64Input = input.replace(/[^A-Za-z0-9+/=]/g, '')
+export function refNumberToString(ref: number, reportType: ReportModelName): string {
+  let str = reportType[0]
+  const base32Str = Base32.encode(ref)
 
-    while (i < validBase64Input.length) {
-      enc1 = Base64.#keyStr.indexOf(validBase64Input.charAt(i++))
-      enc2 = Base64.#keyStr.indexOf(validBase64Input.charAt(i++))
-      enc3 = Base64.#keyStr.indexOf(validBase64Input.charAt(i++))
-      enc4 = Base64.#keyStr.indexOf(validBase64Input.charAt(i++))
+  let index = 0
+  do {
+    str += '-'
+    str += base32Str.slice(index, index + 3).padStart(3, '0')
+    index += 3
+  } while (index < base32Str.length)
 
-      chr1 = (enc1 << 2) | (enc2 >> 4)
-      chr2 = ((enc2 & 15) << 4) | (enc3 >> 2)
-      chr3 = ((enc3 & 3) << 6) | enc4
-
-      output = output + String.fromCharCode(chr1)
-
-      if (enc3 !== 64) {
-        output = output + String.fromCharCode(chr2)
-      }
-      if (enc4 !== 64) {
-        output = output + String.fromCharCode(chr3)
-      }
-    }
-
-    output = Base64.#utf8_decode(output)
-
-    return output
-  }
-
-  static #utf8_encode(string: string): string {
-    const stringLineBreakCleaned = string.replace(/\r\n/g, '\n')
-    let utftext = ''
-
-    for (let n = 0; n < stringLineBreakCleaned.length; n++) {
-      const c = stringLineBreakCleaned.charCodeAt(n)
-
-      if (c < 128) {
-        utftext += String.fromCharCode(c)
-      } else if (c > 127 && c < 2048) {
-        utftext += String.fromCharCode((c >> 6) | 192)
-        utftext += String.fromCharCode((c & 63) | 128)
-      } else {
-        utftext += String.fromCharCode((c >> 12) | 224)
-        utftext += String.fromCharCode(((c >> 6) & 63) | 128)
-        utftext += String.fromCharCode((c & 63) | 128)
-      }
-    }
-
-    return utftext
-  }
-
-  static #utf8_decode(utftext: string): string {
-    let string = ''
-    let i = 0
-    let c: number
-    let c2: number
-    let c3 = 0
-
-    while (i < utftext.length) {
-      c = utftext.charCodeAt(i)
-
-      if (c < 128) {
-        string += String.fromCharCode(c)
-        i++
-      } else if (c > 191 && c < 224) {
-        c2 = utftext.charCodeAt(i + 1)
-        string += String.fromCharCode(((c & 31) << 6) | (c2 & 63))
-        i += 2
-      } else {
-        c2 = utftext.charCodeAt(i + 1)
-        c3 = utftext.charCodeAt(i + 2)
-        string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63))
-        i += 3
-      }
-    }
-
-    return string
-  }
+  return str
 }
 
 /**
@@ -520,13 +550,21 @@ export function csvToObjects(
   if (lines.length > 1) {
     const headers = lines[0]
     for (let i = 1; i < lines.length; i++) {
-      const obj: Record<string, ValueType> = {}
       const currentline = lines[i]
+      if (currentline.every((entry) => entry.trim() === '')) {
+        continue
+      }
+
+      const obj: Record<string, ValueType> = {}
       for (let j = 0; j < headers.length; j++) {
+        const header = headers[j]?.trim()
+        if (!header) {
+          continue
+        }
         let object = obj
         const valStr = currentline[j] !== '' ? currentline[j] : undefined
         let val: ValueType = valStr
-        const pathParts = headers[j].split(pathSeparator)
+        const pathParts = header.split(pathSeparator)
         for (let k = 0; k < pathParts.length - 1; k++) {
           if (!isObject(object[pathParts[k]])) {
             object[pathParts[k]] = {}
@@ -535,15 +573,15 @@ export function csvToObjects(
         }
         const key = pathParts[pathParts.length - 1]
         // search for [] to identify arrays
-        const match = currentline[j].match(/^\[(.*)\]$/)
+        const match = currentline[j]?.match(/^\[(.*)\]$/) || null
         if (match === null) {
-          if (transformer[headers[j]]) {
-            val = transformer[headers[j]](valStr)
+          if (transformer[header]) {
+            val = transformer[header](valStr)
           }
         } else {
           const split = match[1].split(arraySeparator)
-          if (transformer[headers[j]]) {
-            val = split.map(transformer[headers[j]])
+          if (transformer[header]) {
+            val = split.map(transformer[header])
           }
         }
         object[key] = val
@@ -623,6 +661,18 @@ export function objectsToCSV(objects: Record<string, unknown>[], separator = '\t
   return str
 }
 
+export function rowsToCSV(rows: readonly (readonly (string | number | null | undefined)[])[]) {
+  const serializeCell = (cell: string | number | null | undefined) => {
+    if (cell === null || cell === undefined) {
+      return ''
+    }
+    const value = String(cell)
+    return /[;"\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value
+  }
+
+  return `\uFEFF${rows.map((row) => row.map(serializeCell).join(';')).join('\r\n')}\r\n`
+}
+
 export function download(file: File) {
   const link = document.createElement('a')
   const url = URL.createObjectURL(file)
@@ -661,4 +711,13 @@ export function hexToRGB(hex: HexColor): [number, number, number] {
   const blue = Number.parseInt(hexChars.slice(4, 6), 16)
 
   return [red, green, blue]
+}
+
+export function mdLinksToHtml(input: string): string {
+  // Only match Markdown links whose URL starts with http:// or https://
+  const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/gi
+
+  return input.replace(mdLinkRegex, (_full, text: string, href: string) => {
+    return `<a href="${href}">${text}</a>`
+  })
 }

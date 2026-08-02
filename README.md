@@ -2,8 +2,8 @@
 DMUN abrechnung
 </h1>
 <p align="center">
-<a href="https://github.com/david-loe/abrechnung/actions/workflows/production-build.yml"><img src="https://github.com/david-loe/abrechnung/actions/workflows/production-build.yml/badge.svg" alt="Production Build"></a>
 <a href="https://github.com/david-loe/abrechnung/actions/workflows/migration-test.yml"><img src="https://github.com/david-loe/abrechnung/actions/workflows/migration-test.yml/badge.svg" alt="Migration & Test"></a>
+<a href="https://hub.docker.com/r/davidloe/abrechnung-backend"><img src="https://img.shields.io/docker/pulls/davidloe/abrechnung-backend?logo=docker" alt="Docker Pulls"></a>
 </p>
 <h3 align="center"  style="margin-top: 0px; margin-bottom: 30px">
 Demo und Hosting ➡️ <a href="https://reiseabrechner.de">reiseabrechner.de</a>
@@ -31,9 +31,11 @@ https://github.com/david-loe/abrechnung/assets/56305409/8b31b6a1-e6c4-4bd9-bb76-
 
 ## Wechselkurse
 
-[InforEuro](https://commission.europa.eu/funding-tenders/procedures-guidelines-tenders/information-contractors-and-beneficiaries/exchange-rate-inforeuro_en)
+Auswahl zwischen
 
-Dieser statische Währungsrechner zeigt den offiziellen monatlichen Buchungskurs der Europäischen Kommission für den Euro und die durch den Rechnungsführer im Einklang mit Artikel 19 der Haushaltsordnung festgelegten Umrechnungskurse an.
+- tagesaktuell [Frankfurter](https://frankfurter.dev/)
+
+- Monatskurse von [InforEuro](https://commission.europa.eu/funding-tenders/procedures-guidelines-tenders/information-contractors-and-beneficiaries/exchange-rate-inforeuro_en)
 
 ## Development Environment
 

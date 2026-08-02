@@ -36,6 +36,51 @@ export function resizeImage(file: Blob, longestSide: number): Promise<Blob> {
   })
 }
 
+function blobToImage(blob: Blob): Promise<HTMLImageElement> {
+  const img = new Image()
+  const objectUrl = URL.createObjectURL(blob)
+  return new Promise((resolve, reject) => {
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      resolve(img)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Could not load image'))
+    }
+    img.src = objectUrl
+  })
+}
+
+export async function rotateImageClockwise(file: Blob, mimeType: ImageType = 'image/jpeg', degrees: 90 | 180 | 270 = 90): Promise<Blob> {
+  let image: HTMLImageElement
+  try {
+    image = await blobToImage(file)
+  } catch {
+    return file
+  }
+  const canvas = document.createElement('canvas')
+  if (degrees === 180) {
+    canvas.width = image.naturalWidth
+    canvas.height = image.naturalHeight
+  } else {
+    canvas.width = image.naturalHeight
+    canvas.height = image.naturalWidth
+  }
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    return file
+  }
+
+  ctx.translate(canvas.width / 2, canvas.height / 2)
+  ctx.rotate((Math.PI * degrees) / 180)
+  ctx.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2)
+
+  return await new Promise((resolve) => {
+    canvas.toBlob((rotatedBlob) => resolve(rotatedBlob || file), mimeType, mimeType === 'image/jpeg' ? 0.85 : undefined)
+  })
+}
+
 export async function fileEventToDocumentFiles(
   event: Event,
   maxFileSizeInBytes: number,
@@ -67,16 +112,22 @@ export async function fileEventToDocumentFiles(
   return null
 }
 
-export function formatBytes(bytes: number): string {
-  if (bytes >= 1024 * 1024) {
-    const mb = bytes / (1024 * 1024)
-    return `${mb.toFixed(2)} MB`
+export function formatBytes(value: number, scale = 1) {
+  const bytes = value * scale
+  if (!bytes) {
+    return '0 B'
   }
-  if (bytes >= 1024) {
-    const kb = bytes / 1024
-    return `${kb.toFixed(2)} KB`
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let size = bytes
+  let unitIndex = 0
+
+  while (size >= 1_000 && unitIndex < units.length - 1) {
+    size /= 1_000
+    unitIndex++
   }
-  return `${bytes} B`
+
+  const fixed = size >= 10 ? size.toFixed(0) : size.toFixed(1)
+  return `${fixed} ${units[unitIndex]}`
 }
 
 export function detectImageType(buffer: ArrayBuffer) {

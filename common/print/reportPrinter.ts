@@ -1,0 +1,708 @@
+import { TextAlignment } from 'pdf-lib'
+import {
+  _id,
+  Advance,
+  AdvanceState,
+  baseCurrency,
+  Comment,
+  Cost,
+  CountrySimple,
+  DisplaySettings,
+  ExpenseReport,
+  getModelNameFromReport,
+  getReportTypeFromModelName,
+  HealthCareCost,
+  Locale,
+  Meal,
+  Place,
+  PrinterSettings,
+  PrintOptions,
+  PurposeSimple,
+  ReportModelNameWithoutAdvance,
+  reportIsAdvance,
+  reportIsHealthCareCost,
+  reportIsTravel,
+  State,
+  Transport,
+  Travel,
+  TravelDay,
+  TravelSettings,
+  TravelState,
+  UserSimple
+} from '../types.js'
+import Formatter from '../utils/formatter.js'
+import { getAddUpTableData, getCostGrossAmount, getTotalBalance, isValidDate, refNumberToString } from '../utils/scripts.js'
+import { Column, EMPTY_CELL, Options, PDFDrawer, Printer, ReceiptMap, TableOptions } from './printer.js'
+
+function getReceiptMap<idType extends _id>(costList: { cost: Cost<idType> }[], startNumber = 1) {
+  let number = startNumber
+  const map: ReceiptMap<idType> = {}
+  for (const cost of costList) {
+    if (cost.cost?.receipts) {
+      for (const receipt of cost.cost.receipts) {
+        map[receipt._id.toString()] = Object.assign(
+          { number: number++, date: cost.cost.date as Date, amount: getCostGrossAmount(cost.cost) },
+          receipt
+        )
+      }
+    }
+  }
+  return { map, number }
+}
+
+interface ReportPrinterTravelSettings {
+  distanceRefunds: TravelSettings['distanceRefunds']
+  vehicleRegistrationWhenUsingOwnCar: TravelSettings['vehicleRegistrationWhenUsingOwnCar']
+}
+
+export class ReportPrinter<idType extends _id> extends Printer<idType> {
+  travelSettings: ReportPrinterTravelSettings
+  reportTypeIcons: DisplaySettings['reportTypeIcons']
+
+  constructor(
+    settings: PrinterSettings,
+    travelSettings: ReportPrinterTravelSettings,
+    formatter: Formatter,
+    translateFunc: (textIdentifier: string, language: Locale, interpolation?: Record<string, string>) => string,
+    getDocumentFileBufferById: PDFDrawer<idType>['getDocumentFileBufferById'],
+    getOrganisationLogoIdById: PDFDrawer<idType>['getOrganisationLogoIdById'],
+    reportTypeIcons: DisplaySettings['reportTypeIcons']
+  ) {
+    super(settings, formatter, translateFunc, getDocumentFileBufferById, getOrganisationLogoIdById)
+    this.travelSettings = travelSettings
+    this.reportTypeIcons = reportTypeIcons
+  }
+
+  async print(
+    report: Travel<idType> | ExpenseReport<idType> | HealthCareCost<idType> | Advance<idType>,
+    language: Locale,
+    options?: Partial<PrintOptions>
+  ) {
+    const print = await ReportPrint.create(
+      report,
+      this.settings,
+      this.getDocumentFileBufferById,
+      this.getOrganisationLogoIdById,
+      this.travelSettings,
+      this.formatter,
+      this.translateFunc,
+      language,
+      this.reportTypeIcons
+    )
+    return await print.run(options)
+  }
+
+  setTravelSettings(settings: ReportPrinterTravelSettings) {
+    this.travelSettings = settings
+  }
+}
+
+class ReportPrint<idType extends _id> {
+  drawer: PDFDrawer<idType>
+  report: Travel<idType> | ExpenseReport<idType> | HealthCareCost<idType> | Advance<idType>
+  travelSettings: ReportPrinterTravelSettings
+  translateFunc: (textIdentifier: string, language: Locale, interpolation?: Record<string, string>) => string
+  reportTypeIcons: DisplaySettings['reportTypeIcons']
+
+  constructor(
+    report: Travel<idType> | ExpenseReport<idType> | HealthCareCost<idType> | Advance<idType>,
+    drawer: PDFDrawer<idType>,
+    travelSettings: ReportPrinterTravelSettings,
+    translateFunc: (textIdentifier: string, language: Locale, interpolation?: Record<string, string>) => string,
+    reportTypeIcons: DisplaySettings['reportTypeIcons']
+  ) {
+    this.report = report
+    this.drawer = drawer
+    this.travelSettings = travelSettings
+    this.translateFunc = translateFunc
+    this.reportTypeIcons = reportTypeIcons
+  }
+
+  static async create<idType extends _id>(
+    report: Travel<idType> | ExpenseReport<idType> | HealthCareCost<idType> | Advance<idType>,
+    settings: PrinterSettings,
+    getDocumentFileBufferById: PDFDrawer<idType>['getDocumentFileBufferById'],
+    getOrganisationLogoIdById: PDFDrawer<idType>['getOrganisationLogoIdById'],
+    travelSettings: ReportPrinterTravelSettings,
+    formatter: Formatter,
+    translateFunc: (textIdentifier: string, language: Locale, interpolation?: Record<string, string>) => string,
+    language: Locale,
+    reportTypeIcons: DisplaySettings['reportTypeIcons']
+  ) {
+    const drawer = await PDFDrawer.create(settings, getDocumentFileBufferById, getOrganisationLogoIdById, formatter, language, 'landscape')
+    return new ReportPrint<idType>(report, drawer, travelSettings, translateFunc, reportTypeIcons)
+  }
+
+  async run(options?: Partial<PrintOptions>) {
+    const modelName = getModelNameFromReport(this.report)
+
+    const reportType = getReportTypeFromModelName(modelName)
+    const opts = { ...this.drawer.settings.options[reportType], ...options }
+    const pageTop = this.drawer.currentPage.getSize().height
+
+    const headerX = this.drawer.settings.pagePadding / 3
+    let y = this.drawer.drawLogo(this.t('headlines.title'), {
+      fontSize: this.drawer.settings.fontSizes.M,
+      xStart: headerX,
+      yStart: pageTop - headerX
+    })
+
+    if (this.report.reference > 0) {
+      await this.drawer.drawMultilineText(refNumberToString(this.report.reference, modelName), {
+        alignment: TextAlignment.Center,
+        xStart: 0,
+        yStart: pageTop - this.drawer.settings.pagePadding / 5,
+        width: this.drawer.currentPage.getSize().width,
+        fontSize: this.drawer.settings.fontSizes.S
+      })
+    }
+
+    await this.drawer.drawOrganisationLogo(this.report.project.organisation, {
+      xStart: this.drawer.currentPage.getSize().width - 166,
+      yStart: pageTop - 66,
+      maxHeight: 50,
+      maxWidth: 150
+    })
+    y = this.drawer.drawIconLabel(this.reportTypeIcons[reportType], this.t(`labels.${reportType}`), {
+      xStart: headerX,
+      yStart: y - this.drawer.settings.fontSizes.S / 3,
+      fontSize: this.drawer.settings.fontSizes.L
+    })
+
+    y =
+      this.drawNameAndProject(
+        { xStart: this.drawer.settings.pagePadding, yStart: y - 24, fontSize: this.drawer.settings.fontSizes.M },
+        opts.project
+      ) - 10
+    if (opts.metaInformation) {
+      y = await this.drawMetaInformation(
+        {
+          xStart: this.drawer.settings.pagePadding,
+          yStart: y,
+          fontSize: this.drawer.settings.fontSizes.M,
+          width: this.drawer.currentPage.getSize().width - 2 * this.drawer.settings.pagePadding
+        },
+        opts.additionalOwnerDetails
+      )
+    }
+
+    const receiptMap: ReceiptMap<idType> = {}
+    if (!reportIsAdvance(this.report)) {
+      const optionalMapTravel = reportIsTravel(this.report)
+        ? getReceiptMap(
+            this.report.stages.filter(
+              (s) => this.travelSettings.vehicleRegistrationWhenUsingOwnCar !== 'none' || s.transport.type !== 'ownCar'
+            )
+          )
+        : { map: {}, number: 1 }
+
+      Object.assign(receiptMap, optionalMapTravel.map, getReceiptMap(this.report.expenses, optionalMapTravel.number).map)
+      // Loop through all receipts and assign a new forthrunning number
+      let runningNumber = 1
+      for (const rId in receiptMap) {
+        receiptMap[rId].number = runningNumber++
+      }
+    }
+    let yDates = y
+    y = await this.drawSummary({ xStart: this.drawer.settings.pagePadding, yStart: y, fontSize: this.drawer.settings.fontSizes.M })
+
+    if (opts.reviewDates) {
+      yDates = await this.drawDates({
+        xStart: this.drawer.currentPage.getSize().width - this.drawer.settings.pagePadding - 175, // 175: width of dates table
+        yStart: yDates,
+        fontSize: this.drawer.settings.fontSizes.S
+      })
+    }
+
+    y = y < yDates ? y : yDates
+
+    y = await this.drawStages(
+      receiptMap,
+      { xStart: this.drawer.settings.pagePadding, yStart: y - 16, fontSize: this.drawer.settings.fontSizes.S },
+      opts.notes
+    )
+    y = await this.drawExpenses(
+      receiptMap,
+      { xStart: this.drawer.settings.pagePadding, yStart: y - 16, fontSize: this.drawer.settings.fontSizes.S },
+      opts.notes
+    )
+    // y = await this.drawDays({ xStart: this.drawer.settings.pagePadding, yStart: y - 16, fontSize: this.drawer.settings.fontSizes.S })
+    y = await this.drawReports({ xStart: this.drawer.settings.pagePadding, yStart: y - 16, fontSize: this.drawer.settings.fontSizes.S })
+
+    y = await this.drawComments(opts.comments, opts.bookingRemark, {
+      xStart: this.drawer.settings.pagePadding,
+      yStart: y - 16,
+      fontSize: this.drawer.settings.fontSizes.S
+    })
+
+    await this.drawer.attachReceipts(receiptMap)
+
+    return await this.drawer.finish()
+  }
+
+  drawNameAndProject(options: Options, drawProject = true) {
+    let y = options.yStart
+    y = this.drawer.drawMultilineText(this.report.name, { xStart: options.xStart, yStart: y, fontSize: options.fontSize * 1.5 })
+    if (drawProject) {
+      y = this.drawer.drawMultilineText(
+        `${this.t('labels.project')}: ${this.report.project.identifier}${this.report.project.name ? ` - ${this.report.project.name}` : ''}`,
+        { xStart: options.xStart, yStart: y, fontSize: options.fontSize }
+      )
+    }
+
+    return y
+  }
+
+  async drawMetaInformation(options: Options & { width: number }, drawAdditionalOwnerDetails = true) {
+    let x = options.xStart
+    let width = options.width * (3 / 8) // width left
+    let ownerLine: string
+    let metaInformation: string[] = []
+    const placeLines: { text: string; place: { country: CountrySimple; place?: string } }[] = []
+    if (reportIsTravel(this.report)) {
+      const sc = this.report.stages.length
+      ownerLine = `${this.t('labels.traveler')}: ${this.drawer.formatter.name(this.report.owner.name)}`
+      metaInformation = [
+        this.report.claimSpouseRefund ? `${this.t('labels.fellowTravelersNames')}: ${this.report.fellowTravelersNames}` : '',
+        `${this.t('labels.reason')}: ${this.report.reason}`,
+        `${this.t('labels.from')}: ${sc > 0 ? this.drawer.formatter.dateTime(this.report.stages[0].departure) : this.drawer.formatter.date(this.report.startDate)}    ${this.t('labels.to')}: ${sc > 0 ? this.drawer.formatter.dateTime(this.report.stages[sc - 1].arrival) : this.drawer.formatter.date(this.report.endDate)}`,
+        this.report.professionalShare !== null && this.report.professionalShare !== 1
+          ? `${this.t('labels.professionalShare')}: ${Math.round(this.report.professionalShare * 100)}%`
+          : ''
+      ].filter((line) => line !== '')
+      placeLines.push({ text: `${this.t('labels.destinationPlace')}: `, place: this.report.destinationPlace })
+      if (this.report.lastPlaceOfWork) {
+        const lastPlace = { country: this.report.lastPlaceOfWork.country, place: this.report.lastPlaceOfWork.special }
+        placeLines.push({ text: `${this.t('labels.lastPlaceOfWork')}: `, place: lastPlace })
+      }
+    } else if (reportIsAdvance(this.report)) {
+      ownerLine = `${this.t('labels.advanceRecipient')}: ${this.drawer.formatter.name(this.report.owner.name)}`
+      metaInformation = [`${this.t('labels.reason')}: ${this.report.reason}`]
+    } else if (reportIsHealthCareCost(this.report)) {
+      ownerLine = `${this.t('labels.applicant')}: ${this.drawer.formatter.name(this.report.owner.name)}`
+      const ec = this.report.expenses.length
+      metaInformation = [
+        `${this.t('labels.patientName')}: ${this.report.patientName}`,
+        `${this.t('labels.insurance')}: ${this.report.insurance.name}`,
+        ec > 0
+          ? `${this.t('labels.from')}: ${this.drawer.formatter.date(this.report.expenses[0].cost.date || '')}    ${this.t('labels.to')}: ${this.drawer.formatter.date(this.report.expenses[ec - 1].cost.date || '')}`
+          : ''
+      ].filter((line) => line !== '')
+    } else {
+      ownerLine = `${this.t('labels.expensePayer')}: ${this.drawer.formatter.name(this.report.owner.name)}`
+      const ec = this.report.expenses.length
+      metaInformation = [
+        ec > 0
+          ? `${this.t('labels.from')}: ${this.drawer.formatter.date(this.report.expenses[0].cost.date || '')}    ${this.t('labels.to')}: ${this.drawer.formatter.date(this.report.expenses[ec - 1].cost.date || '')}`
+          : ''
+      ].filter((line) => line !== '')
+    }
+    let yLeft = this.drawer.drawMultilineText(ownerLine, { xStart: x, yStart: options.yStart, fontSize: options.fontSize, width })
+    if (drawAdditionalOwnerDetails && this.report.owner.additionalDetails) {
+      yLeft = this.drawer.drawMultilineText(this.report.owner.additionalDetails, {
+        xStart: x,
+        yStart: yLeft,
+        fontSize: options.fontSize,
+        width
+      })
+    }
+    if (placeLines.length > 0) {
+      yLeft -= options.fontSize
+    }
+    for (const place of placeLines) {
+      yLeft = await this.drawer.drawMultilineTextWithPlace(place.text, place.place, {
+        xStart: x,
+        yStart: yLeft,
+        fontSize: options.fontSize,
+        width
+      })
+    }
+    x += width
+    width = options.width - width // width right
+    let yRight = options.yStart
+    for (const line of metaInformation) {
+      yRight = this.drawer.drawMultilineText(line, { xStart: x, yStart: yRight, fontSize: options.fontSize, width })
+    }
+    return Math.min(yLeft, yRight)
+  }
+
+  async drawSummary(options: Options) {
+    const columns: Column[] = []
+    columns.push({ key: '0', width: 100, alignment: TextAlignment.Left, title: 'title', fn: (l: string) => this.t(l) })
+    const moneyColumn = (key: string) => ({ key, width: 75, alignment: TextAlignment.Right, title: 'title' })
+    let summary = []
+    if (reportIsAdvance(this.report)) {
+      columns.push(moneyColumn('1'))
+      summary.push({ '0': this.t('labels.advance'), '1': this.drawer.formatter.detailedMoney(this.report.budget) })
+      summary.push({ '0': this.t('labels.balance'), '1': this.drawer.formatter.baseCurrency(this.report.balance.amount) })
+    } else {
+      for (let i = 0; i < this.report.addUp.length; i++) {
+        columns.push(moneyColumn((i + 1).toString(10)))
+      }
+      const tableData = getAddUpTableData(this.drawer.formatter, this.report.addUp, reportIsTravel(this.report))
+      summary = tableData.map((row) => Object.fromEntries(row.map((value, index) => [index.toString(10), value])))
+    }
+    const fontSize = options.fontSize + 2
+    this.drawer.drawText(this.t('labels.summary'), { xStart: options.xStart, yStart: options.yStart - fontSize, fontSize: fontSize })
+    const tableOptions: TableOptions = options
+    tableOptions.yStart -= fontSize * 1.25
+    tableOptions.firstRow = false
+    let y = await this.drawer.drawTable(summary, columns, tableOptions)
+    if (!reportIsAdvance(this.report) && this.report.addUp.length > 1) {
+      options.yStart = y
+      y = this.drawer.drawMultilineText(
+        `${this.t('labels.totalBalance')}: ${this.drawer.formatter.baseCurrency(getTotalBalance(this.report.addUp))}`,
+        options
+      )
+    }
+    return y
+  }
+
+  async drawDates(options: Options) {
+    const columns: Column[] = []
+    columns.push({ key: 'reference', width: 80, alignment: TextAlignment.Left, title: 'reference' })
+    columns.push({
+      key: 'value',
+      width: 95,
+      alignment: TextAlignment.Left,
+      title: 'value',
+      fn: (d: Date | string) => {
+        const validDate = isValidDate(d)
+        return validDate ? this.drawer.formatter.date(validDate) : String(d)
+      }
+    })
+
+    const summary = []
+    if (reportIsAdvance(this.report)) {
+      if (this.report.log[AdvanceState.APPLIED_FOR]) {
+        summary.push({ reference: this.t('labels.appliedForOn'), value: this.report.log[AdvanceState.APPLIED_FOR].on })
+      }
+      summary.push({ reference: this.t('labels.approvedOn'), value: this.report.log[AdvanceState.APPROVED]?.on })
+      summary.push({
+        reference: this.t('labels.approvedBy'),
+        value: `${this.drawer.formatter.name(this.report.log[AdvanceState.APPROVED]?.by.name)}`
+      })
+      if (this.report.receivedOn) {
+        summary.push({ reference: this.t('labels.receivedOn'), value: this.report.receivedOn })
+      }
+    } else {
+      if (reportIsTravel(this.report)) {
+        if (this.report.log[TravelState.APPLIED_FOR]) {
+          summary.push({ reference: this.t('labels.appliedForOn'), value: this.report.log[TravelState.APPLIED_FOR].on })
+        }
+        // summary.push({ reference: this.t('labels.approvedOn'), value: this.report.log[TravelState.APPROVED]?.on })
+        // summary.push({
+        //   reference: this.t('labels.approvedBy'),
+        //   value: `${this.drawer.formatter.name(this.report.log[TravelState.APPROVED]?.by.name)}`
+        // })
+      }
+      summary.push({ reference: this.t('labels.submittedOn'), value: this.report.log[State.IN_REVIEW]?.on })
+      summary.push({ reference: this.t('labels.examinedOn'), value: this.report.log[State.BOOKABLE]?.on })
+      summary.push({
+        reference: this.t('labels.examinedBy'),
+        value: `${this.drawer.formatter.name(this.report.log[State.BOOKABLE]?.by.name)}`
+      })
+    }
+
+    const tableOptions: TableOptions = options
+    tableOptions.firstRow = false
+
+    return await this.drawer.drawTable(summary, columns, tableOptions)
+  }
+
+  async drawComments(drawComments: boolean, drawBookingRemark: boolean, options: Options) {
+    if ((this.report.comments.length === 0 || !drawComments) && (!this.report.bookingRemark || !drawBookingRemark)) {
+      return options.yStart
+    }
+    const columns: Column[] = []
+    columns.push({
+      key: 'author',
+      width: 120,
+      alignment: TextAlignment.Left,
+      title: 'author',
+      fn: (a: Comment['author'] | string) => ((a as UserSimple).name ? this.drawer.formatter.name((a as UserSimple).name) : (a as string))
+    })
+    columns.push({ key: 'text', width: 300, alignment: TextAlignment.Left, title: 'value' })
+
+    const fontSize = options.fontSize + 2
+    this.drawer.drawText(this.t('labels.comments'), { xStart: options.xStart, yStart: options.yStart - fontSize, fontSize: fontSize })
+    options.yStart -= fontSize * 1.25
+
+    const tableOptions: TableOptions = options
+    tableOptions.firstRow = false
+
+    let rows: { author: Comment['author'] | string; text: string }[] = []
+    if (drawComments) {
+      rows = [...this.report.comments]
+    }
+    if (drawBookingRemark && this.report.bookingRemark) {
+      rows.push({ author: this.t('labels.bookingRemark'), text: this.report.bookingRemark })
+    }
+
+    return await this.drawer.drawTable<{ author: Comment['author'] | string; text: string }>(rows, columns, tableOptions)
+  }
+
+  getReceiptNumberLinkSegments(cost: Cost, receiptMap: ReceiptMap<idType>) {
+    return cost.receipts
+      .filter((r) => receiptMap[(r._id as _id).toString()]) // if vehicle registration is 'none', receipts for ownCar stages are not included
+      .map((r) => {
+        // receipts always have an _id in backend
+        const id = (r._id as _id).toString()
+        return { text: receiptMap[id].number.toString(), targetId: id }
+      })
+  }
+
+  async drawStages(receiptMap: ReceiptMap<idType>, options: Options, drawNotes = true) {
+    if (!reportIsTravel(this.report) || this.report.stages.length === 0) {
+      return options.yStart
+    }
+    const travel = this.report
+    const rows = travel.stages.flatMap((stage) =>
+      (stage.cost.positions.length > 0 ? stage.cost.positions : [undefined]).map((position) => ({
+        ...stage,
+        positionDetails: position
+          ? `${position.kind === 'ownCar' ? this.t('labels.ownCar') : position.description || ''} · ${position.category.name} · ${position.vatRate} %`
+          : '',
+        cost: position ? { ...stage.cost, positions: [position] } : stage.cost
+      }))
+    )
+    const columns: Column[] = []
+    columns.push({
+      key: 'departure',
+      width: 45,
+      alignment: TextAlignment.Left,
+      title: this.t('labels.departure'),
+      fn: (d: Date) => this.drawer.formatter.simpleDateTime(d)
+    })
+    columns.push({
+      key: 'arrival',
+      width: 45,
+      alignment: TextAlignment.Left,
+      title: this.t('labels.arrival'),
+      fn: (d: Date) => this.drawer.formatter.simpleDateTime(d)
+    })
+    columns.push({
+      key: 'startLocation',
+      width: 115,
+      alignment: TextAlignment.Left,
+      title: this.t('labels.startLocation'),
+      fn: (p: Place) => `${p.place}, ${p.country.name[this.drawer.settings.language]}`,
+      countryCodeForFlag: (p: Place) => p.country._id
+    })
+    columns.push({
+      key: 'endLocation',
+      width: 115,
+      alignment: TextAlignment.Left,
+      title: this.t('labels.endLocation'),
+      fn: (p: Place) => `${p.place}, ${p.country.name[this.drawer.settings.language]}`,
+      countryCodeForFlag: (p: Place) => p.country._id
+    })
+    columns.push({
+      key: 'transport',
+      width: 75,
+      alignment: TextAlignment.Left,
+      title: this.t('labels.transport'),
+      fn: (t: Transport) =>
+        t.type === 'ownCar'
+          ? `${this.t(`distanceRefundTypes.${t.distanceRefundType}`)} (${this.travelSettings.distanceRefunds[t.distanceRefundType]} ${baseCurrency.symbol}/km)`
+          : this.t(`labels.${t.type}`)
+    })
+    columns.push({
+      key: 'transport',
+      width: 45,
+      alignment: TextAlignment.Right,
+      title: this.t('labels.distance'),
+      fn: (t: Transport) => (t.type === 'ownCar' ? String(t.distance) : EMPTY_CELL)
+    })
+    // columns.push({
+    //   key: 'purpose',
+    //   width: 55,
+    //   alignment: TextAlignment.Left,
+    //   title: this.t('labels.purpose'),
+    //   fn: (p: Purpose) =>
+    //     this.t(`labels.${p}`) + (p === 'mixed' && travel.professionalShare ? ` (${Math.round(travel.professionalShare * 100)}%)` : '')
+    // })
+    columns.push({ key: 'positionDetails', width: 105, alignment: TextAlignment.Left, title: this.t('labels.position') })
+    columns.push({
+      key: 'cost',
+      width: 75,
+      alignment: TextAlignment.Right,
+      title: this.t('labels.cost'),
+      fn: (m: Cost) => this.drawer.formatter.detailedMoney(m)
+    })
+    if (drawNotes) {
+      columns.push({ key: 'note', width: 55, alignment: TextAlignment.Left, title: this.t('labels.note') })
+    }
+    columns.push({
+      key: 'cost',
+      width: 45,
+      alignment: TextAlignment.Left,
+      title: this.t('labels.receiptNumber'),
+      fn: (m: Cost) =>
+        this.getReceiptNumberLinkSegments(m, receiptMap)
+          .map((segment) => segment.text)
+          .join(', '),
+      internalPdfLinkSegments: (m: Cost) => this.getReceiptNumberLinkSegments(m, receiptMap)
+    })
+
+    const fontSize = options.fontSize + 2
+    this.drawer.drawText(this.t('labels.stages'), { xStart: options.xStart, yStart: options.yStart - fontSize, fontSize: fontSize })
+    options.yStart -= fontSize * 1.25
+
+    return await this.drawer.drawTable(rows, columns, options)
+  }
+
+  async drawExpenses(receiptMap: ReceiptMap<idType>, options: Options, drawNotes = true) {
+    if (reportIsAdvance(this.report) || this.report.expenses.length === 0) {
+      return options.yStart
+    }
+    const rows = this.report.expenses.flatMap((expense) =>
+      expense.cost.positions.map((position) => ({
+        ...expense,
+        positionDetails: `${position.description || ''} · ${position.category.name} · ${position.vatRate} %`,
+        cost: { ...expense.cost, positions: [position] }
+      }))
+    )
+    const columns: Column[] = []
+    columns.push({ key: 'description', width: 140, alignment: TextAlignment.Left, title: this.t('labels.description') })
+    columns.push({ key: 'positionDetails', width: 140, alignment: TextAlignment.Left, title: this.t('labels.position') })
+    // if (reportIsTravel(this.report)) {
+    //   const travel = this.report
+    //   columns.push({
+    //     key: 'purpose',
+    //     width: 55,
+    //     alignment: TextAlignment.Left,
+    //     title: this.t('labels.purpose'),
+    //     fn: (p: TravelExpense['purpose']) =>
+    //       this.t(`labels.${p}`) + (p === 'mixed' && travel.professionalShare ? ` (${Math.round(travel.professionalShare * 100)}%)` : '')
+    //   })
+    // }
+    columns.push({
+      key: 'cost',
+      width: 90,
+      alignment: TextAlignment.Right,
+      title: this.t('labels.cost'),
+      fn: (m: Cost) => this.drawer.formatter.detailedMoney(m)
+    })
+    columns.push({
+      key: 'cost',
+      width: 90,
+      alignment: TextAlignment.Left,
+      title: this.t('labels.invoiceDate'),
+      fn: (c: Cost) => this.drawer.formatter.date(c.date || '')
+    })
+    if (drawNotes) {
+      columns.push({ key: 'note', width: 130, alignment: TextAlignment.Left, title: this.t('labels.note') })
+    }
+    columns.push({
+      key: 'cost',
+      width: 45,
+      alignment: TextAlignment.Left,
+      title: this.t('labels.receiptNumber'),
+      fn: (m: Cost) =>
+        this.getReceiptNumberLinkSegments(m, receiptMap)
+          .map((segment) => segment.text)
+          .join(', '),
+      internalPdfLinkSegments: (m: Cost) => this.getReceiptNumberLinkSegments(m, receiptMap)
+    })
+
+    const fontSize = options.fontSize + 2
+    this.drawer.drawText(this.t('labels.expenses'), { xStart: options.xStart, yStart: options.yStart - fontSize, fontSize: fontSize })
+    options.yStart -= fontSize * 1.25
+
+    return await this.drawer.drawTable(rows, columns, options)
+  }
+
+  async drawDays(options: Options) {
+    if (!reportIsTravel(this.report) || this.report.days.length === 0) {
+      return options.yStart
+    }
+    const columns: Column[] = []
+    columns.push({
+      key: 'date',
+      width: 70,
+      alignment: TextAlignment.Left,
+      title: this.t('labels.date'),
+      fn: (d: Date) => this.drawer.formatter.date(d)
+    })
+    columns.push({
+      key: 'country',
+      width: 120,
+      alignment: TextAlignment.Left,
+      title: this.t('labels.country'),
+      fn: (c: CountrySimple) => c.name[this.drawer.settings.language],
+      countryCodeForFlag: (c: CountrySimple) => c._id
+    })
+    columns.push({ key: 'special', width: 80, alignment: TextAlignment.Left, title: this.t('labels.city'), fn: (s?: string) => s || '' })
+    columns.push({
+      key: 'purpose',
+      width: 55,
+      alignment: TextAlignment.Left,
+      title: this.t('labels.purpose'),
+      fn: (p: PurposeSimple) => this.t(`labels.${p}`)
+    })
+    columns.push({
+      key: 'cateringRefund',
+      width: 120,
+      alignment: TextAlignment.Left,
+      title: this.t('labels.cateringNoRefund'),
+      fn: (c: TravelDay['cateringRefund']) => (Object.keys(c) as Meal[]).map((k) => (c[k] ? '' : this.t(`labels.${k}`))).join(' ')
+    })
+    columns.push({
+      key: 'lumpSums',
+      width: 80,
+      alignment: TextAlignment.Right,
+      title: this.t('lumpSums.catering24/'),
+      fn: (lumpSums: TravelDay['lumpSums']) => this.drawer.formatter.detailedMoney(lumpSums.catering.refund)
+    })
+    columns.push({
+      key: 'lumpSums',
+      width: 80,
+      alignment: TextAlignment.Right,
+      title: this.t('lumpSums.overnight/'),
+      fn: (lumpSums: TravelDay['lumpSums']) => this.drawer.formatter.detailedMoney(lumpSums.overnight.refund)
+    })
+
+    const fontSize = options.fontSize + 2
+    this.drawer.drawText(this.t('labels.lumpSums') + (this.report.claimSpouseRefund ? ` (${this.t('labels.claimSpouseRefund')})` : ''), {
+      xStart: options.xStart,
+      yStart: options.yStart - fontSize,
+      fontSize: fontSize
+    })
+    options.yStart -= fontSize * 1.25
+
+    return await this.drawer.drawTable(this.report.days, columns, options)
+  }
+
+  async drawReports(options: Options) {
+    if (!reportIsAdvance(this.report) || this.report.offsetAgainst.length === 0) {
+      return options.yStart
+    }
+    const columns: Column[] = []
+    columns.push({ key: 'subject', width: 280, alignment: TextAlignment.Left, title: this.t('labels.subject') })
+    columns.push({
+      key: 'type',
+      width: 105,
+      alignment: TextAlignment.Left,
+      title: this.t('labels.type'),
+      fn: (t: ReportModelNameWithoutAdvance | 'offsetEntry') =>
+        t === 'offsetEntry' ? this.t('labels.offsetEntry') : this.t(`labels.${getReportTypeFromModelName(t)}`)
+    })
+    columns.push({
+      key: 'amount',
+      width: 100,
+      alignment: TextAlignment.Right,
+      title: this.t('labels.amount'),
+      fn: (a: number) => this.drawer.formatter.money({ amount: a })
+    })
+
+    const fontSize = options.fontSize + 2
+    this.drawer.drawText(this.t('labels.offsetAgainst'), { xStart: options.xStart, yStart: options.yStart - fontSize, fontSize: fontSize })
+    options.yStart -= fontSize * 1.25
+
+    return await this.drawer.drawTable(this.report.offsetAgainst, columns, options)
+  }
+  t(textIdentifier: string, interpolation: Record<string, string> = {}) {
+    return this.translateFunc(textIdentifier, this.drawer.settings.language, interpolation)
+  }
+}

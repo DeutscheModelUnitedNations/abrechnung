@@ -2,6 +2,7 @@ import {
   AddUp,
   AdvanceBase,
   AnyState,
+  Cost,
   FlatAddUp,
   hexColorRegex,
   IdDocument,
@@ -9,36 +10,167 @@ import {
   Log,
   Project,
   ReportModelName,
+  ReportModelNameWithoutAdvance,
   textColors,
   UserSimple
 } from 'abrechnung-common/types.js'
-import mongoose, { HydratedDocument, PopulateOptions, Query, Schema, Types } from 'mongoose'
+import mongoose, { Document, HydratedDocument, PopulateOptions, Query, Schema, Types } from 'mongoose'
 import { AdvanceDoc } from './advance.js'
 import { ProjectDoc } from './project.js'
+import { nextReference } from './referenceCounter.js'
 
-export function costObject(
-  exchangeRate = true,
-  receipts = true,
-  required = false,
-  defaultCurrency: string | null = null,
-  defaultAmount: number | null = null,
-  min: number | undefined = undefined
-) {
+const bookingSides = ['debit', 'credit'] as const
+
+export function costObject(options: {
+  exchangeRate: boolean
+  receipts: boolean
+  required: boolean
+  receiptsRequired?: boolean
+  min?: number
+  defaultCurrency?: string | null
+  defaultAmount?: number | null
+}) {
+  // receiptsRequired defaults to required
+  const opts = { defaultCurrency: null, defaultAmount: null, receiptsRequired: options.required, ...options }
   // biome-ignore lint/suspicious/noExplicitAny: typing to complex
-  const type: any = { amount: { type: Number, min, required: required, default: required && defaultAmount === null ? 0 : defaultAmount } }
-  if (exchangeRate) {
-    type.exchangeRate = { date: { type: Date }, rate: { type: Number, min: 0 }, amount: { type: Number, min } }
-    type.currency = { type: String, ref: 'Currency', required: required, default: defaultCurrency }
+  const type: any = {
+    amount: {
+      type: Number,
+      min: opts.min,
+      required: opts.required,
+      default: opts.required && opts.defaultAmount === null ? 0 : opts.defaultAmount,
+      set: (value: number | null | undefined) => (typeof value === 'number' && Number.isNaN(value) ? null : value)
+    }
   }
-  if (receipts) {
-    type.receipts = { type: [{ type: Schema.Types.ObjectId, ref: 'DocumentFile', required: required }] }
+  if (opts.exchangeRate) {
+    type.exchangeRate = { type: { date: { type: Date }, rate: { type: Number, min: 0 }, amount: { type: Number, min: opts.min } } }
+    type.currency = { type: String, ref: 'Currency', required: opts.required, default: opts.defaultCurrency }
+  }
+  if (opts.receipts) {
+    type.receipts = { type: [{ type: Schema.Types.ObjectId, ref: 'DocumentFile', required: opts.receiptsRequired }] }
     type.date = {
       type: Date,
       validate: { validator: (v: Date | string | number) => Date.now() >= new Date(v).valueOf(), message: 'futureNotAllowed' },
-      required: required
+      required: opts.required
     }
   }
-  return { type, required, default: () => ({}) }
+  return { type, required: opts.required, default: () => ({}) }
+}
+
+export function positionedCostObject(options: { required: boolean; receiptsRequired?: boolean; min?: number }) {
+  const opts = { receiptsRequired: options.required, ...options }
+  return {
+    type: {
+      positions: {
+        type: [
+          {
+            kind: { type: String, enum: ['manual', 'ownCar'], required: true, default: 'manual' },
+            description: { type: String, trim: true },
+            grossAmount: { type: Number, min: opts.min, required: true },
+            vatRate: { type: Number, min: 0, max: 100, required: true, default: 0 },
+            project: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
+            category: { type: Schema.Types.ObjectId, ref: 'Category', required: true }
+          }
+        ],
+        required: options.required,
+        default: () => []
+      },
+      exchangeRate: { type: { date: { type: Date }, rate: { type: Number, min: 0 } } },
+      currency: { type: String, ref: 'Currency', required: options.required, default: options.required ? 'EUR' : null },
+      receipts: { type: [{ type: Schema.Types.ObjectId, ref: 'DocumentFile', required: opts.receiptsRequired }] },
+      date: {
+        type: Date,
+        validate: { validator: (v: Date | string | number) => Date.now() >= new Date(v).valueOf(), message: 'futureNotAllowed' },
+        required: options.required
+      }
+    },
+    required: options.required,
+    default: () => ({ positions: [] })
+  }
+}
+
+export async function getCostPositionValidationIssues(
+  costs: Cost<Types.ObjectId>[],
+  categoryFor: 'Travel' | 'ExpenseReport',
+  requirePositions: boolean,
+  requireSinglePositionDescription: boolean
+) {
+  const issues: { path: string; message: string }[] = []
+  const positions = costs.flatMap((cost, costIndex) =>
+    cost.positions.map((position, positionIndex) => ({ costIndex, positionIndex, position }))
+  )
+  if (positions.length === 0) {
+    if (requirePositions) {
+      costs.forEach((_, costIndex) => {
+        issues.push({ path: `${costIndex}.positions`, message: 'required' })
+      })
+    }
+    return issues
+  }
+  const projectIds = Array.from(
+    new Set(positions.map(({ position }) => idDocumentToId(position.project)?.toString()).filter((id): id is string => Boolean(id)))
+  )
+  const categoryIds = Array.from(
+    new Set(positions.map(({ position }) => idDocumentToId(position.category)?.toString()).filter((id): id is string => Boolean(id)))
+  )
+  const [projects, categories] = await Promise.all([
+    mongoose
+      .model<{ _id: Types.ObjectId; organisation: Types.ObjectId }>('Project')
+      .find({ _id: { $in: projectIds } }, { organisation: 1 })
+      .lean(),
+    mongoose
+      .model<{ _id: Types.ObjectId; for: 'Travel' | 'ExpenseReport' | 'both' }>('Category')
+      .find({ _id: { $in: categoryIds } }, { for: 1 })
+      .lean()
+  ])
+  const projectsById = new Map(projects.map((project) => [project._id.toString(), project]))
+  const categoriesById = new Map(categories.map((category) => [category._id.toString(), category]))
+  const organisationIds = Array.from(new Set(projects.map(({ organisation }) => organisation.toString())))
+  const organisations = await mongoose
+    .model<{ _id: Types.ObjectId; accountingSettings: { vatRates: { rate: number }[] } }>('Organisation')
+    .find({ _id: { $in: organisationIds } }, { 'accountingSettings.vatRates.rate': 1 })
+    .lean()
+  const organisationsById = new Map(organisations.map((organisation) => [organisation._id.toString(), organisation]))
+
+  for (const [costIndex, cost] of costs.entries()) {
+    if (requirePositions && cost.positions.length < 1) {
+      issues.push({ path: `${costIndex}.positions`, message: 'required' })
+    }
+    for (const [positionIndex, position] of cost.positions.entries()) {
+      const prefix = `${costIndex}.positions.${positionIndex}`
+      if (position.kind === 'manual' && (requireSinglePositionDescription || cost.positions.length > 1) && !position.description?.trim()) {
+        issues.push({ path: `${prefix}.description`, message: 'required' })
+      }
+      const projectValue = idDocumentToId(position.project)
+      if (!projectValue) {
+        issues.push({ path: `${prefix}.project`, message: 'invalidProject' })
+        continue
+      }
+      const projectId = projectValue.toString()
+      const project = projectsById.get(projectId)
+      if (!project) {
+        issues.push({ path: `${prefix}.project`, message: 'invalidProject' })
+      } else {
+        const accountingSettings = organisationsById.get(project.organisation.toString())?.accountingSettings
+        const allowedRates = accountingSettings?.vatRates.map(({ rate }) => rate) ?? [0]
+        if (!allowedRates.includes(position.vatRate)) {
+          issues.push({ path: `${prefix}.vatRate`, message: 'invalidVatRate' })
+        }
+      }
+
+      const categoryValue = idDocumentToId(position.category)
+      if (!categoryValue) {
+        issues.push({ path: `${prefix}.category`, message: 'invalidCategory' })
+        continue
+      }
+      const categoryId = categoryValue.toString()
+      const category = categoriesById.get(categoryId)
+      if (!category || (category.for !== 'both' && category.for !== categoryFor)) {
+        issues.push({ path: `${prefix}.category`, message: 'invalidCategory' })
+      }
+    }
+  }
+  return issues
 }
 
 export function logObject<T extends AnyState>(states: readonly T[]) {
@@ -55,7 +187,7 @@ export function logObject<T extends AnyState>(states: readonly T[]) {
 }
 
 export function setLog(doc: HydratedDocument<{ state: AnyState; log: Log<Types.ObjectId>; editor: UserSimple<Types.ObjectId> }>) {
-  if (doc.isModified('state')) {
+  if (doc.isModified('state') && !doc.log[doc.state]) {
     doc.log[doc.state] = { on: new Date(), by: doc.editor }
   }
 }
@@ -80,6 +212,7 @@ export function requestBaseSchema<S extends AnyState = AnyState>(
 ) {
   const schema = {
     name: { type: String },
+    reference: { type: Number, index: true, unique: true, sparse: true, min: 0 },
     owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     project: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     state: { type: Number, required: true, enum: stages, default: defaultState },
@@ -96,21 +229,33 @@ export function requestBaseSchema<S extends AnyState = AnyState>(
       ]
     },
     bookingRemark: { type: String },
+    bookings: {
+      type: [
+        {
+          side: { type: String, enum: bookingSides, required: true },
+          ledgerAccount: { type: Schema.Types.ObjectId, ref: 'LedgerAccount', required: true },
+          amount: { type: Number, min: 0, required: true },
+          date: { type: Date, required: true },
+          project: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
+          remark: { type: String, trim: true }
+        }
+      ]
+    },
     history: { type: [{ type: Schema.Types.ObjectId, ref: modelName }] },
     historic: { type: Boolean, required: true, default: false }
   }
 
-  const addUp = Object.assign(
-    {
-      project: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
-      balance: costObject(false, false, true),
-      total: costObject(false, false, true),
-      expenses: costObject(false, false, true),
-      advance: costObject(false, false, true),
-      advanceOverflow: { type: Boolean, required: true, default: false }
-    },
-    addUpLumpSums ? { lumpSums: costObject(false, false, true) } : {}
-  )
+  const addUp = {
+    project: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
+    balance: costObject({ exchangeRate: false, receipts: false, required: true, min: 0 }),
+    total: costObject({ exchangeRate: false, receipts: false, required: true, min: 0 }),
+    expenses: costObject({ exchangeRate: false, receipts: false, required: true }),
+    advance: costObject({ exchangeRate: false, receipts: false, required: true, min: 0 }),
+    advanceOverflow: { type: Boolean, required: true, default: false },
+    negativeTotal: { type: Boolean, required: true, default: false },
+    ...(addUpLumpSums ? { lumpSums: costObject({ exchangeRate: false, receipts: false, required: false, defaultAmount: 0 }) } : {})
+  }
+
   const schemaWithAdvances = Object.assign(
     schema,
     advancesAndAddUp
@@ -172,7 +317,8 @@ export function populateSelected<DocType extends {}>(
 }
 
 export function populateAll<DocType extends {}>(
-  doc: HydratedDocument<DocType>,
+  // biome-ignore lint/complexity/noBannedTypes: mongoose uses {} as type
+  doc: Document<unknown, {}, DocType>,
   projectionPopulateMap: Partial<Record<keyof DocType, PopulateOptions[]>>
 ) {
   const populates: Promise<unknown>[] = []
@@ -187,8 +333,8 @@ export function populateAll<DocType extends {}>(
 }
 
 export async function offsetAdvance(
-  report: { addUp: FlatAddUp<Types.ObjectId>[]; advances: AdvanceBase<Types.ObjectId>[]; _id: Types.ObjectId },
-  modelName: ReportModelName
+  report: { addUp: FlatAddUp<Types.ObjectId>[]; advances: AdvanceBase<Types.ObjectId>[]; _id: Types.ObjectId; name: string },
+  modelName: ReportModelNameWithoutAdvance
 ) {
   const session = await mongoose.startSession()
   // session.startTransaction() // needs Replica Set
@@ -198,7 +344,7 @@ export async function offsetAdvance(
       let total = addUp.total.amount || 0
       for (const advance of report.advances) {
         if (advance.project._id.equals(idDocumentToId(addUp.project))) {
-          total = await (advance as AdvanceDoc).offset(total, modelName, report._id, session)
+          total = await (advance as AdvanceDoc).offset(total, modelName, report._id, report.name, session)
         }
       }
     }
@@ -228,4 +374,29 @@ export async function addToProjectBalance(report: { addUp: AddUp[]; project: Pro
   } finally {
     await session.endSession()
   }
+}
+
+type ReferenceDoc = { reference: number; historic?: boolean }
+export async function addReferenceOnNewDocs(doc: HydratedDocument<ReferenceDoc>, modelName: ReportModelName) {
+  if (doc.isNew && !doc.historic) {
+    doc.reference = await nextReference(modelName)
+  }
+}
+
+type HistoryDoc = { reference?: number; historic?: boolean; updatedAt: Date | string; history: Types.ObjectId[] }
+export async function addHistoryEntry(doc: HydratedDocument<HistoryDoc>, modelName: string, session: mongoose.ClientSession | null = null) {
+  const m = mongoose.model<HistoryDoc>(modelName)
+  const dbDoc = await m.findOne({ _id: doc._id }, { history: 0 }).session(session).lean()
+  if (!dbDoc) {
+    throw new Error(`${modelName} (${doc._id}) not found while saving to history`)
+  }
+  dbDoc._id = new mongoose.Types.ObjectId()
+  dbDoc.updatedAt = new Date()
+  dbDoc.historic = true
+  dbDoc.reference = undefined
+  const old = new m(dbDoc)
+  old.$locals.SKIP_POST_SAFE_HOOK = true
+  await old.save({ timestamps: false, session })
+  doc.history.push(old._id)
+  doc.markModified('history')
 }

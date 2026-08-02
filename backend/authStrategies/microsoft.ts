@@ -1,6 +1,6 @@
 import { microsoftSettings } from 'abrechnung-common/types.js'
 import { Strategy as MicrosoftStrategy } from 'passport-microsoft'
-import { getConnectionSettings } from '../db.js'
+import { BACKEND_CACHE } from '../db.js'
 import ENV from '../env.js'
 import { displayNameSplit, findOrCreateUser } from './index.js'
 
@@ -28,7 +28,7 @@ interface msProfile {
 }
 
 export async function getMicrosoftStrategy() {
-  const connectionSettings = await getConnectionSettings()
+  const { connectionSettings } = BACKEND_CACHE.getSnapshot()
   if (!connectionSettings.auth.microsoft) {
     throw new Error('Microsoft not configured in Connection Settings')
   }

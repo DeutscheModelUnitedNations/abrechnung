@@ -1,0 +1,3357 @@
+[
+  {
+    "name": {
+      "de": "Andorra",
+      "en": "Andorra",
+      "fr": "Andorre",
+      "es": "Andorra",
+      "ru": "Андорра",
+      "kk": "Андорра"
+    },
+    "code": "AD",
+    "currency": "EUR",
+    "flag": "🇦🇩"
+  },
+  {
+    "name": {
+      "de": "Vereinigte Arabische Emirate",
+      "en": "United Arab Emirates",
+      "fr": "Émirats arabes unis",
+      "es": "Emiratos Árabes Unidos",
+      "ru": "ОАЭ",
+      "kk": "Біріккен Араб Әмірліктері"
+    },
+    "code": "AE",
+    "currency": "AED",
+    "flag": "🇦🇪"
+  },
+  {
+    "name": {
+      "de": "Afghanistan",
+      "en": "Afghanistan",
+      "fr": "Afghanistan",
+      "es": "Afganistán",
+      "ru": "Афганистан",
+      "kk": "Ауғанстан"
+    },
+    "code": "AF",
+    "currency": "AFN",
+    "flag": "🇦🇫"
+  },
+  {
+    "name": {
+      "de": "Antigua und Barbuda",
+      "en": "Antigua and Barbuda",
+      "fr": "Antigua-et-Barbuda",
+      "es": "Antigua y Barbuda",
+      "ru": "Антигуа и Барбуда",
+      "kk": "Антигуа және Барбуда"
+    },
+    "code": "AG",
+    "currency": "XCD",
+    "lumpSumsFrom": "TT",
+    "flag": "🇦🇬"
+  },
+  {
+    "name": {
+      "de": "Anguilla",
+      "en": "Anguilla",
+      "fr": "Anguilla",
+      "es": "Anguila",
+      "ru": "Ангилья",
+      "kk": "Ангилья"
+    },
+    "code": "AI",
+    "currency": "XCD",
+    "lumpSumsFrom": "GB",
+    "flag": "🇦🇮"
+  },
+  {
+    "name": {
+      "de": "Albanien",
+      "en": "Albania",
+      "fr": "Albanie",
+      "es": "Albania",
+      "ru": "Албания",
+      "kk": "Албания"
+    },
+    "code": "AL",
+    "currency": "ALL",
+    "flag": "🇦🇱"
+  },
+  {
+    "name": {
+      "de": "Armenien",
+      "en": "Armenia",
+      "fr": "Arménie",
+      "es": "Armenia",
+      "ru": "Армения",
+      "kk": "Армения"
+    },
+    "code": "AM",
+    "currency": "AMD",
+    "flag": "🇦🇲"
+  },
+  {
+    "name": {
+      "de": "Angola",
+      "en": "Angola",
+      "fr": "Angola",
+      "es": "Angola",
+      "ru": "Ангола",
+      "kk": "Ангола"
+    },
+    "code": "AO",
+    "currency": "AOA",
+    "flag": "🇦🇴"
+  },
+  {
+    "name": {
+      "de": "Argentinien",
+      "en": "Argentina",
+      "fr": "Argentine",
+      "es": "Argentina",
+      "ru": "Аргентина",
+      "kk": "Аргентина"
+    },
+    "code": "AR",
+    "currency": "ARS",
+    "flag": "🇦🇷"
+  },
+  {
+    "name": {
+      "de": "Amerikanisch-Samoa",
+      "en": "American Samoa",
+      "fr": "Samoa américaines",
+      "es": "Samoa Americana",
+      "ru": "Американское Самоа",
+      "kk": "Америкалық Самоа"
+    },
+    "code": "AS",
+    "currency": "USD",
+    "lumpSumsFrom": "US",
+    "flag": "🇦🇸"
+  },
+  {
+    "name": {
+      "de": "Österreich",
+      "en": "Austria",
+      "fr": "Autriche",
+      "es": "Austria",
+      "ru": "Австрия",
+      "kk": "Австрия"
+    },
+    "code": "AT",
+    "currency": "EUR",
+    "flag": "🇦🇹",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Australien",
+      "en": "Australia",
+      "fr": "Australie",
+      "es": "Australia",
+      "ru": "Австралия",
+      "kk": "Австралия"
+    },
+    "code": "AU",
+    "currency": "AUD",
+    "flag": "🇦🇺"
+  },
+  {
+    "name": {
+      "de": "Aruba",
+      "en": "Aruba",
+      "fr": "Aruba",
+      "es": "Aruba",
+      "ru": "Аруба",
+      "kk": "Аруба"
+    },
+    "code": "AW",
+    "currency": "AWG",
+    "lumpSumsFrom": "NL",
+    "flag": "🇦🇼"
+  },
+  {
+    "name": {
+      "de": "Ålandinseln",
+      "en": "Åland Islands",
+      "fr": "Îles Åland",
+      "es": "Islas Åland",
+      "ru": "Аландские о-ва",
+      "kk": "Аланд аралдары"
+    },
+    "code": "AX",
+    "currency": "EUR",
+    "flag": "🇦🇽"
+  },
+  {
+    "name": {
+      "de": "Aserbaidschan",
+      "en": "Azerbaijan",
+      "fr": "Azerbaïdjan",
+      "es": "Azerbaiyán",
+      "ru": "Азербайджан",
+      "kk": "Әзірбайжан"
+    },
+    "code": "AZ",
+    "currency": "AZN",
+    "flag": "🇦🇿"
+  },
+  {
+    "name": {
+      "de": "Bosnien und Herzegowina",
+      "en": "Bosnia and Herzegovina",
+      "fr": "Bosnie-Herzégovine",
+      "es": "Bosnia y Herzegovina",
+      "ru": "Босния и Герцеговина",
+      "kk": "Босния және Герцеговина"
+    },
+    "code": "BA",
+    "currency": "BAM",
+    "flag": "🇧🇦"
+  },
+  {
+    "name": {
+      "de": "Barbados",
+      "en": "Barbados",
+      "fr": "Barbade",
+      "es": "Barbados",
+      "ru": "Барбадос",
+      "kk": "Барбадос"
+    },
+    "code": "BB",
+    "currency": "BBD",
+    "flag": "🇧🇧"
+  },
+  {
+    "name": {
+      "de": "Bangladesch",
+      "en": "Bangladesh",
+      "fr": "Bangladesh",
+      "es": "Bangladés",
+      "ru": "Бангладеш",
+      "kk": "Бангладеш"
+    },
+    "code": "BD",
+    "currency": "BDT",
+    "flag": "🇧🇩"
+  },
+  {
+    "name": {
+      "de": "Belgien",
+      "en": "Belgium",
+      "fr": "Belgique",
+      "es": "Bélgica",
+      "ru": "Бельгия",
+      "kk": "Бельгия"
+    },
+    "code": "BE",
+    "currency": "EUR",
+    "flag": "🇧🇪",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Burkina Faso",
+      "en": "Burkina Faso",
+      "fr": "Burkina Faso",
+      "es": "Burkina Faso",
+      "ru": "Буркина-Фасо",
+      "kk": "Буркина-Фасо"
+    },
+    "code": "BF",
+    "currency": "XOF",
+    "flag": "🇧🇫"
+  },
+  {
+    "name": {
+      "de": "Bulgarien",
+      "en": "Bulgaria",
+      "fr": "Bulgarie",
+      "es": "Bulgaria",
+      "ru": "Болгария",
+      "kk": "Болгария"
+    },
+    "code": "BG",
+    "currency": "BGN",
+    "flag": "🇧🇬",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Bahrain",
+      "en": "Bahrain",
+      "fr": "Bahreïn",
+      "es": "Baréin",
+      "ru": "Бахрейн",
+      "kk": "Бахрейн"
+    },
+    "code": "BH",
+    "currency": "BHD",
+    "flag": "🇧🇭"
+  },
+  {
+    "name": {
+      "de": "Burundi",
+      "en": "Burundi",
+      "fr": "Burundi",
+      "es": "Burundi",
+      "ru": "Бурунди",
+      "kk": "Бурунди"
+    },
+    "code": "BI",
+    "currency": "BIF",
+    "flag": "🇧🇮"
+  },
+  {
+    "name": {
+      "de": "Benin",
+      "en": "Benin",
+      "fr": "Bénin",
+      "es": "Benín",
+      "ru": "Бенин",
+      "kk": "Бенин"
+    },
+    "code": "BJ",
+    "currency": "XOF",
+    "flag": "🇧🇯"
+  },
+  {
+    "name": {
+      "de": "St. Barthélemy",
+      "en": "Saint Barthélemy",
+      "fr": "Saint-Barthélemy",
+      "es": "San Bartolomé",
+      "ru": "Сен-Бартелеми",
+      "kk": "Сен-Бартелеми"
+    },
+    "code": "BL",
+    "currency": "EUR",
+    "lumpSumsFrom": "FR",
+    "flag": "🇧🇱"
+  },
+  {
+    "name": {
+      "de": "Bermuda",
+      "en": "Bermuda",
+      "fr": "Bermudes",
+      "es": "Bermudas",
+      "ru": "Бермудские о-ва",
+      "kk": "Бермуд аралдары"
+    },
+    "code": "BM",
+    "currency": "BMD",
+    "lumpSumsFrom": "GB",
+    "flag": "🇧🇲"
+  },
+  {
+    "name": {
+      "de": "Brunei",
+      "en": "Brunei",
+      "fr": "Brunéi Darussalam",
+      "es": "Brunéi",
+      "ru": "Бруней-Даруссалам",
+      "kk": "Бруней"
+    },
+    "code": "BN",
+    "currency": "BND",
+    "flag": "🇧🇳"
+  },
+  {
+    "name": {
+      "de": "Bolivien",
+      "en": "Bolivia",
+      "fr": "Bolivie",
+      "es": "Bolivia",
+      "ru": "Боливия",
+      "kk": "Боливия"
+    },
+    "code": "BO",
+    "currency": "BOB",
+    "flag": "🇧🇴"
+  },
+  {
+    "name": {
+      "de": "Brasilien",
+      "en": "Brazil",
+      "fr": "Brésil",
+      "es": "Brasil",
+      "ru": "Бразилия",
+      "kk": "Бразилия"
+    },
+    "code": "BR",
+    "currency": "BRL",
+    "flag": "🇧🇷"
+  },
+  {
+    "name": {
+      "de": "Bahamas",
+      "en": "Bahamas",
+      "fr": "Bahamas",
+      "es": "Bahamas",
+      "ru": "Багамы",
+      "kk": "Багам аралдары"
+    },
+    "code": "BS",
+    "currency": "BSD",
+    "flag": "🇧🇸"
+  },
+  {
+    "name": {
+      "de": "Bhutan",
+      "en": "Bhutan",
+      "fr": "Bhoutan",
+      "es": "Bután",
+      "ru": "Бутан",
+      "kk": "Бутан"
+    },
+    "code": "BT",
+    "currency": "BTN",
+    "flag": "🇧🇹"
+  },
+  {
+    "name": {
+      "de": "Bouvetinsel",
+      "en": "Bouvet Island",
+      "fr": "Île Bouvet",
+      "es": "Isla Bouvet",
+      "ru": "о-в Буве",
+      "kk": "Буве аралы"
+    },
+    "code": "BV",
+    "lumpSumsFrom": "NO",
+    "flag": "🇧🇻"
+  },
+  {
+    "name": {
+      "de": "Botsuana",
+      "en": "Botswana",
+      "fr": "Botswana",
+      "es": "Botsuana",
+      "ru": "Ботсвана",
+      "kk": "Ботсвана"
+    },
+    "code": "BW",
+    "currency": "BWP",
+    "flag": "🇧🇼"
+  },
+  {
+    "name": {
+      "de": "Belarus",
+      "en": "Belarus",
+      "fr": "Biélorussie",
+      "es": "Bielorrusia",
+      "ru": "Беларусь",
+      "kk": "Беларусь"
+    },
+    "alias": {
+      "de": ["Weißrussland"]
+    },
+    "code": "BY",
+    "currency": "BYN",
+    "flag": "🇧🇾"
+  },
+  {
+    "name": {
+      "de": "Belize",
+      "en": "Belize",
+      "fr": "Belize",
+      "es": "Belice",
+      "ru": "Белиз",
+      "kk": "Белиз"
+    },
+    "code": "BZ",
+    "currency": "BZD",
+    "flag": "🇧🇿"
+  },
+  {
+    "name": {
+      "de": "Kanada",
+      "en": "Canada",
+      "fr": "Canada",
+      "es": "Canadá",
+      "ru": "Канада",
+      "kk": "Канада"
+    },
+    "code": "CA",
+    "currency": "CAD",
+    "flag": "🇨🇦"
+  },
+  {
+    "name": {
+      "de": "Kokosinseln",
+      "en": "Cocos Islands",
+      "fr": "Îles Cocos",
+      "es": "Islas Cocos",
+      "ru": "Кокосовые о-ва",
+      "kk": "Кокос (Килинг) аралдары"
+    },
+    "code": "CC",
+    "currency": "AUD",
+    "lumpSumsFrom": "AU",
+    "flag": "🇨🇨"
+  },
+  {
+    "name": {
+      "de": "Demokratische Republik Kongo",
+      "en": "Democratic Republic of the Congo",
+      "fr": "Congo-Kinshasa",
+      "es": "República Democrática del Congo",
+      "ru": "Конго - Киншаса",
+      "kk": "Конго"
+    },
+    "alias": {
+      "de": ["Kongo, Demokratische Republik"]
+    },
+    "code": "CD",
+    "currency": "CDF",
+    "flag": "🇨🇩"
+  },
+  {
+    "name": {
+      "de": "Zentralafrikanische Republik",
+      "en": "Central African Republic",
+      "fr": "République centrafricaine",
+      "es": "República Centroafricana",
+      "ru": "Центрально-Африканская Республика",
+      "kk": "Орталық Африка Республикасы"
+    },
+    "code": "CF",
+    "currency": "XAF",
+    "flag": "🇨🇫"
+  },
+  {
+    "name": {
+      "de": "Kongo",
+      "en": "Congo",
+      "fr": "Congo-Brazzaville",
+      "es": "Congo",
+      "ru": "Конго - Браззавиль",
+      "kk": "Конго-Браззавиль Республикасы"
+    },
+    "alias": {
+      "de": ["Kongo, Republik"]
+    },
+    "code": "CG",
+    "currency": "XAF",
+    "flag": "🇨🇬"
+  },
+  {
+    "name": {
+      "de": "Schweiz",
+      "en": "Switzerland",
+      "fr": "Suisse",
+      "es": "Suiza",
+      "ru": "Швейцария",
+      "kk": "Швейцария"
+    },
+    "code": "CH",
+    "currency": "CHF",
+    "flag": "🇨🇭",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Côte d’Ivoire",
+      "en": "Côte d’Ivoire",
+      "fr": "Côte d’Ivoire",
+      "es": "Côte d’Ivoire",
+      "ru": "Кот-д’Ивуар",
+      "kk": "Кот-д’Ивуар"
+    },
+    "alias": {
+      "de": ["Elfenbeinküste"]
+    },
+    "code": "CI",
+    "currency": "XOF",
+    "flag": "🇨🇮"
+  },
+  {
+    "name": {
+      "de": "Cookinseln",
+      "en": "Cook Islands",
+      "fr": "Îles Cook",
+      "es": "Islas Cook",
+      "ru": "Острова Кука",
+      "kk": "Кук аралдары"
+    },
+    "code": "CK",
+    "currency": "NZD",
+    "flag": "🇨🇰"
+  },
+  {
+    "name": {
+      "de": "Chile",
+      "en": "Chile",
+      "fr": "Chili",
+      "es": "Chile",
+      "ru": "Чили",
+      "kk": "Чили"
+    },
+    "code": "CL",
+    "currency": "CLP",
+    "flag": "🇨🇱"
+  },
+  {
+    "name": {
+      "de": "Kamerun",
+      "en": "Cameroon",
+      "fr": "Cameroun",
+      "es": "Camerún",
+      "ru": "Камерун",
+      "kk": "Камерун"
+    },
+    "code": "CM",
+    "currency": "XAF",
+    "flag": "🇨🇲"
+  },
+  {
+    "name": {
+      "de": "China",
+      "en": "China",
+      "fr": "Chine",
+      "es": "China",
+      "ru": "Китай",
+      "kk": "Қытай"
+    },
+    "code": "CN",
+    "currency": "CNY",
+    "flag": "🇨🇳"
+  },
+  {
+    "name": {
+      "de": "Kolumbien",
+      "en": "Colombia",
+      "fr": "Colombie",
+      "es": "Colombia",
+      "ru": "Колумбия",
+      "kk": "Колумбия"
+    },
+    "code": "CO",
+    "currency": "COP",
+    "flag": "🇨🇴"
+  },
+  {
+    "name": {
+      "de": "Clipperton",
+      "en": "Clipperton",
+      "fr": "Île Clipperton",
+      "es": "Isla Clipperton",
+      "ru": "о-в Клиппертон",
+      "kk": "Клиппертон аралы"
+    },
+    "code": "CP",
+    "lumpSumsFrom": "FR",
+    "flag": "🇨🇵"
+  },
+  {
+    "name": {
+      "de": "Costa Rica",
+      "en": "Costa Rica",
+      "fr": "Costa Rica",
+      "es": "Costa Rica",
+      "ru": "Коста-Рика",
+      "kk": "Коста-Рика"
+    },
+    "code": "CR",
+    "currency": "CRC",
+    "flag": "🇨🇷"
+  },
+  {
+    "name": {
+      "de": "Kuba",
+      "en": "Cuba",
+      "fr": "Cuba",
+      "es": "Cuba",
+      "ru": "Куба",
+      "kk": "Куба"
+    },
+    "code": "CU",
+    "currency": "CUP",
+    "flag": "🇨🇺"
+  },
+  {
+    "name": {
+      "de": "Cabo Verde",
+      "en": "Cabo Verde",
+      "fr": "Cap-Vert",
+      "es": "Cabo Verde",
+      "ru": "Кабо-Верде",
+      "kk": "Кабо-Верде"
+    },
+    "alias": {
+      "de": ["Kap Verde"]
+    },
+    "code": "CV",
+    "currency": "CVE",
+    "flag": "🇨🇻"
+  },
+  {
+    "name": {
+      "de": "Curaçao",
+      "en": "Curaçao",
+      "fr": "Curaçao",
+      "es": "Curazao",
+      "ru": "Кюрасао",
+      "kk": "Кюрасао"
+    },
+    "code": "CW",
+    "currency": "ANG",
+    "lumpSumsFrom": "NL",
+    "flag": "🇨🇼"
+  },
+  {
+    "name": {
+      "de": "Weihnachtsinsel",
+      "en": "Christmas Island",
+      "fr": "Île Christmas",
+      "es": "Isla de Navidad",
+      "ru": "о-в Рождества",
+      "kk": "Рождество аралы"
+    },
+    "code": "CX",
+    "currency": "AUD",
+    "lumpSumsFrom": "AU",
+    "flag": "🇨🇽"
+  },
+  {
+    "name": {
+      "de": "Zypern",
+      "en": "Cyprus",
+      "fr": "Chypre",
+      "es": "Chipre",
+      "ru": "Кипр",
+      "kk": "Кипр"
+    },
+    "code": "CY",
+    "currency": "EUR",
+    "flag": "🇨🇾",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Tschechien",
+      "en": "Czechia",
+      "fr": "Tchéquie",
+      "es": "Chequia",
+      "ru": "Чехия",
+      "kk": "Чехия"
+    },
+    "alias": {
+      "de": ["Tschechische Republik"]
+    },
+    "code": "CZ",
+    "currency": "CZK",
+    "flag": "🇨🇿",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Deutschland",
+      "en": "Germany",
+      "fr": "Allemagne",
+      "es": "Alemania",
+      "ru": "Германия",
+      "kk": "Германия"
+    },
+    "code": "DE",
+    "currency": "EUR",
+    "flag": "🇩🇪"
+  },
+  {
+    "name": {
+      "de": "Dschibuti",
+      "en": "Djibouti",
+      "fr": "Djibouti",
+      "es": "Yibuti",
+      "ru": "Джибути",
+      "kk": "Джибути"
+    },
+    "code": "DJ",
+    "currency": "DJF",
+    "flag": "🇩🇯"
+  },
+  {
+    "name": {
+      "de": "Dänemark",
+      "en": "Denmark",
+      "fr": "Danemark",
+      "es": "Dinamarca",
+      "ru": "Дания",
+      "kk": "Дания"
+    },
+    "code": "DK",
+    "currency": "DKK",
+    "flag": "🇩🇰",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Dominica",
+      "en": "Dominica",
+      "fr": "Dominique",
+      "es": "Dominica",
+      "ru": "Доминика",
+      "kk": "Доминика"
+    },
+    "code": "DM",
+    "currency": "XCD",
+    "lumpSumsFrom": "TT",
+    "flag": "🇩🇲"
+  },
+  {
+    "name": {
+      "de": "Dominikanische Republik",
+      "en": "Dominican Republic",
+      "fr": "République dominicaine",
+      "es": "República Dominicana",
+      "ru": "Доминиканская Республика",
+      "kk": "Доминикан Республикасы"
+    },
+    "code": "DO",
+    "currency": "DOP",
+    "flag": "🇩🇴"
+  },
+  {
+    "name": {
+      "de": "Algerien",
+      "en": "Algeria",
+      "fr": "Algérie",
+      "es": "Argelia",
+      "ru": "Алжир",
+      "kk": "Алжир"
+    },
+    "code": "DZ",
+    "currency": "DZD",
+    "flag": "🇩🇿"
+  },
+  {
+    "name": {
+      "de": "Ecuador",
+      "en": "Ecuador",
+      "fr": "Équateur",
+      "es": "Ecuador",
+      "ru": "Эквадор",
+      "kk": "Эквадор"
+    },
+    "code": "EC",
+    "currency": "USD",
+    "flag": "🇪🇨"
+  },
+  {
+    "name": {
+      "de": "Estland",
+      "en": "Estonia",
+      "fr": "Estonie",
+      "es": "Estonia",
+      "ru": "Эстония",
+      "kk": "Эстония"
+    },
+    "code": "EE",
+    "currency": "EUR",
+    "flag": "🇪🇪",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Ägypten",
+      "en": "Egypt",
+      "fr": "Égypte",
+      "es": "Egipto",
+      "ru": "Египет",
+      "kk": "Мысыр"
+    },
+    "code": "EG",
+    "currency": "EGP",
+    "flag": "🇪🇬"
+  },
+  {
+    "name": {
+      "de": "Westsahara",
+      "en": "Western Sahara",
+      "fr": "Sahara occidental",
+      "es": "Sáhara Occidental",
+      "ru": "Западная Сахара",
+      "kk": "Батыс Сахара"
+    },
+    "code": "EH",
+    "currency": "MAD",
+    "flag": "🇪🇭"
+  },
+  {
+    "name": {
+      "de": "Griechenland",
+      "en": "Greece",
+      "fr": "Grèce",
+      "es": "Grecia",
+      "ru": "Греция",
+      "kk": "Грекия"
+    },
+    "code": "GR",
+    "currency": "EUR",
+    "flag": "🇬🇷",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Eritrea",
+      "en": "Eritrea",
+      "fr": "Érythrée",
+      "es": "Eritrea",
+      "ru": "Эритрея",
+      "kk": "Эритрея"
+    },
+    "code": "ER",
+    "currency": "ERN",
+    "flag": "🇪🇷"
+  },
+  {
+    "name": {
+      "de": "Spanien",
+      "en": "Spain",
+      "fr": "Espagne",
+      "es": "España",
+      "ru": "Испания",
+      "kk": "Испания"
+    },
+    "code": "ES",
+    "currency": "EUR",
+    "flag": "🇪🇸",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Äthiopien",
+      "en": "Ethiopia",
+      "fr": "Éthiopie",
+      "es": "Etiopía",
+      "ru": "Эфиопия",
+      "kk": "Эфиопия"
+    },
+    "code": "ET",
+    "currency": "ETB",
+    "flag": "🇪🇹"
+  },
+  {
+    "name": {
+      "de": "Finnland",
+      "en": "Finland",
+      "fr": "Finlande",
+      "es": "Finlandia",
+      "ru": "Финляндия",
+      "kk": "Финляндия"
+    },
+    "code": "FI",
+    "currency": "EUR",
+    "flag": "🇫🇮",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Fidschi",
+      "en": "Fiji",
+      "fr": "Fidji",
+      "es": "Fiyi",
+      "ru": "Фиджи",
+      "kk": "Фиджи"
+    },
+    "code": "FJ",
+    "currency": "FJD",
+    "flag": "🇫🇯"
+  },
+  {
+    "name": {
+      "de": "Falklandinseln",
+      "en": "Falkland Islands",
+      "fr": "Îles Malouines",
+      "es": "Islas Malvinas",
+      "ru": "Фолклендские о-ва",
+      "kk": "Фолкленд аралдары"
+    },
+    "code": "FK",
+    "currency": "FKP",
+    "lumpSumsFrom": "GB",
+    "flag": "🇫🇰"
+  },
+  {
+    "name": {
+      "de": "Mikronesien",
+      "en": "Micronesia",
+      "fr": "États fédérés de Micronésie",
+      "es": "Micronesia",
+      "ru": "Федеративные Штаты Микронезии",
+      "kk": "Микронезия"
+    },
+    "code": "FM",
+    "currency": "USD",
+    "lumpSumsFrom": "PH",
+    "flag": "🇫🇲"
+  },
+  {
+    "name": {
+      "de": "Färöer",
+      "en": "Faroes",
+      "fr": "Îles Féroé",
+      "es": "Islas Feroe",
+      "ru": "Фарерские о-ва",
+      "kk": "Фарер аралдары"
+    },
+    "code": "FO",
+    "currency": "DKK",
+    "lumpSumsFrom": "DK",
+    "flag": "🇫🇴"
+  },
+  {
+    "name": {
+      "de": "Frankreich",
+      "en": "France",
+      "fr": "France",
+      "es": "Francia",
+      "ru": "Франция",
+      "kk": "Франция"
+    },
+    "code": "FR",
+    "currency": "EUR",
+    "flag": "🇫🇷",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Gabun",
+      "en": "Gabon",
+      "fr": "Gabon",
+      "es": "Gabón",
+      "ru": "Габон",
+      "kk": "Габон"
+    },
+    "code": "GA",
+    "currency": "XAF",
+    "flag": "🇬🇦"
+  },
+  {
+    "name": {
+      "de": "Grenada",
+      "en": "Grenada",
+      "fr": "Grenade",
+      "es": "Granada",
+      "ru": "Гренада",
+      "kk": "Гренада"
+    },
+    "code": "GD",
+    "currency": "XCD",
+    "lumpSumsFrom": "TT",
+    "flag": "🇬🇩"
+  },
+  {
+    "name": {
+      "de": "Georgien",
+      "en": "Georgia",
+      "fr": "Géorgie",
+      "es": "Georgia",
+      "ru": "Грузия",
+      "kk": "Грузия"
+    },
+    "code": "GE",
+    "currency": "GEL",
+    "flag": "🇬🇪"
+  },
+  {
+    "name": {
+      "de": "Französisch-Guayana",
+      "en": "French Guiana",
+      "fr": "Guyane française",
+      "es": "Guayana Francesa",
+      "ru": "Французская Гвиана",
+      "kk": "Француз Гвианасы"
+    },
+    "code": "GF",
+    "currency": "EUR",
+    "lumpSumsFrom": "FR",
+    "flag": "🇬🇫"
+  },
+  {
+    "name": {
+      "de": "Guernsey",
+      "en": "Guernsey",
+      "fr": "Guernesey",
+      "es": "Guernsey",
+      "ru": "Гернси",
+      "kk": "Гернси"
+    },
+    "code": "GG",
+    "currency": "GBP",
+    "lumpSumsFrom": "GB",
+    "flag": "🇬🇬"
+  },
+  {
+    "name": {
+      "de": "Ghana",
+      "en": "Ghana",
+      "fr": "Ghana",
+      "es": "Ghana",
+      "ru": "Гана",
+      "kk": "Гана"
+    },
+    "code": "GH",
+    "currency": "GHS",
+    "flag": "🇬🇭"
+  },
+  {
+    "name": {
+      "de": "Gibraltar",
+      "en": "Gibraltar",
+      "fr": "Gibraltar",
+      "es": "Gibraltar",
+      "ru": "Гибралтар",
+      "kk": "Гибралтар"
+    },
+    "code": "GI",
+    "currency": "GIP",
+    "lumpSumsFrom": "GB",
+    "flag": "🇬🇮"
+  },
+  {
+    "name": {
+      "de": "Grönland",
+      "en": "Greenland",
+      "fr": "Groenland",
+      "es": "Groenlandia",
+      "ru": "Гренландия",
+      "kk": "Гренландия"
+    },
+    "code": "GL",
+    "currency": "DKK",
+    "lumpSumsFrom": "DK",
+    "flag": "🇬🇱"
+  },
+  {
+    "name": {
+      "de": "Gambia",
+      "en": "The Gambia",
+      "fr": "Gambie",
+      "es": "Gambia",
+      "ru": "Гамбия",
+      "kk": "Гамбия"
+    },
+    "code": "GM",
+    "currency": "GMD",
+    "flag": "🇬🇲"
+  },
+  {
+    "name": {
+      "de": "Guinea",
+      "en": "Guinea",
+      "fr": "Guinée",
+      "es": "Guinea",
+      "ru": "Гвинея",
+      "kk": "Гвинея"
+    },
+    "code": "GN",
+    "currency": "GNF",
+    "flag": "🇬🇳"
+  },
+  {
+    "name": {
+      "de": "Guadeloupe",
+      "en": "Guadeloupe",
+      "fr": "Guadeloupe",
+      "es": "Guadalupe",
+      "ru": "Гваделупа",
+      "kk": "Гваделупа"
+    },
+    "code": "GP",
+    "currency": "EUR",
+    "lumpSumsFrom": "FR",
+    "flag": "🇬🇵"
+  },
+  {
+    "name": {
+      "de": "Äquatorialguinea",
+      "en": "Equatorial Guinea",
+      "fr": "Guinée équatoriale",
+      "es": "Guinea Ecuatorial",
+      "ru": "Экваториальная Гвинея",
+      "kk": "Экваторлық Гвинея"
+    },
+    "code": "GQ",
+    "currency": "XAF",
+    "flag": "🇬🇶"
+  },
+  {
+    "name": {
+      "de": "Südgeorgien und Südliche Sandwichinseln",
+      "en": "South Georgia and the South Sandwich Islands",
+      "fr": "Géorgie du Sud et îles Sandwich du Sud",
+      "es": "Islas Georgia del Sur y Sandwich del Sur",
+      "ru": "Южная Георгия и Южные Сандвичевы о-ва",
+      "kk": "Оңтүстік Георгия және Оңтүстік Сандвич аралдары"
+    },
+    "code": "GS",
+    "lumpSumsFrom": "GB",
+    "flag": "🇬🇸"
+  },
+  {
+    "name": {
+      "de": "Guatemala",
+      "en": "Guatemala",
+      "fr": "Guatemala",
+      "es": "Guatemala",
+      "ru": "Гватемала",
+      "kk": "Гватемала"
+    },
+    "code": "GT",
+    "currency": "GTQ",
+    "flag": "🇬🇹"
+  },
+  {
+    "name": {
+      "de": "Guam",
+      "en": "Guam",
+      "fr": "Guam",
+      "es": "Guam",
+      "ru": "Гуам",
+      "kk": "Гуам"
+    },
+    "code": "GU",
+    "currency": "USD",
+    "lumpSumsFrom": "US",
+    "flag": "🇬🇺"
+  },
+  {
+    "name": {
+      "de": "Guinea-Bissau",
+      "en": "Guinea-Bissau",
+      "fr": "Guinée-Bissau",
+      "es": "Guinea-Bisáu",
+      "ru": "Гвинея-Бисау",
+      "kk": "Гвинея-Бисау"
+    },
+    "code": "GW",
+    "currency": "XOF",
+    "flag": "🇬🇼"
+  },
+  {
+    "name": {
+      "de": "Guyana",
+      "en": "Guyana",
+      "fr": "Guyana",
+      "es": "Guyana",
+      "ru": "Гайана",
+      "kk": "Гайана"
+    },
+    "code": "GY",
+    "currency": "GYD",
+    "lumpSumsFrom": "TT",
+    "flag": "🇬🇾"
+  },
+  {
+    "name": {
+      "de": "Hongkong",
+      "en": "Hong Kong",
+      "fr": "R.A.S. chinoise de Hong Kong",
+      "es": "RAE de Hong Kong (China)",
+      "ru": "Гонконг (САР)",
+      "kk": "Сянган АӘА"
+    },
+    "code": "HK",
+    "currency": "HKD",
+    "lumpSumsFrom": "CN",
+    "flag": "🇭🇰"
+  },
+  {
+    "name": {
+      "de": "Heard und die McDonaldinseln",
+      "en": "Heard Island and McDonald Islands",
+      "fr": "Îles Heard et McDonald",
+      "es": "Islas Heard y McDonald",
+      "ru": "о-ва Херд и Макдональд",
+      "kk": "Херд аралы және Макдональд аралдары"
+    },
+    "code": "HM",
+    "lumpSumsFrom": "AU",
+    "flag": "🇭🇲"
+  },
+  {
+    "name": {
+      "de": "Honduras",
+      "en": "Honduras",
+      "fr": "Honduras",
+      "es": "Honduras",
+      "ru": "Гондурас",
+      "kk": "Гондурас"
+    },
+    "code": "HN",
+    "currency": "HNL",
+    "flag": "🇭🇳"
+  },
+  {
+    "name": {
+      "de": "Kroatien",
+      "en": "Croatia",
+      "fr": "Croatie",
+      "es": "Croacia",
+      "ru": "Хорватия",
+      "kk": "Хорватия"
+    },
+    "code": "HR",
+    "currency": "EUR",
+    "flag": "🇭🇷",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Haiti",
+      "en": "Haiti",
+      "fr": "Haïti",
+      "es": "Haití",
+      "ru": "Гаити",
+      "kk": "Гаити"
+    },
+    "code": "HT",
+    "currency": "HTG",
+    "flag": "🇭🇹"
+  },
+  {
+    "name": {
+      "de": "Ungarn",
+      "en": "Hungary",
+      "fr": "Hongrie",
+      "es": "Hungría",
+      "ru": "Венгрия",
+      "kk": "Венгрия"
+    },
+    "code": "HU",
+    "currency": "HUF",
+    "flag": "🇭🇺",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Indonesien",
+      "en": "Indonesia",
+      "fr": "Indonésie",
+      "es": "Indonesia",
+      "ru": "Индонезия",
+      "kk": "Индонезия"
+    },
+    "code": "ID",
+    "currency": "IDR",
+    "flag": "🇮🇩"
+  },
+  {
+    "name": {
+      "de": "Irland",
+      "en": "Ireland",
+      "fr": "Irlande",
+      "es": "Irlanda",
+      "ru": "Ирландия",
+      "kk": "Ирландия"
+    },
+    "code": "IE",
+    "currency": "EUR",
+    "flag": "🇮🇪",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Israel",
+      "en": "Israel",
+      "fr": "Israël",
+      "es": "Israel",
+      "ru": "Израиль",
+      "kk": "Израиль"
+    },
+    "code": "IL",
+    "currency": "ILS",
+    "flag": "🇮🇱"
+  },
+  {
+    "name": {
+      "de": "Insel Man",
+      "en": "Isle of Man",
+      "fr": "Île de Man",
+      "es": "Isla de Man",
+      "ru": "о-в Мэн",
+      "kk": "Мэн аралы"
+    },
+    "code": "IM",
+    "currency": "GBP",
+    "flag": "🇮🇲"
+  },
+  {
+    "name": {
+      "de": "Indien",
+      "en": "India",
+      "fr": "Inde",
+      "es": "India",
+      "ru": "Индия",
+      "kk": "Үндістан"
+    },
+    "code": "IN",
+    "currency": "INR",
+    "flag": "🇮🇳"
+  },
+  {
+    "name": {
+      "de": "Britisches Territorium im Indischen Ozean",
+      "en": "British Indian Ocean Territory",
+      "fr": "Territoire britannique de l’océan Indien",
+      "es": "Territorio Británico del Océano Índico",
+      "ru": "Британская территория в Индийском океане",
+      "kk": "Үнді мұхитындағы Британ аймағы"
+    },
+    "code": "IO",
+    "currency": "USD",
+    "lumpSumsFrom": "GB",
+    "flag": "🇮🇴"
+  },
+  {
+    "name": {
+      "de": "Irak",
+      "en": "Iraq",
+      "fr": "Irak",
+      "es": "Irak",
+      "ru": "Ирак",
+      "kk": "Ирак"
+    },
+    "code": "IQ",
+    "currency": "IQD",
+    "flag": "🇮🇶"
+  },
+  {
+    "name": {
+      "de": "Iran",
+      "en": "Iran",
+      "fr": "Iran",
+      "es": "Irán",
+      "ru": "Иран",
+      "kk": "Иран"
+    },
+    "code": "IR",
+    "currency": "IRR",
+    "flag": "🇮🇷"
+  },
+  {
+    "name": {
+      "de": "Island",
+      "en": "Iceland",
+      "fr": "Islande",
+      "es": "Islandia",
+      "ru": "Исландия",
+      "kk": "Исландия"
+    },
+    "code": "IS",
+    "currency": "ISK",
+    "flag": "🇮🇸",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Italien",
+      "en": "Italy",
+      "fr": "Italie",
+      "es": "Italia",
+      "ru": "Италия",
+      "kk": "Италия"
+    },
+    "code": "IT",
+    "currency": "EUR",
+    "flag": "🇮🇹",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Jersey",
+      "en": "Jersey",
+      "fr": "Jersey",
+      "es": "Jersey",
+      "ru": "Джерси",
+      "kk": "Джерси"
+    },
+    "code": "JE",
+    "currency": "GBP",
+    "flag": "🇯🇪"
+  },
+  {
+    "name": {
+      "de": "Jamaika",
+      "en": "Jamaica",
+      "fr": "Jamaïque",
+      "es": "Jamaica",
+      "ru": "Ямайка",
+      "kk": "Ямайка"
+    },
+    "code": "JM",
+    "currency": "JMD",
+    "flag": "🇯🇲"
+  },
+  {
+    "name": {
+      "de": "Jordanien",
+      "en": "Jordan",
+      "fr": "Jordanie",
+      "es": "Jordania",
+      "ru": "Иордания",
+      "kk": "Иордания"
+    },
+    "code": "JO",
+    "currency": "JOD",
+    "flag": "🇯🇴"
+  },
+  {
+    "name": {
+      "de": "Japan",
+      "en": "Japan",
+      "fr": "Japon",
+      "es": "Japón",
+      "ru": "Япония",
+      "kk": "Жапония"
+    },
+    "code": "JP",
+    "currency": "JPY",
+    "flag": "🇯🇵"
+  },
+  {
+    "name": {
+      "de": "Kenia",
+      "en": "Kenya",
+      "fr": "Kenya",
+      "es": "Kenia",
+      "ru": "Кения",
+      "kk": "Кения"
+    },
+    "code": "KE",
+    "currency": "KES",
+    "flag": "🇰🇪"
+  },
+  {
+    "name": {
+      "de": "Kirgisistan",
+      "en": "Kyrgyzstan",
+      "fr": "Kirghizistan",
+      "es": "Kirguistán",
+      "ru": "Киргизия",
+      "kk": "Қырғызстан"
+    },
+    "code": "KG",
+    "currency": "KGS",
+    "flag": "🇰🇬"
+  },
+  {
+    "name": {
+      "de": "Kambodscha",
+      "en": "Cambodia",
+      "fr": "Cambodge",
+      "es": "Camboya",
+      "ru": "Камбоджа",
+      "kk": "Камбоджа"
+    },
+    "code": "KH",
+    "currency": "KHR",
+    "flag": "🇰🇭"
+  },
+  {
+    "name": {
+      "de": "Kiribati",
+      "en": "Kiribati",
+      "fr": "Kiribati",
+      "es": "Kiribati",
+      "ru": "Кирибати",
+      "kk": "Кирибати"
+    },
+    "code": "KI",
+    "currency": "AUD",
+    "flag": "🇰🇮"
+  },
+  {
+    "name": {
+      "de": "Komoren",
+      "en": "Comoros",
+      "fr": "Comores",
+      "es": "Comoras",
+      "ru": "Коморы",
+      "kk": "Комор аралдары"
+    },
+    "code": "KM",
+    "currency": "KMF",
+    "flag": "🇰🇲"
+  },
+  {
+    "name": {
+      "de": "St. Kitts und Nevis",
+      "en": "Saint Kitts and Nevis",
+      "fr": "Saint-Christophe-et-Niévès",
+      "es": "San Cristóbal y Nieves",
+      "ru": "Сент-Китс и Невис",
+      "kk": "Сент-Китс және Невис"
+    },
+    "code": "KN",
+    "currency": "XCD",
+    "lumpSumsFrom": "TT",
+    "flag": "🇰🇳"
+  },
+  {
+    "name": {
+      "de": "Nordkorea",
+      "en": "North Korea",
+      "fr": "Corée du Nord",
+      "es": "Corea del Norte",
+      "ru": "КНДР",
+      "kk": "Солтүстік Корея"
+    },
+    "alias": {
+      "de": ["Korea, Demokratische Volksrepublik"]
+    },
+    "code": "KP",
+    "currency": "KPW",
+    "flag": "🇰🇵"
+  },
+  {
+    "name": {
+      "de": "Südkorea",
+      "en": "South Korea",
+      "fr": "Corée du Sud",
+      "es": "Corea del Sur",
+      "ru": "Республика Корея",
+      "kk": "Оңтүстік Корея"
+    },
+    "alias": {
+      "de": ["Korea, Republik"]
+    },
+    "code": "KR",
+    "currency": "KRW",
+    "flag": "🇰🇷"
+  },
+  {
+    "name": {
+      "de": "Kuwait",
+      "en": "Kuwait",
+      "fr": "Koweït",
+      "es": "Kuwait",
+      "ru": "Кувейт",
+      "kk": "Кувейт"
+    },
+    "code": "KW",
+    "currency": "KWD",
+    "flag": "🇰🇼"
+  },
+  {
+    "name": {
+      "de": "Kaimaninseln",
+      "en": "Cayman Islands",
+      "fr": "Îles Caïmans",
+      "es": "Islas Caimán",
+      "ru": "Острова Кайман",
+      "kk": "Кайман аралдары"
+    },
+    "code": "KY",
+    "currency": "KYD",
+    "lumpSumsFrom": "GB",
+    "flag": "🇰🇾"
+  },
+  {
+    "name": {
+      "de": "Kasachstan",
+      "en": "Kazakhstan",
+      "fr": "Kazakhstan",
+      "es": "Kazajistán",
+      "ru": "Казахстан",
+      "kk": "Қазақстан"
+    },
+    "code": "KZ",
+    "currency": "KZT",
+    "flag": "🇰🇿"
+  },
+  {
+    "name": {
+      "de": "Laos",
+      "en": "Laos",
+      "fr": "Laos",
+      "es": "Laos",
+      "ru": "Лаос",
+      "kk": "Лаос"
+    },
+    "code": "LA",
+    "currency": "LAK",
+    "flag": "🇱🇦"
+  },
+  {
+    "name": {
+      "de": "Libanon",
+      "en": "Lebanon",
+      "fr": "Liban",
+      "es": "Líbano",
+      "ru": "Ливан",
+      "kk": "Ливан"
+    },
+    "code": "LB",
+    "currency": "LBP",
+    "flag": "🇱🇧"
+  },
+  {
+    "name": {
+      "de": "St. Lucia",
+      "en": "Saint Lucia",
+      "fr": "Sainte-Lucie",
+      "es": "Santa Lucía",
+      "ru": "Сент-Люсия",
+      "kk": "Сент-Люсия"
+    },
+    "code": "LC",
+    "currency": "XCD",
+    "lumpSumsFrom": "TT",
+    "flag": "🇱🇨"
+  },
+  {
+    "name": {
+      "de": "Liechtenstein",
+      "en": "Liechtenstein",
+      "fr": "Liechtenstein",
+      "es": "Liechtenstein",
+      "ru": "Лихтенштейн",
+      "kk": "Лихтенштейн"
+    },
+    "code": "LI",
+    "currency": "CHF",
+    "flag": "🇱🇮",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Sri Lanka",
+      "en": "Sri Lanka",
+      "fr": "Sri Lanka",
+      "es": "Sri Lanka",
+      "ru": "Шри-Ланка",
+      "kk": "Шри-Ланка"
+    },
+    "code": "LK",
+    "currency": "LKR",
+    "flag": "🇱🇰"
+  },
+  {
+    "name": {
+      "de": "Liberia",
+      "en": "Liberia",
+      "fr": "Libéria",
+      "es": "Liberia",
+      "ru": "Либерия",
+      "kk": "Либерия"
+    },
+    "code": "LR",
+    "currency": "LRD",
+    "flag": "🇱🇷"
+  },
+  {
+    "name": {
+      "de": "Lesotho",
+      "en": "Lesotho",
+      "fr": "Lesotho",
+      "es": "Lesoto",
+      "ru": "Лесото",
+      "kk": "Лесото"
+    },
+    "code": "LS",
+    "currency": "LSL",
+    "flag": "🇱🇸"
+  },
+  {
+    "name": {
+      "de": "Litauen",
+      "en": "Lithuania",
+      "fr": "Lituanie",
+      "es": "Lituania",
+      "ru": "Литва",
+      "kk": "Литва"
+    },
+    "code": "LT",
+    "currency": "EUR",
+    "flag": "🇱🇹",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Luxemburg",
+      "en": "Luxembourg",
+      "fr": "Luxembourg",
+      "es": "Luxemburgo",
+      "ru": "Люксембург",
+      "kk": "Люксембург"
+    },
+    "code": "LU",
+    "currency": "EUR",
+    "flag": "🇱🇺",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Lettland",
+      "en": "Latvia",
+      "fr": "Lettonie",
+      "es": "Letonia",
+      "ru": "Латвия",
+      "kk": "Латвия"
+    },
+    "code": "LV",
+    "currency": "EUR",
+    "flag": "🇱🇻",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Libyen",
+      "en": "Libya",
+      "fr": "Libye",
+      "es": "Libia",
+      "ru": "Ливия",
+      "kk": "Ливия"
+    },
+    "code": "LY",
+    "currency": "LYD",
+    "flag": "🇱🇾"
+  },
+  {
+    "name": {
+      "de": "Marokko",
+      "en": "Morocco",
+      "fr": "Maroc",
+      "es": "Marruecos",
+      "ru": "Марокко",
+      "kk": "Марокко"
+    },
+    "code": "MA",
+    "currency": "MAD",
+    "flag": "🇲🇦"
+  },
+  {
+    "name": {
+      "de": "Monaco",
+      "en": "Monaco",
+      "fr": "Monaco",
+      "es": "Mónaco",
+      "ru": "Монако",
+      "kk": "Монако"
+    },
+    "code": "MC",
+    "currency": "EUR",
+    "flag": "🇲🇨"
+  },
+  {
+    "name": {
+      "de": "Moldau",
+      "en": "Moldova",
+      "fr": "Moldavie",
+      "es": "Moldavia",
+      "ru": "Молдова",
+      "kk": "Молдова"
+    },
+    "alias": {
+      "de": ["Moldau, Republik"]
+    },
+    "code": "MD",
+    "currency": "MDL",
+    "flag": "🇲🇩"
+  },
+  {
+    "name": {
+      "de": "Montenegro",
+      "en": "Montenegro",
+      "fr": "Monténégro",
+      "es": "Montenegro",
+      "ru": "Черногория",
+      "kk": "Черногория"
+    },
+    "code": "ME",
+    "currency": "EUR",
+    "flag": "🇲🇪"
+  },
+  {
+    "name": {
+      "de": "St. Martin",
+      "en": "Saint Martin",
+      "fr": "Saint-Martin",
+      "es": "San Martín",
+      "ru": "Сен-Мартен",
+      "kk": "Сен-Мартен"
+    },
+    "code": "MF",
+    "currency": "EUR",
+    "lumpSumsFrom": "FR",
+    "flag": "🇲🇫"
+  },
+  {
+    "name": {
+      "de": "Madagaskar",
+      "en": "Madagascar",
+      "fr": "Madagascar",
+      "es": "Madagascar",
+      "ru": "Мадагаскар",
+      "kk": "Мадагаскар"
+    },
+    "code": "MG",
+    "currency": "MGA",
+    "flag": "🇲🇬"
+  },
+  {
+    "name": {
+      "de": "Marshallinseln",
+      "en": "Marshall Islands",
+      "fr": "Îles Marshall",
+      "es": "Islas Marshall",
+      "ru": "Маршалловы Острова",
+      "kk": "Маршалл аралдары"
+    },
+    "alias": {
+      "de": ["Marshall Inseln"]
+    },
+    "code": "MH",
+    "currency": "USD",
+    "flag": "🇲🇭"
+  },
+  {
+    "name": {
+      "de": "Nordmazedonien",
+      "en": "North Macedonia",
+      "fr": "Macédoine du Nord",
+      "es": "Macedonia del Norte",
+      "ru": "Северная Македония",
+      "kk": "Солтүстік Македония"
+    },
+    "code": "MK",
+    "currency": "MKD",
+    "flag": "🇲🇰"
+  },
+  {
+    "name": {
+      "de": "Mali",
+      "en": "Mali",
+      "fr": "Mali",
+      "es": "Mali",
+      "ru": "Мали",
+      "kk": "Мали"
+    },
+    "code": "ML",
+    "currency": "XOF",
+    "flag": "🇲🇱"
+  },
+  {
+    "name": {
+      "de": "Myanmar",
+      "en": "Myanmar/Burma",
+      "fr": "Myanmar (Birmanie)",
+      "es": "Myanmar (Birmania)",
+      "ru": "Мьянма (Бирма)",
+      "kk": "Мьянма (Бирма)"
+    },
+    "code": "MM",
+    "currency": "MMK",
+    "flag": "🇲🇲"
+  },
+  {
+    "name": {
+      "de": "Mongolei",
+      "en": "Mongolia",
+      "fr": "Mongolie",
+      "es": "Mongolia",
+      "ru": "Монголия",
+      "kk": "Моңғолия"
+    },
+    "code": "MN",
+    "currency": "MNT",
+    "flag": "🇲🇳"
+  },
+  {
+    "name": {
+      "de": "Macau",
+      "en": "Macao",
+      "fr": "R.A.S. chinoise de Macao",
+      "es": "RAE de Macao (China)",
+      "ru": "Макао (САР)",
+      "kk": "Макао АӘА"
+    },
+    "code": "MO",
+    "currency": "MOP",
+    "lumpSumsFrom": "CN",
+    "flag": "🇲🇴"
+  },
+  {
+    "name": {
+      "de": "Nördliche Marianen",
+      "en": "Northern Mariana Islands",
+      "fr": "Îles Mariannes du Nord",
+      "es": "Islas Marianas del Norte",
+      "ru": "Северные Марианские о-ва",
+      "kk": "Солтүстік Мариана аралдары"
+    },
+    "code": "MP",
+    "currency": "USD",
+    "lumpSumsFrom": "US",
+    "flag": "🇲🇵"
+  },
+  {
+    "name": {
+      "de": "Martinique",
+      "en": "Martinique",
+      "fr": "Martinique",
+      "es": "Martinica",
+      "ru": "Мартиника",
+      "kk": "Мартиника"
+    },
+    "code": "MQ",
+    "currency": "EUR",
+    "lumpSumsFrom": "FR",
+    "flag": "🇲🇶"
+  },
+  {
+    "name": {
+      "de": "Mauretanien",
+      "en": "Mauritania",
+      "fr": "Mauritanie",
+      "es": "Mauritania",
+      "ru": "Мавритания",
+      "kk": "Мавритания"
+    },
+    "code": "MR",
+    "currency": "MRU",
+    "flag": "🇲🇷"
+  },
+  {
+    "name": {
+      "de": "Montserrat",
+      "en": "Montserrat",
+      "fr": "Montserrat",
+      "es": "Montserrat",
+      "ru": "Монтсеррат",
+      "kk": "Монтсеррат"
+    },
+    "code": "MS",
+    "currency": "XCD",
+    "lumpSumsFrom": "GB",
+    "flag": "🇲🇸"
+  },
+  {
+    "name": {
+      "de": "Malta",
+      "en": "Malta",
+      "fr": "Malte",
+      "es": "Malta",
+      "ru": "Мальта",
+      "kk": "Мальта"
+    },
+    "code": "MT",
+    "currency": "EUR",
+    "flag": "🇲🇹",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Mauritius",
+      "en": "Mauritius",
+      "fr": "Maurice",
+      "es": "Mauricio",
+      "ru": "Маврикий",
+      "kk": "Маврикий"
+    },
+    "code": "MU",
+    "currency": "MUR",
+    "flag": "🇲🇺"
+  },
+  {
+    "name": {
+      "de": "Malediven",
+      "en": "Maldives",
+      "fr": "Maldives",
+      "es": "Maldivas",
+      "ru": "Мальдивы",
+      "kk": "Мальдив аралдары"
+    },
+    "code": "MV",
+    "currency": "MVR",
+    "flag": "🇲🇻"
+  },
+  {
+    "name": {
+      "de": "Malawi",
+      "en": "Malawi",
+      "fr": "Malawi",
+      "es": "Malaui",
+      "ru": "Малави",
+      "kk": "Малави"
+    },
+    "code": "MW",
+    "currency": "MWK",
+    "flag": "🇲🇼"
+  },
+  {
+    "name": {
+      "de": "Mexiko",
+      "en": "Mexico",
+      "fr": "Mexique",
+      "es": "México",
+      "ru": "Мексика",
+      "kk": "Мексика"
+    },
+    "code": "MX",
+    "currency": "MXN",
+    "flag": "🇲🇽"
+  },
+  {
+    "name": {
+      "de": "Malaysia",
+      "en": "Malaysia",
+      "fr": "Malaisie",
+      "es": "Malasia",
+      "ru": "Малайзия",
+      "kk": "Малайзия"
+    },
+    "code": "MY",
+    "currency": "MYR",
+    "flag": "🇲🇾"
+  },
+  {
+    "name": {
+      "de": "Mosambik",
+      "en": "Mozambique",
+      "fr": "Mozambique",
+      "es": "Mozambique",
+      "ru": "Мозамбик",
+      "kk": "Мозамбик"
+    },
+    "code": "MZ",
+    "currency": "MZN",
+    "flag": "🇲🇿"
+  },
+  {
+    "name": {
+      "de": "Namibia",
+      "en": "Namibia",
+      "fr": "Namibie",
+      "es": "Namibia",
+      "ru": "Намибия",
+      "kk": "Намибия"
+    },
+    "code": "NA",
+    "currency": "NAD",
+    "flag": "🇳🇦"
+  },
+  {
+    "name": {
+      "de": "Neukaledonien",
+      "en": "New Caledonia",
+      "fr": "Nouvelle-Calédonie",
+      "es": "Nueva Caledonia",
+      "ru": "Новая Каледония",
+      "kk": "Жаңа Каледония"
+    },
+    "code": "NC",
+    "currency": "XPF",
+    "lumpSumsFrom": "FR",
+    "flag": "🇳🇨"
+  },
+  {
+    "name": {
+      "de": "Niger",
+      "en": "Niger",
+      "fr": "Niger",
+      "es": "Níger",
+      "ru": "Нигер",
+      "kk": "Нигер"
+    },
+    "code": "NE",
+    "currency": "XOF",
+    "flag": "🇳🇪"
+  },
+  {
+    "name": {
+      "de": "Norfolkinsel",
+      "en": "Norfolk Island",
+      "fr": "Île Norfolk",
+      "es": "Isla Norfolk",
+      "ru": "о-в Норфолк",
+      "kk": "Норфолк аралы"
+    },
+    "code": "NF",
+    "currency": "AUD",
+    "lumpSumsFrom": "AU",
+    "flag": "🇳🇫"
+  },
+  {
+    "name": {
+      "de": "Nigeria",
+      "en": "Nigeria",
+      "fr": "Nigéria",
+      "es": "Nigeria",
+      "ru": "Нигерия",
+      "kk": "Нигерия"
+    },
+    "code": "NG",
+    "currency": "NGN",
+    "flag": "🇳🇬"
+  },
+  {
+    "name": {
+      "de": "Nicaragua",
+      "en": "Nicaragua",
+      "fr": "Nicaragua",
+      "es": "Nicaragua",
+      "ru": "Никарагуа",
+      "kk": "Никарагуа"
+    },
+    "code": "NI",
+    "currency": "NIO",
+    "flag": "🇳🇮"
+  },
+  {
+    "name": {
+      "de": "Niederlande",
+      "en": "Netherlands",
+      "fr": "Pays-Bas",
+      "es": "Países Bajos",
+      "ru": "Нидерланды",
+      "kk": "Нидерланд"
+    },
+    "code": "NL",
+    "currency": "EUR",
+    "flag": "🇳🇱",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Norwegen",
+      "en": "Norway",
+      "fr": "Norvège",
+      "es": "Noruega",
+      "ru": "Норвегия",
+      "kk": "Норвегия"
+    },
+    "code": "NO",
+    "currency": "NOK",
+    "flag": "🇳🇴",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Nepal",
+      "en": "Nepal",
+      "fr": "Népal",
+      "es": "Nepal",
+      "ru": "Непал",
+      "kk": "Непал"
+    },
+    "code": "NP",
+    "currency": "NPR",
+    "flag": "🇳🇵"
+  },
+  {
+    "name": {
+      "de": "Nauru",
+      "en": "Nauru",
+      "fr": "Nauru",
+      "es": "Nauru",
+      "ru": "Науру",
+      "kk": "Науру"
+    },
+    "code": "NR",
+    "currency": "AUD",
+    "flag": "🇳🇷"
+  },
+  {
+    "name": {
+      "de": "Niue",
+      "en": "Niue",
+      "fr": "Niue",
+      "es": "Niue",
+      "ru": "Ниуэ",
+      "kk": "Ниуэ"
+    },
+    "code": "NU",
+    "currency": "NZD",
+    "lumpSumsFrom": "NZ",
+    "flag": "🇳🇺"
+  },
+  {
+    "name": {
+      "de": "Neuseeland",
+      "en": "New Zealand",
+      "fr": "Nouvelle-Zélande",
+      "es": "Nueva Zelanda",
+      "ru": "Новая Зеландия",
+      "kk": "Жаңа Зеландия"
+    },
+    "code": "NZ",
+    "currency": "NZD",
+    "flag": "🇳🇿"
+  },
+  {
+    "name": {
+      "de": "Oman",
+      "en": "Oman",
+      "fr": "Oman",
+      "es": "Omán",
+      "ru": "Оман",
+      "kk": "Оман"
+    },
+    "code": "OM",
+    "currency": "OMR",
+    "flag": "🇴🇲"
+  },
+  {
+    "name": {
+      "de": "Panama",
+      "en": "Panama",
+      "fr": "Panama",
+      "es": "Panamá",
+      "ru": "Панама",
+      "kk": "Панама"
+    },
+    "code": "PA",
+    "currency": "PAB",
+    "flag": "🇵🇦"
+  },
+  {
+    "name": {
+      "de": "Peru",
+      "en": "Peru",
+      "fr": "Pérou",
+      "es": "Perú",
+      "ru": "Перу",
+      "kk": "Перу"
+    },
+    "code": "PE",
+    "currency": "PEN",
+    "flag": "🇵🇪"
+  },
+  {
+    "name": {
+      "de": "Französisch-Polynesien",
+      "en": "French Polynesia",
+      "fr": "Polynésie française",
+      "es": "Polinesia Francesa",
+      "ru": "Французская Полинезия",
+      "kk": "Француз Полинезиясы"
+    },
+    "code": "PF",
+    "currency": "XPF",
+    "lumpSumsFrom": "FR",
+    "flag": "🇵🇫"
+  },
+  {
+    "name": {
+      "de": "Papua-Neuguinea",
+      "en": "Papua New Guinea",
+      "fr": "Papouasie-Nouvelle-Guinée",
+      "es": "Papúa Nueva Guinea",
+      "ru": "Папуа — Новая Гвинея",
+      "kk": "Папуа — Жаңа Гвинея"
+    },
+    "code": "PG",
+    "currency": "PGK",
+    "flag": "🇵🇬"
+  },
+  {
+    "name": {
+      "de": "Philippinen",
+      "en": "Philippines",
+      "fr": "Philippines",
+      "es": "Filipinas",
+      "ru": "Филиппины",
+      "kk": "Филиппин аралдары"
+    },
+    "code": "PH",
+    "currency": "PHP",
+    "flag": "🇵🇭"
+  },
+  {
+    "name": {
+      "de": "Pakistan",
+      "en": "Pakistan",
+      "fr": "Pakistan",
+      "es": "Pakistán",
+      "ru": "Пакистан",
+      "kk": "Пәкістан"
+    },
+    "code": "PK",
+    "currency": "PKR",
+    "flag": "🇵🇰"
+  },
+  {
+    "name": {
+      "de": "Polen",
+      "en": "Poland",
+      "fr": "Pologne",
+      "es": "Polonia",
+      "ru": "Польша",
+      "kk": "Польша"
+    },
+    "code": "PL",
+    "currency": "PLN",
+    "flag": "🇵🇱",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "St. Pierre und Miquelon",
+      "en": "Saint Pierre and Miquelon",
+      "fr": "Saint-Pierre-et-Miquelon",
+      "es": "San Pedro y Miquelón",
+      "ru": "Сен-Пьер и Микелон",
+      "kk": "Сен-Пьер және Микелон"
+    },
+    "code": "PM",
+    "currency": "EUR",
+    "lumpSumsFrom": "FR",
+    "flag": "🇵🇲"
+  },
+  {
+    "name": {
+      "de": "Pitcairninseln",
+      "en": "Pitcairn Islands",
+      "fr": "Îles Pitcairn",
+      "es": "Islas Pitcairn",
+      "ru": "о-ва Питкэрн",
+      "kk": "Питкэрн аралдары"
+    },
+    "code": "PN",
+    "currency": "NZD",
+    "lumpSumsFrom": "GB",
+    "flag": "🇵🇳"
+  },
+  {
+    "name": {
+      "de": "Puerto Rico",
+      "en": "Puerto Rico",
+      "fr": "Porto Rico",
+      "es": "Puerto Rico",
+      "ru": "Пуэрто-Рико",
+      "kk": "Пуэрто-Рико"
+    },
+    "code": "PR",
+    "currency": "USD",
+    "lumpSumsFrom": "US",
+    "flag": "🇵🇷"
+  },
+  {
+    "name": {
+      "de": "Portugal",
+      "en": "Portugal",
+      "fr": "Portugal",
+      "es": "Portugal",
+      "ru": "Португалия",
+      "kk": "Португалия"
+    },
+    "code": "PT",
+    "currency": "EUR",
+    "flag": "🇵🇹",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Palau",
+      "en": "Palau",
+      "fr": "Palaos",
+      "es": "Palaos",
+      "ru": "Палау",
+      "kk": "Палау"
+    },
+    "code": "PW",
+    "currency": "USD",
+    "flag": "🇵🇼"
+  },
+  {
+    "name": {
+      "de": "Paraguay",
+      "en": "Paraguay",
+      "fr": "Paraguay",
+      "es": "Paraguay",
+      "ru": "Парагвай",
+      "kk": "Парагвай"
+    },
+    "code": "PY",
+    "currency": "PYG",
+    "flag": "🇵🇾"
+  },
+  {
+    "name": {
+      "de": "Katar",
+      "en": "Qatar",
+      "fr": "Qatar",
+      "es": "Catar",
+      "ru": "Катар",
+      "kk": "Катар"
+    },
+    "code": "QA",
+    "currency": "QAR",
+    "flag": "🇶🇦"
+  },
+  {
+    "name": {
+      "de": "Réunion",
+      "en": "Réunion",
+      "fr": "La Réunion",
+      "es": "Reunión",
+      "ru": "Реюньон",
+      "kk": "Реюньон"
+    },
+    "code": "RE",
+    "currency": "EUR",
+    "lumpSumsFrom": "FR",
+    "flag": "🇷🇪"
+  },
+  {
+    "name": {
+      "de": "Rumänien",
+      "en": "Romania",
+      "fr": "Roumanie",
+      "es": "Rumanía",
+      "ru": "Румыния",
+      "kk": "Румыния"
+    },
+    "code": "RO",
+    "currency": "RON",
+    "flag": "🇷🇴",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Serbien",
+      "en": "Serbia",
+      "fr": "Serbie",
+      "es": "Serbia",
+      "ru": "Сербия",
+      "kk": "Сербия"
+    },
+    "code": "RS",
+    "currency": "RSD",
+    "flag": "🇷🇸"
+  },
+  {
+    "name": {
+      "de": "Russland",
+      "en": "Russia",
+      "fr": "Russie",
+      "es": "Rusia",
+      "ru": "Россия",
+      "kk": "Ресей"
+    },
+    "alias": {
+      "de": ["Russische Föderation"]
+    },
+    "code": "RU",
+    "currency": "RUB",
+    "flag": "🇷🇺"
+  },
+  {
+    "name": {
+      "de": "Ruanda",
+      "en": "Rwanda",
+      "fr": "Rwanda",
+      "es": "Ruanda",
+      "ru": "Руанда",
+      "kk": "Руанда"
+    },
+    "code": "RW",
+    "currency": "RWF",
+    "flag": "🇷🇼"
+  },
+  {
+    "name": {
+      "de": "Saudi-Arabien",
+      "en": "Saudi Arabia",
+      "fr": "Arabie saoudite",
+      "es": "Arabia Saudí",
+      "ru": "Саудовская Аравия",
+      "kk": "Сауд Арабиясы"
+    },
+    "code": "SA",
+    "currency": "SAR",
+    "flag": "🇸🇦"
+  },
+  {
+    "name": {
+      "de": "Salomonen",
+      "en": "Solomon Islands",
+      "fr": "Îles Salomon",
+      "es": "Islas Salomón",
+      "ru": "Соломоновы Острова",
+      "kk": "Соломон аралдары"
+    },
+    "code": "SB",
+    "currency": "SBD",
+    "flag": "🇸🇧"
+  },
+  {
+    "name": {
+      "de": "Seychellen",
+      "en": "Seychelles",
+      "fr": "Seychelles",
+      "es": "Seychelles",
+      "ru": "Сейшельские Острова",
+      "kk": "Сейшель аралдары"
+    },
+    "code": "SC",
+    "currency": "SCR",
+    "flag": "🇸🇨"
+  },
+  {
+    "name": {
+      "de": "Sudan",
+      "en": "Sudan",
+      "fr": "Soudan",
+      "es": "Sudán",
+      "ru": "Судан",
+      "kk": "Судан"
+    },
+    "code": "SD",
+    "currency": "SDG",
+    "flag": "🇸🇩"
+  },
+  {
+    "name": {
+      "de": "Schweden",
+      "en": "Sweden",
+      "fr": "Suède",
+      "es": "Suecia",
+      "ru": "Швеция",
+      "kk": "Швеция"
+    },
+    "code": "SE",
+    "currency": "SEK",
+    "flag": "🇸🇪",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Singapur",
+      "en": "Singapore",
+      "fr": "Singapour",
+      "es": "Singapur",
+      "ru": "Сингапур",
+      "kk": "Сингапур"
+    },
+    "code": "SG",
+    "currency": "SGD",
+    "flag": "🇸🇬"
+  },
+  {
+    "name": {
+      "de": "St. Helena, Ascension und Tristan da Cunha",
+      "en": "Saint Helena, Ascension and Tristan da Cunha",
+      "fr": "Sainte-Hélène",
+      "es": "Santa Elena",
+      "ru": "о-в Св. Елены",
+      "kk": "Әулие Елена аралы"
+    },
+    "code": "SH",
+    "currency": "SHP",
+    "lumpSumsFrom": "GB",
+    "flag": "🇸🇭"
+  },
+  {
+    "name": {
+      "de": "Slowenien",
+      "en": "Slovenia",
+      "fr": "Slovénie",
+      "es": "Eslovenia",
+      "ru": "Словения",
+      "kk": "Словения"
+    },
+    "code": "SI",
+    "currency": "EUR",
+    "flag": "🇸🇮",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Svalbard und Jan Mayen",
+      "en": "Svalbard and Jan Mayen",
+      "fr": "Svalbard et Jan Mayen",
+      "es": "Svalbard y Jan Mayen",
+      "ru": "Шпицберген и Ян-Майен",
+      "kk": "Шпицберген және Ян-Майен"
+    },
+    "code": "SJ",
+    "currency": "NOK",
+    "lumpSumsFrom": "NO",
+    "flag": "🇸🇯"
+  },
+  {
+    "name": {
+      "de": "Slowakei",
+      "en": "Slovakia",
+      "fr": "Slovaquie",
+      "es": "Eslovaquia",
+      "ru": "Словакия",
+      "kk": "Словакия"
+    },
+    "alias": {
+      "de": ["Slowakische Republik"]
+    },
+    "code": "SK",
+    "currency": "EUR",
+    "flag": "🇸🇰",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Sierra Leone",
+      "en": "Sierra Leone",
+      "fr": "Sierra Leone",
+      "es": "Sierra Leona",
+      "ru": "Сьерра-Леоне",
+      "kk": "Сьерра-Леоне"
+    },
+    "code": "SL",
+    "currency": "SLE",
+    "flag": "🇸🇱"
+  },
+  {
+    "name": {
+      "de": "San Marino",
+      "en": "San Marino",
+      "fr": "Saint-Marin",
+      "es": "San Marino",
+      "ru": "Сан-Марино",
+      "kk": "Сан-Марино"
+    },
+    "code": "SM",
+    "currency": "EUR",
+    "flag": "🇸🇲"
+  },
+  {
+    "name": {
+      "de": "Senegal",
+      "en": "Senegal",
+      "fr": "Sénégal",
+      "es": "Senegal",
+      "ru": "Сенегал",
+      "kk": "Сенегал"
+    },
+    "code": "SN",
+    "currency": "XOF",
+    "flag": "🇸🇳"
+  },
+  {
+    "name": {
+      "de": "Somalia",
+      "en": "Somalia",
+      "fr": "Somalie",
+      "es": "Somalia",
+      "ru": "Сомали",
+      "kk": "Сомали"
+    },
+    "code": "SO",
+    "currency": "SOS",
+    "flag": "🇸🇴"
+  },
+  {
+    "name": {
+      "de": "Suriname",
+      "en": "Suriname",
+      "fr": "Suriname",
+      "es": "Surinam",
+      "ru": "Суринам",
+      "kk": "Суринам"
+    },
+    "code": "SR",
+    "currency": "SRD",
+    "lumpSumsFrom": "TT",
+    "flag": "🇸🇷"
+  },
+  {
+    "name": {
+      "de": "Südsudan",
+      "en": "South Sudan",
+      "fr": "Soudan du Sud",
+      "es": "Sudán del Sur",
+      "ru": "Южный Судан",
+      "kk": "Оңтүстік Судан"
+    },
+    "code": "SS",
+    "currency": "SSP",
+    "flag": "🇸🇸"
+  },
+  {
+    "name": {
+      "de": "São Tomé und Príncipe",
+      "en": "São Tomé and Príncipe",
+      "fr": "Sao Tomé-et-Principe",
+      "es": "Santo Tomé y Príncipe",
+      "ru": "Сан-Томе и Принсипи",
+      "kk": "Сан-Томе және Принсипи"
+    },
+    "alias": {
+      "de": ["São Tomé – Príncipe"]
+    },
+    "code": "ST",
+    "currency": "STN",
+    "flag": "🇸🇹"
+  },
+  {
+    "name": {
+      "de": "El Salvador",
+      "en": "El Salvador",
+      "fr": "Salvador",
+      "es": "El Salvador",
+      "ru": "Сальвадор",
+      "kk": "Сальвадор"
+    },
+    "code": "SV",
+    "currency": "SVC",
+    "flag": "🇸🇻"
+  },
+  {
+    "name": {
+      "de": "Sint Maarten",
+      "en": "Sint Maarten",
+      "fr": "Saint-Martin (partie néerlandaise)",
+      "es": "Sint Maarten",
+      "ru": "Синт-Мартен",
+      "kk": "Синт-Мартен"
+    },
+    "code": "SX",
+    "currency": "ANG",
+    "lumpSumsFrom": "NL",
+    "flag": "🇸🇽"
+  },
+  {
+    "name": {
+      "de": "Syrien",
+      "en": "Syria",
+      "fr": "Syrie",
+      "es": "Siria",
+      "ru": "Сирия",
+      "kk": "Сирия"
+    },
+    "code": "SY",
+    "currency": "SYP",
+    "flag": "🇸🇾"
+  },
+  {
+    "name": {
+      "de": "Eswatini",
+      "en": "Eswatini",
+      "fr": "Eswatini",
+      "es": "Esuatini",
+      "ru": "Эсватини",
+      "kk": "Свазиленд"
+    },
+    "code": "SZ",
+    "currency": "SZL",
+    "flag": "🇸🇿"
+  },
+  {
+    "name": {
+      "de": "Turks- und Caicosinseln",
+      "en": "Turks and Caicos Islands",
+      "fr": "Îles Turques-et-Caïques",
+      "es": "Islas Turcas y Caicos",
+      "ru": "о-ва Тёркс и Кайкос",
+      "kk": "Теркс және Кайкос аралдары"
+    },
+    "code": "TC",
+    "currency": "USD",
+    "lumpSumsFrom": "GB",
+    "flag": "🇹🇨"
+  },
+  {
+    "name": {
+      "de": "Tschad",
+      "en": "Chad",
+      "fr": "Tchad",
+      "es": "Chad",
+      "ru": "Чад",
+      "kk": "Чад"
+    },
+    "code": "TD",
+    "currency": "XAF",
+    "flag": "🇹🇩"
+  },
+  {
+    "name": {
+      "de": "Französische Süd- und Antarktisgebiete",
+      "en": "French Southern and Antarctic Lands",
+      "fr": "Terres australes françaises",
+      "es": "Territorios Australes Franceses",
+      "ru": "Французские Южные территории",
+      "kk": "Францияның оңтүстік аймақтары"
+    },
+    "code": "TF",
+    "currency": "EUR",
+    "lumpSumsFrom": "FR",
+    "flag": "🇹🇫"
+  },
+  {
+    "name": {
+      "de": "Togo",
+      "en": "Togo",
+      "fr": "Togo",
+      "es": "Togo",
+      "ru": "Того",
+      "kk": "Того"
+    },
+    "code": "TG",
+    "currency": "XOF",
+    "flag": "🇹🇬"
+  },
+  {
+    "name": {
+      "de": "Thailand",
+      "en": "Thailand",
+      "fr": "Thaïlande",
+      "es": "Tailandia",
+      "ru": "Таиланд",
+      "kk": "Тайланд"
+    },
+    "code": "TH",
+    "currency": "THB",
+    "flag": "🇹🇭"
+  },
+  {
+    "name": {
+      "de": "Tadschikistan",
+      "en": "Tajikistan",
+      "fr": "Tadjikistan",
+      "es": "Tayikistán",
+      "ru": "Таджикистан",
+      "kk": "Тәжікстан"
+    },
+    "code": "TJ",
+    "currency": "TJS",
+    "flag": "🇹🇯"
+  },
+  {
+    "name": {
+      "de": "Tokelau",
+      "en": "Tokelau",
+      "fr": "Tokelau",
+      "es": "Tokelau",
+      "ru": "Токелау",
+      "kk": "Токелау"
+    },
+    "code": "TK",
+    "currency": "NZD",
+    "lumpSumsFrom": "NZ",
+    "flag": "🇹🇰"
+  },
+  {
+    "name": {
+      "de": "Timor-Leste",
+      "en": "Timor-Leste",
+      "fr": "Timor oriental",
+      "es": "Timor-Leste",
+      "ru": "Восточный Тимор",
+      "kk": "Тимор-Лесте"
+    },
+    "code": "TL",
+    "currency": "USD",
+    "flag": "🇹🇱"
+  },
+  {
+    "name": {
+      "de": "Turkmenistan",
+      "en": "Turkmenistan",
+      "fr": "Turkménistan",
+      "es": "Turkmenistán",
+      "ru": "Туркменистан",
+      "kk": "Түрікменстан"
+    },
+    "code": "TM",
+    "currency": "TMT",
+    "flag": "🇹🇲"
+  },
+  {
+    "name": {
+      "de": "Tunesien",
+      "en": "Tunisia",
+      "fr": "Tunisie",
+      "es": "Túnez",
+      "ru": "Тунис",
+      "kk": "Тунис"
+    },
+    "code": "TN",
+    "currency": "TND",
+    "flag": "🇹🇳"
+  },
+  {
+    "name": {
+      "de": "Tonga",
+      "en": "Tonga",
+      "fr": "Tonga",
+      "es": "Tonga",
+      "ru": "Тонга",
+      "kk": "Тонга"
+    },
+    "code": "TO",
+    "currency": "TOP",
+    "flag": "🇹🇴"
+  },
+  {
+    "name": {
+      "de": "Türkei",
+      "en": "Türkiye",
+      "fr": "Turquie",
+      "es": "Turquía",
+      "ru": "Турция",
+      "kk": "Түркия"
+    },
+    "code": "TR",
+    "currency": "TRY",
+    "flag": "🇹🇷"
+  },
+  {
+    "name": {
+      "de": "Trinidad und Tobago",
+      "en": "Trinidad and Tobago",
+      "fr": "Trinité-et-Tobago",
+      "es": "Trinidad y Tobago",
+      "ru": "Тринидад и Тобаго",
+      "kk": "Тринидад және Тобаго"
+    },
+    "code": "TT",
+    "currency": "TTD",
+    "flag": "🇹🇹"
+  },
+  {
+    "name": {
+      "de": "Tuvalu",
+      "en": "Tuvalu",
+      "fr": "Tuvalu",
+      "es": "Tuvalu",
+      "ru": "Тувалу",
+      "kk": "Тувалу"
+    },
+    "code": "TV",
+    "currency": "AUD",
+    "flag": "🇹🇻"
+  },
+  {
+    "name": {
+      "de": "Taiwan",
+      "en": "Taiwan",
+      "fr": "Taïwan",
+      "es": "Taiwán",
+      "ru": "Тайвань",
+      "kk": "Тайвань"
+    },
+    "code": "TW",
+    "currency": "TWD",
+    "flag": "🇹🇼"
+  },
+  {
+    "name": {
+      "de": "Tansania",
+      "en": "Tanzania",
+      "fr": "Tanzanie",
+      "es": "Tanzania",
+      "ru": "Танзания",
+      "kk": "Танзания"
+    },
+    "code": "TZ",
+    "currency": "TZS",
+    "flag": "🇹🇿"
+  },
+  {
+    "name": {
+      "de": "Ukraine",
+      "en": "Ukraine",
+      "fr": "Ukraine",
+      "es": "Ucrania",
+      "ru": "Украина",
+      "kk": "Украина"
+    },
+    "code": "UA",
+    "currency": "UAH",
+    "flag": "🇺🇦"
+  },
+  {
+    "name": {
+      "de": "Uganda",
+      "en": "Uganda",
+      "fr": "Ouganda",
+      "es": "Uganda",
+      "ru": "Уганда",
+      "kk": "Уганда"
+    },
+    "code": "UG",
+    "currency": "UGX",
+    "flag": "🇺🇬"
+  },
+  {
+    "name": {
+      "de": "Vereinigtes Königreich",
+      "en": "United Kingdom",
+      "fr": "Royaume-Uni",
+      "es": "Reino Unido",
+      "ru": "Великобритания",
+      "kk": "Ұлыбритания"
+    },
+    "alias": {
+      "de": ["Vereinigtes Königreich von Großbritannien und Nordirland"]
+    },
+    "code": "GB",
+    "currency": "GBP",
+    "flag": "🇬🇧",
+    "needsA1Certificate": true
+  },
+  {
+    "name": {
+      "de": "Kleinere Amerikanische Überseeinseln",
+      "en": "United States Minor Outlying Islands",
+      "fr": "Îles mineures éloignées des États-Unis",
+      "es": "Islas menores alejadas de EE. UU.",
+      "ru": "Внешние малые о-ва (США)",
+      "kk": "АҚШ-тың сыртқы кіші аралдары"
+    },
+    "code": "UM",
+    "currency": "USD",
+    "lumpSumsFrom": "US",
+    "flag": "🇺🇲"
+  },
+  {
+    "name": {
+      "de": "Vereinigte Staaten",
+      "en": "United States",
+      "fr": "États-Unis",
+      "es": "Estados Unidos",
+      "ru": "Соединенные Штаты",
+      "kk": "Америка Құрама Штаттары"
+    },
+    "alias": {
+      "de": ["Vereinigte Staaten von Amerika (USA)"]
+    },
+    "code": "US",
+    "currency": "USD",
+    "flag": "🇺🇸"
+  },
+  {
+    "name": {
+      "de": "Uruguay",
+      "en": "Uruguay",
+      "fr": "Uruguay",
+      "es": "Uruguay",
+      "ru": "Уругвай",
+      "kk": "Уругвай"
+    },
+    "code": "UY",
+    "currency": "UYU",
+    "flag": "🇺🇾"
+  },
+  {
+    "name": {
+      "de": "Usbekistan",
+      "en": "Uzbekistan",
+      "fr": "Ouzbékistan",
+      "es": "Uzbekistán",
+      "ru": "Узбекистан",
+      "kk": "Өзбекстан"
+    },
+    "code": "UZ",
+    "currency": "UZS",
+    "flag": "🇺🇿"
+  },
+  {
+    "name": {
+      "de": "Vatikanstadt",
+      "en": "Vatican City State",
+      "fr": "État de la Cité du Vatican",
+      "es": "Ciudad del Vaticano",
+      "ru": "Ватикан",
+      "kk": "Ватикан"
+    },
+    "alias": {
+      "de": ["Vatikanstaat"]
+    },
+    "code": "VA",
+    "currency": "EUR",
+    "flag": "🇻🇦"
+  },
+  {
+    "name": {
+      "de": "St. Vincent und Grenadinen",
+      "en": "Saint Vincent and the Grenadines",
+      "fr": "Saint-Vincent-et-les-Grenadines",
+      "es": "San Vicente y las Granadinas",
+      "ru": "Сент-Винсент и Гренадины",
+      "kk": "Сент-Винсент және Гренадин аралдары"
+    },
+    "code": "VC",
+    "currency": "XCD",
+    "lumpSumsFrom": "TT",
+    "flag": "🇻🇨"
+  },
+  {
+    "name": {
+      "de": "Venezuela",
+      "en": "Venezuela",
+      "fr": "Venezuela",
+      "es": "Venezuela",
+      "ru": "Венесуэла",
+      "kk": "Венесуэла"
+    },
+    "code": "VE",
+    "currency": "VES",
+    "flag": "🇻🇪"
+  },
+  {
+    "name": {
+      "de": "Britische Jungferninseln",
+      "en": "British Virgin Islands",
+      "fr": "Îles Vierges britanniques",
+      "es": "Islas Vírgenes Británicas",
+      "ru": "Виргинские о-ва (Великобритания)",
+      "kk": "Британдық Виргин аралдары"
+    },
+    "code": "VG",
+    "currency": "USD",
+    "lumpSumsFrom": "GB",
+    "flag": "🇻🇬"
+  },
+  {
+    "name": {
+      "de": "Amerikanische Jungferninseln",
+      "en": "US Virgin Islands",
+      "fr": "Îles Vierges des États-Unis",
+      "es": "Islas Vírgenes de EE. UU.",
+      "ru": "Виргинские о-ва (США)",
+      "kk": "АҚШ-тың Виргин аралдары"
+    },
+    "code": "VI",
+    "currency": "USD",
+    "lumpSumsFrom": "US",
+    "flag": "🇻🇮"
+  },
+  {
+    "name": {
+      "de": "Vietnam",
+      "en": "Vietnam",
+      "fr": "Vietnam",
+      "es": "Vietnam",
+      "ru": "Вьетнам",
+      "kk": "Вьетнам"
+    },
+    "code": "VN",
+    "currency": "VND",
+    "flag": "🇻🇳"
+  },
+  {
+    "name": {
+      "de": "Vanuatu",
+      "en": "Vanuatu",
+      "fr": "Vanuatu",
+      "es": "Vanuatu",
+      "ru": "Вануату",
+      "kk": "Вануату"
+    },
+    "code": "VU",
+    "currency": "VUV",
+    "flag": "🇻🇺"
+  },
+  {
+    "name": {
+      "de": "Wallis und Futuna",
+      "en": "Wallis and Futuna",
+      "fr": "Wallis-et-Futuna",
+      "es": "Wallis y Futuna",
+      "ru": "Уоллис и Футуна",
+      "kk": "Уоллис және Футуна"
+    },
+    "code": "WF",
+    "currency": "XPF",
+    "lumpSumsFrom": "FR",
+    "flag": "🇼🇫"
+  },
+  {
+    "name": {
+      "de": "Samoa",
+      "en": "Samoa",
+      "fr": "Samoa",
+      "es": "Samoa",
+      "ru": "Самоа",
+      "kk": "Самоа"
+    },
+    "code": "WS",
+    "currency": "WST",
+    "flag": "🇼🇸"
+  },
+  {
+    "name": {
+      "de": "Jemen",
+      "en": "Yemen",
+      "fr": "Yémen",
+      "es": "Yemen",
+      "ru": "Йемен",
+      "kk": "Йемен"
+    },
+    "code": "YE",
+    "currency": "YER",
+    "flag": "🇾🇪"
+  },
+  {
+    "name": {
+      "de": "Mayotte",
+      "en": "Mayotte",
+      "fr": "Mayotte",
+      "es": "Mayotte",
+      "ru": "Майотта",
+      "kk": "Майотта"
+    },
+    "code": "YT",
+    "currency": "EUR",
+    "lumpSumsFrom": "FR",
+    "flag": "🇾🇹"
+  },
+  {
+    "name": {
+      "de": "Südafrika",
+      "en": "South Africa",
+      "fr": "Afrique du Sud",
+      "es": "Sudáfrica",
+      "ru": "Южно-Африканская Республика",
+      "kk": "Оңтүстік Африка Республикасы"
+    },
+    "code": "ZA",
+    "currency": "ZAR",
+    "flag": "🇿🇦"
+  },
+  {
+    "name": {
+      "de": "Sambia",
+      "en": "Zambia",
+      "fr": "Zambie",
+      "es": "Zambia",
+      "ru": "Замбия",
+      "kk": "Замбия"
+    },
+    "code": "ZM",
+    "currency": "ZMW",
+    "flag": "🇿🇲"
+  },
+  {
+    "name": {
+      "de": "Simbabwe",
+      "en": "Zimbabwe",
+      "fr": "Zimbabwe",
+      "es": "Zimbabue",
+      "ru": "Зимбабве",
+      "kk": "Зимбабве"
+    },
+    "code": "ZW",
+    "currency": "ZWL",
+    "flag": "🇿🇼"
+  },
+  {
+    "name": {
+      "de": "Kosovo",
+      "en": "Kosovo",
+      "fr": "Kosovo",
+      "es": "Kosovo",
+      "ru": "Косово",
+      "kk": "Косово"
+    },
+    "code": "XK",
+    "currency": "EUR",
+    "flag": "🇽🇰"
+  }
+]

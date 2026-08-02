@@ -4,13 +4,37 @@
       ref="modalComp"
       :header="modalMode === 'add' ? t('labels.newX', { X: t('labels.' + modalObjectType) }) : modalObject ? modalObject.name : ''"
       @afterClose="modalMode === 'edit' || modalMode === 'view' ? resetModal() : null">
+      <template #header="{header}">
+        <h5 class="modal-title">{{ header }}</h5>
+        <RefStringBadge
+          v-if="modalObject.reference"
+          class="ms-2"
+          :number="modalObject.reference"
+          :type="getReportModelNameFromType(modalObjectType)" />
+      </template>
       <div v-if="modalObject">
         <template v-if="modalMode === 'view'">
-          <TravelApplication v-if="modalObjectType === 'travel'" :travel="(modalObject as TravelSimple)"></TravelApplication>
-          <Advance v-else-if="modalObjectType === 'advance'" :advance="(modalObject as AdvanceSimple<string>)"></Advance>
+          <TravelApplication v-if="modalObjectType === 'travel'" :travel="(modalObject as TravelSimple)" />
+          <Advance v-else-if="modalObjectType === 'advance'" :advance="(modalObject as AdvanceSimple<string>)">
+            <template #buttons>
+              <template v-if="canConfirmReceipt(modalObject as AdvanceSimple<string>)">
+                <button
+                  type="button"
+                  class="btn btn-success"
+                  :disabled="!sessionState.isOnline.value"
+                  @click="openReceiptModal(modalObject as AdvanceSimple<string>)">
+                  {{ t('labels.confirmReceipt') }}
+                </button>
+              </template>
+            </template>
+          </Advance>
           <div v-if="modalObject.state !== undefined" class="mb-1">
             <template v-if="modalObject.state <= State.APPLIED_FOR">
-              <button type="submit" class="btn btn-primary me-2" @click="showModal('edit', modalObjectType, modalObject)">
+              <button
+                type="submit"
+                class="btn btn-primary me-2"
+                :disabled="!sessionState.isOnline.value"
+                @click="showModal('edit', modalObjectType, modalObject)">
                 {{ t('labels.edit') }}
               </button>
             </template>
@@ -23,12 +47,11 @@
               <button
                 type="button"
                 class="btn btn-danger me-2"
+                :disabled="!sessionState.isOnline.value"
                 @click="deleteReport(modalObjectType as 'travel' | 'advance', modalObject._id as string)">
                 {{ t('labels.delete') }}
               </button>
-              <button type="button" class="btn btn-light" @click="resetAndHide()">
-                {{ t('labels.cancel') }}
-              </button>
+              <button type="button" class="btn btn-light" @click="resetAndHide()">{{ t('labels.cancel') }}</button>
             </template>
           </div>
         </template>
@@ -36,7 +59,7 @@
           <TravelApplyForm
             v-if="modalObjectType === 'travel'"
             :mode="modalMode"
-            :travel="(modalObject as Partial<TravelSimple>)"
+            :travel="(modalObject as Partial<TravelSimple<string>>)"
             :loading="modalFormIsLoading"
             :owner="APP_DATA?.user"
             :minStartDate="APP_DATA?.user.access['approved:travel'] ? '' : undefined"
@@ -45,27 +68,25 @@
             @cancel="resetAndHide()"
             @add="handleSubmit"
             @edit="handleSubmit"
-            ref="travelApplyForm"></TravelApplyForm>
+            ref="travelApplyForm" />
           <ExpenseReportForm
             v-else-if="modalObjectType === 'expenseReport'"
             :mode="(modalMode as 'add' | 'edit')"
-            :expenseReport="(modalObject as Partial<ExpenseReportSimple>)"
+            :expenseReport="(modalObject as Partial<ExpenseReportSimple<string>>)"
             :loading="modalFormIsLoading"
             :owner="APP_DATA?.user"
             update-user-org
             @cancel="resetAndHide()"
-            @add="handleSubmit">
-          </ExpenseReportForm>
+            @add="handleSubmit" />
           <HealthCareCostForm
             v-else-if="modalObjectType === 'healthCareCost'"
             :mode="(modalMode as 'add' | 'edit')"
-            :healthCareCost="(modalObject as Partial<HealthCareCostSimple>)"
+            :healthCareCost="(modalObject as Partial<HealthCareCostSimple<string>>)"
             :loading="modalFormIsLoading"
             :owner="APP_DATA?.user"
             update-user-org
             @cancel="resetAndHide()"
-            @add="handleSubmit">
-          </HealthCareCostForm>
+            @add="handleSubmit" />
           <AdvanceForm
             v-else
             :mode="(modalMode as 'add' | 'edit')"
@@ -73,10 +94,17 @@
             :loading="modalFormIsLoading"
             @cancel="resetAndHide()"
             @add="handleSubmit"
-            @edit="handleSubmit">
-          </AdvanceForm>
+            @edit="handleSubmit" />
         </template>
       </div>
+    </ModalComponent>
+    <ModalComponent ref="receiptModalComp" :header="t('labels.confirmReceipt')" @afterClose="resetReceiptModal">
+      <AdvanceReceivedForm
+        v-if="receiptAdvance"
+        :advance="receiptAdvance"
+        :loading="receiptFormIsLoading"
+        @confirm="confirmReceipt"
+        @cancel="hideReceiptModal" />
     </ModalComponent>
     <div v-if="APP_DATA" class="container py-3">
       <div class="row mb-3 justify-content-end gx-4 gy-2">
@@ -84,7 +112,7 @@
           <h2>{{ t('headlines.home') }}</h2>
         </div>
         <div v-if="!APP_DATA.settings.disableReportType.travel && APP_DATA.user.access['appliedFor:travel']" class="col-auto">
-          <button class="btn btn-secondary" @click="showModal('add', 'travel', undefined)">
+          <button class="btn btn-secondary" :disabled="!sessionState.isOnline.value" @click="showModal('add', 'travel', undefined)">
             <i class="bi bi-plus-lg"></i>
             <span class="ms-1">
               {{ t(APP_DATA.user.access['approved:travel'] ? 'labels.addX' : 'labels.applyForX', { X: t('labels.travel') }) }}
@@ -92,19 +120,19 @@
           </button>
         </div>
         <div v-if="!APP_DATA.settings.disableReportType.expenseReport && APP_DATA.user.access['inWork:expenseReport']" class="col-auto">
-          <button class="btn btn-secondary" @click="showModal('add', 'expenseReport', undefined)">
+          <button class="btn btn-secondary" :disabled="!sessionState.isOnline.value" @click="showModal('add', 'expenseReport', undefined)">
             <i class="bi bi-plus-lg"></i>
             <span class="ms-1">{{ t('labels.addX', { X: t('labels.expenseReport') }) }}</span>
           </button>
         </div>
         <div v-if="!APP_DATA.settings.disableReportType.healthCareCost && APP_DATA.user.access['inWork:healthCareCost']" class="col-auto">
-          <button class="btn btn-secondary" @click="showModal('add', 'healthCareCost', undefined)">
+          <button class="btn btn-secondary" :disabled="!sessionState.isOnline.value" @click="showModal('add', 'healthCareCost', undefined)">
             <i class="bi bi-plus-lg"></i>
             <span class="ms-1">{{ t('labels.submitX', { X: t('labels.healthCareCost') }) }}</span>
           </button>
         </div>
         <div v-if="!APP_DATA.settings.disableReportType.advance && APP_DATA.user.access['appliedFor:advance']" class="col-auto">
-          <button class="btn btn-secondary" @click="showModal('add', 'advance', undefined)">
+          <button class="btn btn-secondary" :disabled="!sessionState.isOnline.value" @click="showModal('add', 'advance', undefined)">
             <i class="bi bi-plus-lg"></i>
             <span class="ms-1">{{ t('labels.applyForX', { X: t('labels.advance') }) }}</span>
           </button>
@@ -118,7 +146,7 @@
           endpoint="travel"
           :columns-to-hide="COMMON_HIDDEN_COLUMNS"
           @clicked-applied="(t) => showModal('view', 'travel', t)"
-          dbKeyPrefix="home"></TravelList>
+          dbKeyPrefix="home" />
       </template>
       <template v-if="!APP_DATA.settings.disableReportType.expenseReport">
         <h3>{{ t('labels.expenses') }}</h3>
@@ -127,7 +155,7 @@
           ref="expenseReportList"
           endpoint="expenseReport"
           :columns-to-hide="COMMON_HIDDEN_COLUMNS"
-          dbKeyPrefix="home"></ExpenseReportList>
+          dbKeyPrefix="home" />
       </template>
       <template v-if="!APP_DATA.settings.disableReportType.healthCareCost">
         <h3>{{ t('labels.healthCareCost') }}</h3>
@@ -135,16 +163,16 @@
           ref="healthCareCostList"
           endpoint="healthCareCost"
           :columns-to-hide="COMMON_HIDDEN_COLUMNS"
-          dbKeyPrefix="home"></HealthCareCostList>
+          dbKeyPrefix="home" />
       </template>
       <template v-if="!APP_DATA.settings.disableReportType.advance">
         <h3>{{ t('labels.advance') }}</h3>
         <AdvanceList
           ref="advanceList"
           endpoint="advance"
-          :columns-to-hide="['owner', 'updatedAt', 'report', 'organisation', 'bookingRemark', 'log.30.on']"
+          :columns-to-hide="['owner', 'updatedAt', 'report', 'organisation', 'bookingRemark', 'log.30.on', 'reference']"
           @clicked="(t) => showModal('view', 'advance', t)"
-          dbKeyPrefix="home"></AdvanceList>
+          dbKeyPrefix="home" />
       </template>
     </div>
   </div>
@@ -153,20 +181,24 @@
 <script setup lang="ts">
 import {
   type AdvanceSimple,
+  AdvanceState,
   type ExpenseReportSimple,
+  getReportModelNameFromType,
   type HealthCareCostSimple,
+  ReportType,
   State,
   type TravelSimple
 } from 'abrechnung-common/types.js'
-import { ref, useTemplateRef } from 'vue'
+import { nextTick, onMounted, PropType, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import API from '@/api.js'
-import APP_LOADER from '@/appData.js'
 import Advance from '@/components/advance/Advance.vue'
 import AdvanceList from '@/components/advance/AdvanceList.vue'
 import AdvanceForm from '@/components/advance/forms/AdvanceForm.vue'
+import AdvanceReceivedForm from '@/components/advance/forms/AdvanceReceivedForm.vue'
 import ModalComponent from '@/components/elements/ModalComponent.vue'
+import RefStringBadge from '@/components/elements/RefStringBadge.vue'
 import ExpenseReportList from '@/components/expenseReport/ExpenseReportList.vue'
 import ExpenseReportForm from '@/components/expenseReport/forms/ExpenseReportForm.vue'
 import HealthCareCostForm from '@/components/healthCareCost/forms/HealthCareCostForm.vue'
@@ -174,6 +206,8 @@ import HealthCareCostList from '@/components/healthCareCost/HealthCareCostList.v
 import TravelApplication from '@/components/travel/elements/TravelApplication.vue'
 import TravelApplyForm from '@/components/travel/forms/TravelApplyForm.vue'
 import TravelList from '@/components/travel/TravelList.vue'
+import APP_LOADER from '@/dataLoader.js'
+import { sessionState } from '@/session.js'
 
 type ModalMode = 'view' | 'add' | 'edit'
 type ModalObjectType = 'travel' | 'expenseReport' | 'healthCareCost' | 'advance'
@@ -183,17 +217,35 @@ const modalMode = ref<ModalMode>('add')
 const modalObjectType = ref<ModalObjectType>('travel')
 const modalObject = ref<ModalObject>({})
 const modalFormIsLoading = ref(false)
+const receiptAdvance = ref<AdvanceSimple<string> | null>(null)
+const receiptFormIsLoading = ref(false)
 
 const travelList = useTemplateRef('travelList')
 const expenseReportList = useTemplateRef('expenseReportList')
 const healthCareCostList = useTemplateRef('healthCareCostList')
 const advanceList = useTemplateRef('advanceList')
 const modalComp = useTemplateRef('modalComp')
+const receiptModalComp = useTemplateRef('receiptModalComp')
 
-const COMMON_HIDDEN_COLUMNS = ['owner', 'updatedAt', 'report', 'addUp.totalTotal', 'organisation', 'bookingRemark']
+const COMMON_HIDDEN_COLUMNS = [
+  'owner',
+  'updatedAt',
+  'report',
+  'addUp.totalTotal',
+  'addUp.totalAdvance',
+  'organisation',
+  'bookingRemark',
+  'reference'
+]
 
 const router = useRouter()
 const { t } = useI18n()
+
+const props = defineProps({
+  reportType: { type: String as PropType<ReportType> },
+  reportId: { type: String },
+  confirmAdvance: { type: Boolean, default: false }
+})
 
 await APP_LOADER.loadData()
 const APP_DATA = APP_LOADER.data
@@ -223,7 +275,50 @@ function resetAndHide() {
   hideModal()
 }
 
-async function handleSubmit(payload: TravelSimple | ExpenseReportSimple | HealthCareCostSimple | Partial<AdvanceSimple>) {
+function openReceiptModal(advance: AdvanceSimple<string>) {
+  receiptAdvance.value = advance
+  receiptFormIsLoading.value = false
+  modalComp.value?.hideModal()
+  receiptModalComp.value?.modal?.show()
+}
+
+function hideReceiptModal() {
+  receiptModalComp.value?.hideModal()
+}
+
+function resetReceiptModal() {
+  receiptAdvance.value = null
+  receiptFormIsLoading.value = false
+}
+
+function canConfirmReceipt(advance: AdvanceSimple<string>) {
+  return (
+    Boolean(APP_DATA.value?.user) &&
+    advance.owner._id === APP_DATA.value?.user._id &&
+    advance.state >= AdvanceState.APPROVED &&
+    !advance.receivedOn
+  )
+}
+
+async function confirmReceipt(receivedOn: Date | string) {
+  if (!receiptAdvance.value) {
+    return
+  }
+  receiptFormIsLoading.value = true
+  const result = await API.setter<AdvanceSimple<string>>('advance/received', { _id: receiptAdvance.value._id, receivedOn })
+  receiptFormIsLoading.value = false
+  if (result.ok) {
+    if (modalObject.value && modalObjectType.value === 'advance' && modalObject.value._id === result.ok._id) {
+      modalObject.value = result.ok
+    }
+    advanceList.value?.loadFromServer()
+    hideReceiptModal()
+  }
+}
+
+async function handleSubmit(
+  payload: Partial<TravelSimple> | Partial<ExpenseReportSimple> | Partial<HealthCareCostSimple> | Partial<AdvanceSimple>
+) {
   modalFormIsLoading.value = true
   let result: { _id: string } | undefined
 
@@ -268,6 +363,24 @@ async function deleteReport(endpoint: 'travel' | 'advance', _id: string) {
     resetAndHide()
   }
 }
+
+async function showPropReport() {
+  if (props.reportId && props.reportType) {
+    const result = await API.getter<ModalObject>(props.reportType, { _id: props.reportId })
+    if (result.ok) {
+      if (props.confirmAdvance && props.reportType === 'advance') {
+        openReceiptModal(result.ok.data as AdvanceSimple<string>)
+      } else {
+        showModal('view', props.reportType, result.ok.data)
+      }
+    }
+    await nextTick()
+    router.replace('/user')
+  }
+}
+
+onMounted(showPropReport)
+watch(() => props.reportId, showPropReport)
 </script>
 
 <style></style>

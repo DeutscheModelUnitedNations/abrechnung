@@ -48,16 +48,14 @@
           </slot>
         </template>
 
-        <template v-slot:singlelabel="{ value }">
-          <span class="text-truncate ms-2 me-auto" :title="value.name[$i18n.locale]">
-            <span v-if="value.flag" class="me-1">{{ value.flag }}</span>
-            <span>{{ value._id }}</span>
-          </span>
-        </template>
+        <template v-slot:singlelabel="{ value }"><span class="text-truncate ms-2 me-auto" :title="value.name[$i18n.locale]">
+          <span v-if="value.flag" class="me-1">{{ value.flag }}</span>
+          <span>{{ value._id }}</span>
+        </span></template>
 
         <template v-slot:multiplelabel="{ values }">
           <span class="ms-2 mt-1 me-auto">
-            <span v-for="value of values" class="me-3 text-nowrap" :title="value.name[$i18n.locale]">
+            <span v-for="value of values" :key="value._id" class="me-3 text-nowrap" :title="value.name[$i18n.locale]">
               <span v-if="value.flag" class="me-1">{{ value.flag }}</span>
               <span>{{ value._id }}</span>
             </span>
@@ -66,12 +64,8 @@
 
         <template v-slot:option="{ option }">
           <div class="row align-items-center" :title="option.name[$i18n.locale]">
-            <div v-if="option.flag" class="col-auto px-1">
-              <span class="fs-3">{{ option.flag }}</span>
-            </div>
-            <div class="col p-1 text-truncate">
-              <small>{{ option.name[$i18n.locale] }}</small>
-            </div>
+            <div v-if="option.flag" class="col-auto px-1"><span class="fs-3">{{ option.flag }}</span></div>
+            <div class="col p-1 text-truncate"><small>{{ option.name[$i18n.locale] }}</small></div>
           </div>
         </template>
       </Multiselect>
@@ -79,7 +73,9 @@
 
     <!-- Default element slots -->
     <template v-for="(component, slot) in elementSlots" #[slot]>
-      <slot :name="slot" :el$="el$"><component :is="component" :el$="el$" /></slot>
+      <slot :name="slot" :el$="el$">
+        <component :is="component" :el$="el$" />
+      </slot>
     </template>
   </component>
 </template>
@@ -87,9 +83,9 @@
 <script>
 import Multiselect from '@vueform/multiselect/src/Multiselect.vue'
 import { defineElement, SelectElement } from '@vueform/vueform'
-import { SelectElement as SelectElementTemplate } from '@vueform/vueform/dist/vueform'
+import { SelectElement as SelectElementTemplate } from '@vueform/vueform/dist/bootstrap'
 import { ref } from 'vue'
-import APP_LOADER from '@/appData.js'
+import APP_LOADER from '@/dataLoader.js'
 
 export default defineElement({
   ...SelectElement, // adding props, mixins, emits

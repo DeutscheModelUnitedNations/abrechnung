@@ -5,9 +5,7 @@
         <button type="button" class="btn p-0 m-1" @click="showSettings = true"><i class="bi bi-gear"></i></button>
       </div>
       <div v-else class="d-flex align-items-center">
-        <ArrowSortableList
-          v-model="columnOrder"
-          :labelFn="(c: {text: string, value: string}) => c.text ? t(c.text) : c.value"></ArrowSortableList>
+        <ArrowSortableList v-model="columnOrder" :labelFn="(c: {text: string, value: string}) => c.text ? t(c.text) : c.value" />
         <button type="button" class="btn p-0 m-2" :title="t('labels.save')" @click="applyOrder">
           <i class="bi bi-check-lg text-success"></i>
         </button>
@@ -25,6 +23,7 @@
       @update:items-selected="(s: Item[]) => emits('update:itemsSelected', s)"
       @update:server-options="(o: ServerOptions) => emits('update:serverOptions', o)"
       @click-row="(a: ClickRowArgument) => emits('click-row', a)"
+      @update-sort="(s: UpdateSortArgument) => emits('update-sort', s)"
       :server-items-length="serverItemsLength"
       :loading="loading"
       :items="items"
@@ -35,9 +34,7 @@
       :preventContextMenuRow="false"
       body-item-class-name="text-truncate"
       :style="{ filter: showSettings ? 'blur(3px)' : 'none', transition: 'filter 0.2s ease-in-out' }">
-      <template #header="header">
-        {{ header.text ? t(header.text) : '' }}
-      </template>
+      <template #header="header">{{ header.text ? t(header.text) : '' }}</template>
       <!-- Standard-Slot weiterleiten -->
       <template v-for="(_, slot) in $slots" v-slot:[slot]="scope">
         <slot :name="slot" v-bind="scope"></slot>
@@ -48,9 +45,9 @@
 
 <script lang="ts" setup>
 import { PropType, ref } from 'vue'
-import type { ClickRowArgument, FilterOption, Header, Item, ServerOptions, SortType } from 'vue3-easy-data-table'
+import type { ClickRowArgument, FilterOption, Header, Item, ServerOptions, SortType, UpdateSortArgument } from 'vue3-easy-data-table'
 import Vue3EasyDataTable from 'vue3-easy-data-table'
-import 'vue3-easy-data-table/dist/style.css'
+import '@/vendor/vue3-easy-data-table.css'
 import { useI18n } from 'vue-i18n'
 import ArrowSortableList from '@/components/elements/ArrowSortableList.vue'
 import { deleteFromDB, readFromDB, storeToDB } from '@/indexedDB'
@@ -77,7 +74,12 @@ const props = defineProps({
   serverOptions: { type: Object as PropType<ServerOptions> }
 })
 
-const emits = defineEmits<{ 'update:itemsSelected': [Item[]]; 'update:serverOptions': [ServerOptions]; 'click-row': [ClickRowArgument] }>()
+const emits = defineEmits<{
+  'update:itemsSelected': [Item[]]
+  'update:serverOptions': [ServerOptions]
+  'click-row': [ClickRowArgument]
+  'update-sort': [UpdateSortArgument]
+}>()
 
 const headers = ref(props.headers)
 for (const columnToHide of props.columnsToHide) {
@@ -136,15 +138,12 @@ tbody.vue3-easy-data-table__body td {
   position: relative; /* für absolutes Positionieren des Icons */
 }
 
-/* Das Icon verstecken und sanft einblenden */
 .overlay {
   z-index: 10;
   position: absolute;
   top: 1px;
   right: 1px;
-  /* Optional: Hintergrundkreis, damit’s besser zu erkennen ist */
   background-color: rgba(var(--bs-body-bg-rgb), 0.8);
-  /* line-height: 0; */
 }
 
 .settings-icon {

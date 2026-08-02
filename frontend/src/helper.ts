@@ -1,13 +1,22 @@
+import {
+  AnyState,
+  getReportTypeFromModelName,
+  IdDocument,
+  idDocumentToId,
+  ReportModelName,
+  State,
+  TravelState,
+  User
+} from 'abrechnung-common/types.js'
+import { AxiosRequestConfig } from 'axios'
+import { Ref } from 'vue'
+import API from './api'
+import ENV from './env.js'
+
 /**
  * register user for push notifivation if Push Manager and VAPID key avaiable
  * checking permission and asking for it if needed
  */
-
-import { AxiosRequestConfig } from 'axios'
-import { Ref } from 'vue'
-import API from '@/api'
-import ENV from '@/env.js'
-
 export async function subscribeToPush() {
   if (!('PushManager' in window) || !ENV.VITE_PUBLIC_VAPID_KEY) {
     return
@@ -51,9 +60,9 @@ function urlBase64ToUint8Array(base64String: string) {
 
 export const bp = { sm: 576, md: 768, lg: 992, xl: 1200, xxl: 1400 } as const
 
-export function hideExpandColumn(colDeleted: boolean, colIndex = 0) {
+export function hideExpandColumn(table: ParentNode, colDeleted: boolean, colIndex = 0) {
   queueMicrotask(() => {
-    for (const tr of document.querySelectorAll<HTMLTableRowElement>('tr')) {
+    for (const tr of table.querySelectorAll<HTMLTableRowElement>('tr')) {
       const cells = tr.querySelectorAll<HTMLElement>('th, td')
       const cell = cells[colIndex]
       if (cell) {
@@ -62,7 +71,7 @@ export function hideExpandColumn(colDeleted: boolean, colIndex = 0) {
     }
 
     if (!colDeleted) {
-      const cols = document.querySelectorAll<HTMLElement>('col')
+      const cols = table.querySelectorAll<HTMLElement>('col')
       const col = cols[colIndex]
       if (col) {
         col.remove()
@@ -71,11 +80,24 @@ export function hideExpandColumn(colDeleted: boolean, colIndex = 0) {
   })
 }
 
-export function expandCollapseComments() {
-  for (const td of document.querySelectorAll<HTMLElement>('td.can-expand')) {
+export function expandCollapseComments(table: ParentNode) {
+  for (const td of table.querySelectorAll<HTMLElement>('td.can-expand')) {
     td.click()
   }
 }
+
+export function setLast<T>(item: T, list: T[], limit = 3) {
+  const index = list.indexOf(item)
+  if (index !== -1) {
+    list.splice(index, 1)
+  }
+  const length = list.unshift(item)
+  if (length > limit) {
+    list.pop()
+  }
+}
+
+export const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
 export async function showFile(
   file: { endpoint: string; params: AxiosRequestConfig['params']; filename: string; isDownloading?: Ref<string> } | Blob | File
@@ -98,4 +120,38 @@ export async function showFile(
     }
   }
   window.open(URL.createObjectURL(fileObj), '_blank')
+}
+
+export function getRouteForReport(
+  user: User,
+  report: { state: AnyState; owner: IdDocument; _id: string },
+  reportModelName: ReportModelName
+) {
+  const reportType = getReportTypeFromModelName(reportModelName)
+  if (user._id === idDocumentToId(report.owner)) {
+    return `/${reportType}/${report._id}`
+  }
+
+  if (reportType === 'advance') {
+    if (user.access['approve/advance']) {
+      return `/approve/advance/${report._id}`
+    }
+    return `/book/advance/${report._id}`
+  }
+
+  if (reportType === 'travel') {
+    if (user.access['examine/travel'] && report.state >= TravelState.APPROVED && report.state <= TravelState.REVIEW_COMPLETED) {
+      return `/examine/travel/${report._id}`
+    }
+    if (user.access['approve/travel'] && report.state <= TravelState.APPROVED) {
+      return `/approve/travel/${report._id}`
+    }
+    return `/book/travel/${report._id}`
+  }
+
+  //reportType === 'expenseReport' || reportType === 'healthCareCost'
+  if (user.access[`examine/${reportType}`] && report.state >= State.EDITABLE_BY_OWNER && report.state <= State.BOOKABLE) {
+    return `/examine/${reportType}/${report._id}`
+  }
+  return `/book/${reportType}/${report._id}`
 }

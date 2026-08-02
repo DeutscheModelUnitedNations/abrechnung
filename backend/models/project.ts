@@ -1,4 +1,5 @@
 import { _id, Project, ProjectSimple, ProjectUsers } from 'abrechnung-common/types.js'
+import { sumAmounts } from 'abrechnung-common/utils/scripts.js'
 import mongoose, { HydratedDocument, InferSchemaType, Model, model, Schema, Types } from 'mongoose'
 import { costObject } from './helper.js'
 
@@ -6,20 +7,19 @@ interface Methods {
   addToBalance(reportTotal: number, session?: mongoose.ClientSession | null): Promise<void>
 }
 
-// biome-ignore lint/complexity/noBannedTypes: mongoose uses {} as type
-type ProjectModel = Model<Project<Types.ObjectId>, {}, Methods>
-
 export const projectSchema = () =>
-  new Schema<Project<Types.ObjectId>, ProjectModel, Methods>({
+  new Schema<Project<Types.ObjectId>, Model<Project<Types.ObjectId>>, Methods>({
     identifier: { type: String, trim: true, required: true, unique: true, index: true },
     organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
     name: { type: String, trim: true },
-    budget: Object.assign({ description: 'in EUR' }, costObject(false, false, false)),
-    balance: Object.assign({ description: 'in EUR' }, costObject(false, false, true))
+    budget: Object.assign({ description: 'in EUR' }, costObject({ exchangeRate: false, receipts: false, required: false, min: 0 })),
+    balance: Object.assign({ description: 'in EUR' }, costObject({ exchangeRate: false, receipts: false, required: true, min: 0 }))
   })
 
 const schema = projectSchema()
 
+// biome-ignore lint/complexity/noBannedTypes: mongoose uses {} as type
+type ProjectModel = Model<Project<Types.ObjectId>, {}, Methods>
 // When calling this method from populated paths, only the populated field are in the document
 interface ProjectSimpleDoc extends Methods, HydratedDocument<ProjectSimple> {}
 
@@ -31,14 +31,14 @@ schema.methods.addToBalance = async function (this: ProjectSimpleDoc, reportTota
   if (!doc) {
     return
   }
-  doc.balance.amount += reportTotal
+  doc.balance.amount = sumAmounts(doc.balance.amount, reportTotal)
   await doc.save({ session })
 }
 
 export type ProjectSchema = InferSchemaType<typeof schema>
 export type IProject = ProjectSchema & { _id: _id }
 
-export default model<Project<Types.ObjectId>, ProjectModel>('Project', schema)
+export default model('Project', schema)
 
 export interface ProjectDoc extends Methods, HydratedDocument<Project<Types.ObjectId>> {}
 

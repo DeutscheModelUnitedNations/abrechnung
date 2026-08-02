@@ -3,7 +3,7 @@ import { Request } from 'express'
 import * as openidClient from 'openid-client'
 import { Strategy as OidcStrategy } from 'openid-client/passport'
 import passport from 'passport'
-import { getConnectionSettings } from '../db.js'
+import { BACKEND_CACHE } from '../db.js'
 import ENV from '../env.js'
 import { displayNameSplit, findOrCreateUser } from './index.js'
 
@@ -37,8 +37,7 @@ export class CustomStrategy extends OidcStrategy {
 }
 
 export async function getOidcStrategy() {
-  const connectionSettings = await getConnectionSettings()
-
+  const { connectionSettings } = BACKEND_CACHE.getSnapshot()
   if (!connectionSettings.auth.oidc) {
     throw new Error('OIDC not configured in Connection Settings')
   }

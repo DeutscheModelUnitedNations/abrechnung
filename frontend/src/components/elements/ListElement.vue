@@ -12,9 +12,7 @@
     :sort-by="sortBy"
     :sort-type="sortType"
     :db-key="dbKey">
-    <template #header="header">
-      {{ t(header.text) }}
-    </template>
+    <template #header="header">{{ header.text ? t(header.text) : '' }}</template>
     <!-- Standard-Slot weiterleiten -->
     <template v-for="(_, slot) in $slots" v-slot:[slot]="scope">
       <slot :name="slot" v-bind="scope"></slot>
@@ -23,11 +21,11 @@
 </template>
 
 <script lang="ts" setup>
-import { Base64 } from 'abrechnung-common/utils/scripts.js'
+import { Base64 } from 'abrechnung-common/utils/encoding.js'
 import { PropType, ref, watch } from 'vue'
 import type { Header, Item, ServerOptions, SortType } from 'vue3-easy-data-table'
 import API from '@/api.js'
-import 'vue3-easy-data-table/dist/style.css'
+import '@/vendor/vue3-easy-data-table.css'
 import { useI18n } from 'vue-i18n'
 import TableElement from '@/components/elements/TableElement.vue'
 

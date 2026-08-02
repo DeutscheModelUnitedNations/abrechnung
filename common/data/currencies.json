@@ -1,0 +1,2106 @@
+[
+  {
+    "code": "EUR",
+    "name": {
+      "de": "Euro",
+      "en": "euro",
+      "fr": "euro",
+      "es": "euro",
+      "ru": "евро",
+      "kk": "Еуро"
+    },
+    "subunit": "Cent",
+    "symbol": "€",
+    "flag": "🇪🇺"
+  },
+  {
+    "code": "USD",
+    "name": {
+      "de": "US-Dollar",
+      "en": "US dollar",
+      "fr": "dollar des États-Unis",
+      "es": "dólar estadounidense",
+      "ru": "доллар США",
+      "kk": "АҚШ доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇺🇸"
+  },
+  {
+    "code": "GBP",
+    "name": {
+      "de": "Pfund Sterling",
+      "en": "Pound Sterling",
+      "fr": "livre sterling",
+      "es": "libra esterlina",
+      "ru": "британский фунт стерлингов",
+      "kk": "Британдық фунт"
+    },
+    "subunit": "Penny",
+    "symbol": "£",
+    "flag": "🇬🇧"
+  },
+  {
+    "code": "CNY",
+    "name": {
+      "de": "Renminbi Yuan",
+      "en": "renminbi-yuan",
+      "fr": "yuan renminbi chinois",
+      "es": "yuan",
+      "ru": "китайский юань",
+      "kk": "Қытай юані"
+    },
+    "subunit": "Fen",
+    "symbol": "¥",
+    "flag": "🇨🇳"
+  },
+  {
+    "code": "CHF",
+    "name": {
+      "de": "Schweizer Franken",
+      "en": "Swiss franc",
+      "fr": "franc suisse",
+      "es": "franco suizo",
+      "ru": "швейцарский франк",
+      "kk": "Швейцария франкі"
+    },
+    "subunit": "Rappen;Centime",
+    "symbol": "CHF",
+    "flag": "🇨🇭"
+  },
+  {
+    "code": "HKD",
+    "name": {
+      "de": "Hongkong-Dollar",
+      "en": "Hong Kong dollar",
+      "fr": "dollar de Hong Kong",
+      "es": "dólar hongkonés",
+      "ru": "гонконгский доллар",
+      "kk": "Гонконг доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇭🇰"
+  },
+  {
+    "code": "SGD",
+    "name": {
+      "de": "Singapur-Dollar",
+      "en": "Singapore dollar",
+      "fr": "dollar de Singapour",
+      "es": "dólar singapurense",
+      "ru": "сингапурский доллар",
+      "kk": "Сингапур доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇸🇬"
+  },
+  {
+    "code": "NZD",
+    "name": {
+      "de": "Neuseeland-Dollar",
+      "en": "New Zealand dollar",
+      "fr": "dollar néo-zélandais",
+      "es": "dólar neozelandés",
+      "ru": "новозеландский доллар",
+      "kk": "Жаңа Зеландия доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇳🇿"
+  },
+  {
+    "code": "INR",
+    "name": {
+      "de": "indische Rupie",
+      "en": "Indian rupee",
+      "fr": "roupie indienne",
+      "es": "rupia india",
+      "ru": "индийская рупия",
+      "kk": "Үндістан рупиясы"
+    },
+    "subunit": "Paisa",
+    "symbol": "₹",
+    "flag": "🇮🇳"
+  },
+  {
+    "code": "ZAR",
+    "name": {
+      "de": "Rand",
+      "en": "rand",
+      "fr": "rand sud-africain",
+      "es": "rand",
+      "ru": "южноафриканский рэнд",
+      "kk": "Оңтүстік Африка рэнді"
+    },
+    "subunit": "Cent",
+    "symbol": "R",
+    "flag": "🇿🇦"
+  },
+  {
+    "code": "THB",
+    "name": {
+      "de": "Baht",
+      "en": "baht",
+      "fr": "baht thaïlandais",
+      "es": "bat",
+      "ru": "таиландский бат",
+      "kk": "Тай баты"
+    },
+    "subunit": "Satang",
+    "symbol": "฿",
+    "flag": "🇹🇭"
+  },
+  {
+    "code": "IDR",
+    "name": {
+      "de": "Indonesische Rupiah",
+      "en": "Indonesian rupiah",
+      "fr": "roupie indonésienne",
+      "es": "rupia indonesia",
+      "ru": "индонезийская рупия",
+      "kk": "Индонезия рупиясы"
+    },
+    "subunit": "Sen",
+    "symbol": "Rp",
+    "flag": "🇮🇩"
+  },
+  {
+    "code": "AED",
+    "name": {
+      "de": "VAE-Dirham",
+      "en": "UAE dirham",
+      "fr": "dirham des Émirats arabes unis",
+      "es": "dírham de los Emiratos Árabes Unidos",
+      "ru": "дирхам ОАЭ",
+      "kk": "Біріккен Араб Әмірліктерінің дирхамы"
+    },
+    "subunit": "Fils",
+    "flag": "🇦🇪"
+  },
+  {
+    "code": "TRY",
+    "name": {
+      "de": "türkische Lira",
+      "en": "Turkish lira",
+      "fr": "livre turque",
+      "es": "lira turca",
+      "ru": "турецкая лира",
+      "kk": "Түрік лирасы"
+    },
+    "subunit": "Kurus",
+    "symbol": "₺",
+    "flag": "🇹🇷"
+  },
+  {
+    "code": "XCD",
+    "name": {
+      "de": "ostkaribischer Dollar",
+      "en": "East Caribbean dollar",
+      "fr": "dollar des Caraïbes orientales",
+      "es": "dólar del Caribe Oriental",
+      "ru": "восточно-карибский доллар",
+      "kk": "Шығыс Кариб доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": null
+  },
+  {
+    "code": "ALL",
+    "name": {
+      "de": "Lek",
+      "en": "lek",
+      "fr": "lek albanais",
+      "es": "lek",
+      "ru": "албанский лек",
+      "kk": "Албания легі"
+    },
+    "symbol": "Lek",
+    "flag": "🇦🇱"
+  },
+  {
+    "code": "AFN",
+    "name": {
+      "de": "Afghani",
+      "en": "afghani",
+      "fr": "afghani afghan",
+      "es": "afgani",
+      "ru": "афгани",
+      "kk": "Ауғанстан афганиі"
+    },
+    "subunit": "Pul",
+    "symbol": "؋",
+    "flag": "🇦🇫"
+  },
+  {
+    "code": "AMD",
+    "name": {
+      "de": "Dram",
+      "en": "dram",
+      "fr": "dram arménien",
+      "es": "dram",
+      "ru": "армянский драм",
+      "kk": "Армения драмы"
+    },
+    "subunit": "Lumma",
+    "flag": "🇦🇲"
+  },
+  {
+    "code": "AOA",
+    "name": {
+      "de": "Kwanza",
+      "en": "kwanza",
+      "fr": "kwanza angolais",
+      "es": "kuanza",
+      "ru": "ангольская кванза",
+      "kk": "Ангола кванзасы"
+    },
+    "subunit": "Cêntimo",
+    "flag": "🇦🇴"
+  },
+  {
+    "code": "ARS",
+    "name": {
+      "de": "argentinischer Peso",
+      "en": "Argentine peso",
+      "fr": "peso argentin",
+      "es": "peso argentino",
+      "ru": "аргентинский песо",
+      "kk": "Аргентина песосы"
+    },
+    "subunit": "Centavo",
+    "symbol": "$",
+    "flag": "🇦🇷"
+  },
+  {
+    "code": "AUD",
+    "name": {
+      "de": "australischer Dollar",
+      "en": "Australian dollar",
+      "fr": "dollar australien",
+      "es": "dólar australiano",
+      "ru": "австралийский доллар",
+      "kk": "Австралия доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇦🇺"
+  },
+  {
+    "code": "AWG",
+    "name": {
+      "de": "Aruba-Gulden",
+      "en": "Aruban guilder",
+      "fr": "florin arubais",
+      "es": "florín arubeño",
+      "ru": "арубанский флорин",
+      "kk": "Аруба флорині"
+    },
+    "subunit": "Cent",
+    "symbol": "ƒ",
+    "flag": "🇦🇼"
+  },
+  {
+    "code": "AZN",
+    "name": {
+      "de": "Aserbaidschan-Manat",
+      "en": "Azerbaijan manat",
+      "fr": "manat azéri",
+      "es": "manat azerbaiyano",
+      "ru": "азербайджанский манат",
+      "kk": "Әзірбайжан манаты"
+    },
+    "subunit": "Qäpik",
+    "symbol": "₼",
+    "flag": "🇦🇿"
+  },
+  {
+    "code": "BAM",
+    "name": {
+      "de": "konvertierbare Mark",
+      "en": "convertible mark",
+      "fr": "mark convertible bosniaque",
+      "es": "marco convertible de Bosnia y Herzegovina",
+      "ru": "конвертируемая марка Боснии и Герцеговины",
+      "kk": "Босния және Герцеговина айырбасталмалы маркасы"
+    },
+    "subunit": "Fening",
+    "symbol": "KM",
+    "flag": "🇧🇦"
+  },
+  {
+    "code": "BBD",
+    "name": {
+      "de": "Barbados-Dollar",
+      "en": "Barbados dollar",
+      "fr": "dollar barbadien",
+      "es": "dólar barbadense",
+      "ru": "барбадосский доллар",
+      "kk": "Барбадос доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇧🇧"
+  },
+  {
+    "code": "BDT",
+    "name": {
+      "de": "Taka",
+      "en": "taka",
+      "fr": "taka bangladeshi",
+      "es": "taka",
+      "ru": "бангладешская така",
+      "kk": "Бангладеш такасы"
+    },
+    "subunit": "Poisha",
+    "flag": "🇧🇩"
+  },
+  {
+    "code": "XOF",
+    "name": {
+      "de": "CFA-Franc (BCEAO)",
+      "en": "CFA franc",
+      "fr": "franc CFA (BCEAO)",
+      "es": "franco CFA de África Occidental",
+      "ru": "франк КФА ВСЕАО",
+      "kk": "КФА ВСЕАО франкі"
+    },
+    "subunit": "Centime",
+    "flag": null
+  },
+  {
+    "code": "BGN",
+    "name": {
+      "de": "Lew",
+      "en": "lev",
+      "fr": "lev bulgare",
+      "es": "lev búlgaro",
+      "ru": "болгарский лев",
+      "kk": "Болгария леві"
+    },
+    "subunit": "Stótinka",
+    "symbol": "лв",
+    "flag": "🇧🇬"
+  },
+  {
+    "code": "BHD",
+    "name": {
+      "de": "Bahrain-Dinar",
+      "en": "Bahraini dinar",
+      "fr": "dinar bahreïni",
+      "es": "dinar bahreiní",
+      "ru": "бахрейнский динар",
+      "kk": "Бахрейн динары"
+    },
+    "subunit": "Fils",
+    "flag": "🇧🇭"
+  },
+  {
+    "code": "BIF",
+    "name": {
+      "de": "Burundi-Franc",
+      "en": "Burundi franc",
+      "fr": "franc burundais",
+      "es": "franco burundés",
+      "ru": "бурундийский франк",
+      "kk": "Бурунди франкі"
+    },
+    "subunit": "Centime",
+    "flag": "🇧🇮"
+  },
+  {
+    "code": "BMD",
+    "name": {
+      "de": "Bermuda-Dollar",
+      "en": "Bermuda dollar",
+      "fr": "dollar bermudien",
+      "es": "dólar de Bermudas",
+      "ru": "бермудский доллар",
+      "kk": "Бермуд доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇧🇲"
+  },
+  {
+    "code": "BND",
+    "name": {
+      "de": "Brunei-Dollar",
+      "en": "Brunei dollar",
+      "fr": "dollar brunéien",
+      "es": "dólar bruneano",
+      "ru": "брунейский доллар",
+      "kk": "Бруней доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇧🇳"
+  },
+  {
+    "code": "BOB",
+    "name": {
+      "de": "Boliviano",
+      "en": "boliviano",
+      "fr": "boliviano bolivien",
+      "es": "boliviano",
+      "ru": "боливийский боливиано",
+      "kk": "Боливия боливианосы"
+    },
+    "subunit": "Centavo",
+    "symbol": "$b",
+    "flag": "🇧🇴"
+  },
+  {
+    "code": "BRL",
+    "name": {
+      "de": "Real",
+      "en": "real",
+      "fr": "réal brésilien",
+      "es": "real brasileño",
+      "ru": "бразильский реал",
+      "kk": "Бразилия реалы"
+    },
+    "subunit": "Centavo",
+    "symbol": "R$",
+    "flag": "🇧🇷"
+  },
+  {
+    "code": "BSD",
+    "name": {
+      "de": "Bahama-Dollar",
+      "en": "Bahamian dollar",
+      "fr": "dollar bahaméen",
+      "es": "dólar bahameño",
+      "ru": "багамский доллар",
+      "kk": "Багам доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇧🇸"
+  },
+  {
+    "code": "BTN",
+    "name": {
+      "de": "Ngultrum",
+      "en": "ngultrum",
+      "fr": "ngultrum bouthanais",
+      "es": "gultrum",
+      "ru": "бутанский нгултрум",
+      "kk": "Бутан нгултрумы"
+    },
+    "subunit": "Chhetrum",
+    "flag": "🇧🇹"
+  },
+  {
+    "code": "BWP",
+    "name": {
+      "de": "Pula",
+      "en": "pula",
+      "fr": "pula botswanais",
+      "es": "pula",
+      "ru": "ботсванская пула",
+      "kk": "Ботсвана пуласы"
+    },
+    "subunit": "Thebe",
+    "symbol": "P",
+    "flag": "🇧🇼"
+  },
+  {
+    "code": "BYN",
+    "name": {
+      "de": "belarussischer Rubel",
+      "en": "Belarusian rouble",
+      "fr": "rouble biélorusse",
+      "es": "rublo bielorruso",
+      "ru": "белорусский рубль",
+      "kk": "Беларусь рублі"
+    },
+    "subunit": "Kupeke",
+    "symbol": "Br",
+    "flag": "🇧🇾"
+  },
+  {
+    "code": "BZD",
+    "name": {
+      "de": "Belize-Dollar",
+      "en": "Belize dollar",
+      "fr": "dollar bélizéen",
+      "es": "dólar beliceño",
+      "ru": "белизский доллар",
+      "kk": "Белиз доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "BZ$",
+    "flag": "🇧🇿"
+  },
+  {
+    "code": "CAD",
+    "name": {
+      "de": "kanadischer Dollar",
+      "en": "Canadian dollar",
+      "fr": "dollar canadien",
+      "es": "dólar canadiense",
+      "ru": "канадский доллар",
+      "kk": "Канада доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇨🇦"
+  },
+  {
+    "code": "CDF",
+    "name": {
+      "de": "Kongo-Franc",
+      "en": "Congolese franc",
+      "fr": "franc congolais",
+      "es": "franco congoleño",
+      "ru": "конголезский франк",
+      "kk": "Конго франкі"
+    },
+    "subunit": "Centime",
+    "flag": "🇨🇩"
+  },
+  {
+    "code": "XAF",
+    "name": {
+      "de": "CFA-Franc (BEAC)",
+      "en": "CFA franc",
+      "fr": "franc CFA (BEAC)",
+      "es": "franco CFA de África Central",
+      "ru": "франк КФА BEAC",
+      "kk": "КФА ВЕАС франкі"
+    },
+    "subunit": "Centime",
+    "flag": null
+  },
+  {
+    "code": "CLP",
+    "name": {
+      "de": "chilenischer Peso",
+      "en": "Chilean peso",
+      "fr": "peso chilien",
+      "es": "peso chileno",
+      "ru": "чилийский песо",
+      "kk": "Чили песосы"
+    },
+    "subunit": "Centavo",
+    "symbol": "$",
+    "flag": "🇨🇱"
+  },
+  {
+    "code": "COP",
+    "name": {
+      "de": "kolumbianischer Peso",
+      "en": "Colombian peso",
+      "fr": "peso colombien",
+      "es": "peso colombiano",
+      "ru": "колумбийский песо",
+      "kk": "Колумбия песосы"
+    },
+    "subunit": "Centavo",
+    "symbol": "$",
+    "flag": "🇨🇴"
+  },
+  {
+    "code": "CRC",
+    "name": {
+      "de": "Costa-Rica-Colón",
+      "en": "Costa Rican colón",
+      "fr": "colón costaricain",
+      "es": "colón costarricense",
+      "ru": "костариканский колон",
+      "kk": "Коста-Рика колоны"
+    },
+    "subunit": "Céntimo",
+    "symbol": "₡",
+    "flag": "🇨🇷"
+  },
+  {
+    "code": "CUP",
+    "name": {
+      "de": "kubanischer Peso",
+      "en": "Cuban peso",
+      "fr": "peso cubain",
+      "es": "peso cubano",
+      "ru": "кубинский песо",
+      "kk": "Куба песосы"
+    },
+    "subunit": "Centavo",
+    "symbol": "₱",
+    "flag": "🇨🇺"
+  },
+  {
+    "code": "CVE",
+    "name": {
+      "de": "Cabo-Verde-Escudo",
+      "en": "Cabo Verde escudo",
+      "fr": "escudo capverdien",
+      "es": "escudo de Cabo Verde",
+      "ru": "эскудо Кабо-Верде",
+      "kk": "Кабо-Верде эскудосы"
+    },
+    "subunit": "Centavo",
+    "flag": "🇨🇻"
+  },
+  {
+    "code": "ANG",
+    "name": {
+      "de": "Niederländische-Antillen-Gulden",
+      "en": "Netherlands Antillean guilder",
+      "fr": "florin antillais",
+      "es": "florín de las Antillas Neerlandesas",
+      "ru": "нидерландский антильский гульден",
+      "kk": "Нидерланд антиль гульдені"
+    },
+    "subunit": "Cent",
+    "symbol": "ƒ",
+    "flag": null
+  },
+  {
+    "code": "CZK",
+    "name": {
+      "de": "tschechische Krone",
+      "en": "Czech koruna",
+      "fr": "couronne tchèque",
+      "es": "corona checa",
+      "ru": "чешская крона",
+      "kk": "Чехия кронасы"
+    },
+    "subunit": "Haléř",
+    "symbol": "Kč",
+    "flag": "🇨🇿"
+  },
+  {
+    "code": "DJF",
+    "name": {
+      "de": "Dschibuti-Franc",
+      "en": "Djibouti franc",
+      "fr": "franc djiboutien",
+      "es": "franco yibutiano",
+      "ru": "франк Джибути",
+      "kk": "Джибути франкі"
+    },
+    "flag": "🇩🇯"
+  },
+  {
+    "code": "DKK",
+    "name": {
+      "de": "dänische Krone",
+      "en": "Danish krone",
+      "fr": "couronne danoise",
+      "es": "corona danesa",
+      "ru": "датская крона",
+      "kk": "Дат кроны"
+    },
+    "subunit": "Øre",
+    "symbol": "kr",
+    "flag": "🇩🇰"
+  },
+  {
+    "code": "DOP",
+    "name": {
+      "de": "dominikanischer Peso",
+      "en": "Dominican peso",
+      "fr": "peso dominicain",
+      "es": "peso dominicano",
+      "ru": "доминиканский песо",
+      "kk": "Доминикан песосы"
+    },
+    "subunit": "Centavo",
+    "symbol": "RD$",
+    "flag": "🇩🇴"
+  },
+  {
+    "code": "DZD",
+    "name": {
+      "de": "algerischer Dinar",
+      "en": "Algerian dinar",
+      "fr": "dinar algérien",
+      "es": "dinar argelino",
+      "ru": "алжирский динар",
+      "kk": "Алжир динары"
+    },
+    "subunit": "Centime",
+    "flag": "🇩🇿"
+  },
+  {
+    "code": "EGP",
+    "name": {
+      "de": "ägyptisches Pfund",
+      "en": "Egyptian pound",
+      "fr": "livre égyptienne",
+      "es": "libra egipcia",
+      "ru": "египетский фунт",
+      "kk": "Мысыр фунты"
+    },
+    "subunit": "Piaster",
+    "symbol": "£",
+    "flag": "🇪🇬"
+  },
+  {
+    "code": "MAD",
+    "name": {
+      "de": "marokkanischer Dirham",
+      "en": "Moroccan dirham",
+      "fr": "dirham marocain",
+      "es": "dírham marroquí",
+      "ru": "марокканский дирхам",
+      "kk": "Марокко дирхамы"
+    },
+    "subunit": "Centime",
+    "flag": "🇲🇦"
+  },
+  {
+    "code": "ERN",
+    "name": {
+      "de": "Nakfa",
+      "en": "nakfa",
+      "fr": "nafka érythréen",
+      "es": "nakfa",
+      "ru": "эритрейская накфа",
+      "kk": "Эритрея накфасы"
+    },
+    "subunit": "Cent",
+    "flag": "🇪🇷"
+  },
+  {
+    "code": "ETB",
+    "name": {
+      "de": "Birr",
+      "en": "birr",
+      "fr": "birr éthiopien",
+      "es": "bir",
+      "ru": "эфиопский быр",
+      "kk": "Эфиопия быры"
+    },
+    "subunit": "Cent",
+    "flag": "🇪🇹"
+  },
+  {
+    "code": "FJD",
+    "name": {
+      "de": "Fidschi-Dollar",
+      "en": "Fiji dollar",
+      "fr": "dollar fidjien",
+      "es": "dólar fiyiano",
+      "ru": "доллар Фиджи",
+      "kk": "Фиджи доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇫🇯"
+  },
+  {
+    "code": "FKP",
+    "name": {
+      "de": "Falkland-Pfund",
+      "en": "Falkland Islands pound",
+      "fr": "livre des îles Malouines",
+      "es": "libra malvinense",
+      "ru": "фунт Фолклендских островов",
+      "kk": "Фолкленд аралдарының фунты"
+    },
+    "subunit": "Penny",
+    "symbol": "£",
+    "flag": "🇫🇰"
+  },
+  {
+    "code": "GEL",
+    "name": {
+      "de": "Lari",
+      "en": "lari",
+      "fr": "lari géorgien",
+      "es": "lari",
+      "ru": "грузинский лари",
+      "kk": "Грузия лариі"
+    },
+    "subunit": "Tetri",
+    "symbol": "₾",
+    "flag": "🇬🇪"
+  },
+  {
+    "code": "GHS",
+    "name": {
+      "de": "Ghana Cedi",
+      "en": "Ghana cedi",
+      "fr": "cédi ghanéen",
+      "es": "cedi",
+      "ru": "ганский седи",
+      "kk": "Гана седиі"
+    },
+    "subunit": "Pesewa",
+    "symbol": "¢",
+    "flag": "🇬🇭"
+  },
+  {
+    "code": "GIP",
+    "name": {
+      "de": "Gibraltar-Pfund",
+      "en": "Gibraltar pound",
+      "fr": "livre de Gibraltar",
+      "es": "libra gibraltareña",
+      "ru": "гибралтарский фунт",
+      "kk": "Гибралтар фунты"
+    },
+    "subunit": "Penny",
+    "symbol": "£",
+    "flag": "🇬🇮"
+  },
+  {
+    "code": "GMD",
+    "name": {
+      "de": "Dalasi",
+      "en": "dalasi",
+      "fr": "dalasi gambien",
+      "es": "dalasi",
+      "ru": "гамбийский даласи",
+      "kk": "Гамбия даласиі"
+    },
+    "subunit": "Butut",
+    "flag": "🇬🇲"
+  },
+  {
+    "code": "GNF",
+    "name": {
+      "de": "Guinea-Franc",
+      "en": "Guinean franc",
+      "fr": "franc guinéen",
+      "es": "franco guineano",
+      "ru": "гвинейский франк",
+      "kk": "Гвинея франкі"
+    },
+    "flag": "🇬🇳"
+  },
+  {
+    "code": "GTQ",
+    "name": {
+      "de": "Quetzal",
+      "en": "quetzal",
+      "fr": "quetzal guatémaltèque",
+      "es": "quetzal guatemalteco",
+      "ru": "гватемальский кетсаль",
+      "kk": "Гватемала кетсалі"
+    },
+    "subunit": "Centavo",
+    "symbol": "Q",
+    "flag": "🇬🇹"
+  },
+  {
+    "code": "GYD",
+    "name": {
+      "de": "Guyana-Dollar",
+      "en": "Guyana dollar",
+      "fr": "dollar du Guyana",
+      "es": "dólar guyanés",
+      "ru": "гайанский доллар",
+      "kk": "Гайана доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇬🇾"
+  },
+  {
+    "code": "HNL",
+    "name": {
+      "de": "Lempira",
+      "en": "lempira",
+      "fr": "lempira hondurien",
+      "es": "lempira hondureño",
+      "ru": "гондурасская лемпира",
+      "kk": "Гондурас лемпирасы"
+    },
+    "subunit": "Centavo",
+    "symbol": "L",
+    "flag": "🇭🇳"
+  },
+  {
+    "code": "HTG",
+    "name": {
+      "de": "Gourde",
+      "en": "gourde",
+      "fr": "gourde haïtienne",
+      "es": "gourde haitiano",
+      "ru": "гаитянский гурд",
+      "kk": "Гаити гурды"
+    },
+    "subunit": "Centime",
+    "flag": "🇭🇹"
+  },
+  {
+    "code": "HUF",
+    "name": {
+      "de": "Forint",
+      "en": "forint",
+      "fr": "forint hongrois",
+      "es": "forinto húngaro",
+      "ru": "венгерский форинт",
+      "kk": "Венгрия форинті"
+    },
+    "symbol": "Ft",
+    "flag": "🇭🇺"
+  },
+  {
+    "code": "ILS",
+    "name": {
+      "de": "Schekel",
+      "en": "shekel",
+      "fr": "nouveau shekel israélien",
+      "es": "nuevo séquel israelí",
+      "ru": "новый израильский шекель",
+      "kk": "Израиль жаңа шекелі"
+    },
+    "subunit": "Agora",
+    "symbol": "₪",
+    "flag": "🇮🇱"
+  },
+  {
+    "code": "IQD",
+    "name": {
+      "de": "Irak-Dinar",
+      "en": "Iraqi dinar",
+      "fr": "dinar irakien",
+      "es": "dinar iraquí",
+      "ru": "иракский динар",
+      "kk": "Ирак динары"
+    },
+    "subunit": "Fils",
+    "flag": "🇮🇶"
+  },
+  {
+    "code": "IRR",
+    "name": {
+      "de": "iranischer Rial",
+      "en": "Iranian rial",
+      "fr": "riyal iranien",
+      "es": "rial iraní",
+      "ru": "иранский риал",
+      "kk": "Иран риалы"
+    },
+    "symbol": "﷼",
+    "flag": "🇮🇷"
+  },
+  {
+    "code": "ISK",
+    "name": {
+      "de": "isländische Krone",
+      "en": "króna",
+      "fr": "couronne islandaise",
+      "es": "corona islandesa",
+      "ru": "исландская крона",
+      "kk": "Исландия кронасы"
+    },
+    "symbol": "kr",
+    "flag": "🇮🇸"
+  },
+  {
+    "code": "JMD",
+    "name": {
+      "de": "Jamaika-Dollar",
+      "en": "Jamaica dollar",
+      "fr": "dollar jamaïcain",
+      "es": "dólar jamaicano",
+      "ru": "ямайский доллар",
+      "kk": "Ямайка доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "J$",
+    "flag": "🇯🇲"
+  },
+  {
+    "code": "JOD",
+    "name": {
+      "de": "Jordan-Dinar",
+      "en": "Jordanian dinar",
+      "fr": "dinar jordanien",
+      "es": "dinar jordano",
+      "ru": "иорданский динар",
+      "kk": "Иордания динары"
+    },
+    "subunit": "Piaster",
+    "flag": "🇯🇴"
+  },
+  {
+    "code": "JPY",
+    "name": {
+      "de": "Yen",
+      "en": "yen",
+      "fr": "yen japonais",
+      "es": "yen",
+      "ru": "японская иена",
+      "kk": "Жапония иенасы"
+    },
+    "symbol": "¥",
+    "flag": "🇯🇵"
+  },
+  {
+    "code": "KES",
+    "name": {
+      "de": "Kenia-Schilling",
+      "en": "Kenyan shilling",
+      "fr": "shilling kényan",
+      "es": "chelín keniano",
+      "ru": "кенийский шиллинг",
+      "kk": "Кения шиллингі"
+    },
+    "subunit": "Cent",
+    "flag": "🇰🇪"
+  },
+  {
+    "code": "KGS",
+    "name": {
+      "de": "Som",
+      "en": "som",
+      "fr": "som kirghize",
+      "es": "som",
+      "ru": "киргизский сом",
+      "kk": "Қырғызстан сомы"
+    },
+    "subunit": "Tyin",
+    "symbol": "лв",
+    "flag": "🇰🇬"
+  },
+  {
+    "code": "KHR",
+    "name": {
+      "de": "Riel",
+      "en": "riel",
+      "fr": "riel cambodgien",
+      "es": "riel",
+      "ru": "камбоджийский риель",
+      "kk": "Камбоджа риелі"
+    },
+    "symbol": "៛",
+    "flag": "🇰🇭"
+  },
+  {
+    "code": "KMF",
+    "name": {
+      "de": "Komoren-Franc",
+      "en": "Comorian franc",
+      "fr": "franc comorien",
+      "es": "franco comorense",
+      "ru": "коморский франк",
+      "kk": "Комор аралдары франкі"
+    },
+    "flag": "🇰🇲"
+  },
+  {
+    "code": "KPW",
+    "name": {
+      "de": "nordkoreanischer Won",
+      "en": "North Korean won",
+      "fr": "won nord-coréen",
+      "es": "won norcoreano",
+      "ru": "северокорейская вона",
+      "kk": "Солтүстік Корея воны"
+    },
+    "subunit": "Chon",
+    "symbol": "₩",
+    "flag": "🇰🇵"
+  },
+  {
+    "code": "KRW",
+    "name": {
+      "de": "südkoreanischer Won",
+      "en": "South Korean won",
+      "fr": "won sud-coréen",
+      "es": "won surcoreano",
+      "ru": "южнокорейская вона",
+      "kk": "Оңтүстік Корея воны"
+    },
+    "symbol": "₩",
+    "flag": "🇰🇷"
+  },
+  {
+    "code": "KWD",
+    "name": {
+      "de": "Kuwait-Dinar",
+      "en": "Kuwaiti dinar",
+      "fr": "dinar koweïtien",
+      "es": "dinar kuwaití",
+      "ru": "кувейтский динар",
+      "kk": "Кувейт динары"
+    },
+    "subunit": "Fils",
+    "flag": "🇰🇼"
+  },
+  {
+    "code": "KYD",
+    "name": {
+      "de": "Kaiman-Dollar",
+      "en": "Cayman Islands dollar",
+      "fr": "dollar des îles Caïmans",
+      "es": "dólar de las Islas Caimán",
+      "ru": "доллар Островов Кайман",
+      "kk": "Кайман аралдары доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇰🇾"
+  },
+  {
+    "code": "KZT",
+    "name": {
+      "de": "Tenge",
+      "en": "tenge",
+      "fr": "tenge kazakh",
+      "es": "tenge kazako",
+      "ru": "казахский тенге",
+      "kk": "Қазақстан теңгесі"
+    },
+    "subunit": "Tyin",
+    "symbol": "лв",
+    "flag": "🇰🇿"
+  },
+  {
+    "code": "LAK",
+    "name": {
+      "de": "Kip",
+      "en": "kip",
+      "fr": "kip loatien",
+      "es": "kip",
+      "ru": "лаосский кип",
+      "kk": "Лаос кипі"
+    },
+    "symbol": "₭",
+    "flag": "🇱🇦"
+  },
+  {
+    "code": "LBP",
+    "name": {
+      "de": "libanesisches Pfund",
+      "en": "Lebanese pound",
+      "fr": "livre libanaise",
+      "es": "libra libanesa",
+      "ru": "ливанский фунт",
+      "kk": "Ливан фунты"
+    },
+    "symbol": "£",
+    "flag": "🇱🇧"
+  },
+  {
+    "code": "LKR",
+    "name": {
+      "de": "Sri-Lanka-Rupie",
+      "en": "Sri Lankan rupee",
+      "fr": "roupie srilankaise",
+      "es": "rupia esrilanquesa",
+      "ru": "шри-ланкийская рупия",
+      "kk": "Шри-Ланка рупиясы"
+    },
+    "subunit": "Sri-Lanka-Cent",
+    "symbol": "₨",
+    "flag": "🇱🇰"
+  },
+  {
+    "code": "LRD",
+    "name": {
+      "de": "liberianischer Dollar",
+      "en": "Liberian dollar",
+      "fr": "dollar libérien",
+      "es": "dólar liberiano",
+      "ru": "либерийский доллар",
+      "kk": "Либерия доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇱🇷"
+  },
+  {
+    "code": "LSL",
+    "name": {
+      "de": "Loti",
+      "en": "loti",
+      "fr": "loti lesothan",
+      "es": "loti lesothense",
+      "ru": "Лоти",
+      "kk": "Лесото лотиси"
+    },
+    "subunit": "Sente",
+    "flag": "🇱🇸"
+  },
+  {
+    "code": "LYD",
+    "name": {
+      "de": "libyscher Dinar",
+      "en": "Libyan dinar",
+      "fr": "dinar libyen",
+      "es": "dinar libio",
+      "ru": "ливийский динар",
+      "kk": "Ливия динары"
+    },
+    "subunit": "Dirham",
+    "flag": "🇱🇾"
+  },
+  {
+    "code": "MDL",
+    "name": {
+      "de": "Moldau-Leu",
+      "en": "Moldovan leu",
+      "fr": "leu moldave",
+      "es": "leu moldavo",
+      "ru": "молдавский лей",
+      "kk": "Молдова лейі"
+    },
+    "subunit": "Ban",
+    "flag": "🇲🇩"
+  },
+  {
+    "code": "MGA",
+    "name": {
+      "de": "Ariary",
+      "en": "ariary",
+      "fr": "ariary malgache",
+      "es": "ariari",
+      "ru": "малагасийский ариари",
+      "kk": "Малагаси ариариі"
+    },
+    "subunit": "Iraimbilanja",
+    "flag": "🇲🇬"
+  },
+  {
+    "code": "MKD",
+    "name": {
+      "de": "Denar",
+      "en": "denar",
+      "fr": "denar macédonien",
+      "es": "dinar macedonio",
+      "ru": "македонский денар",
+      "kk": "Македония динары"
+    },
+    "subunit": "Denimazedonisch",
+    "symbol": "ден",
+    "flag": "🇲🇰"
+  },
+  {
+    "code": "MMK",
+    "name": {
+      "de": "Kyat",
+      "en": "kyat",
+      "fr": "kyat myanmarais",
+      "es": "kiat",
+      "ru": "мьянманский кьят",
+      "kk": "Мьянма кьяты"
+    },
+    "subunit": "Pya",
+    "flag": "🇲🇲"
+  },
+  {
+    "code": "MNT",
+    "name": {
+      "de": "Tugrik",
+      "en": "tugrik",
+      "fr": "tugrik mongol",
+      "es": "tugrik",
+      "ru": "монгольский тугрик",
+      "kk": "Моңғолия тугригі"
+    },
+    "subunit": "Möngö",
+    "symbol": "₮",
+    "flag": "🇲🇳"
+  },
+  {
+    "code": "MOP",
+    "name": {
+      "de": "Pataca",
+      "en": "pataca",
+      "fr": "pataca macanaise",
+      "es": "pataca de Macao",
+      "ru": "патака Макао",
+      "kk": "Макао патакасы"
+    },
+    "subunit": "Avo",
+    "flag": "🇲🇴"
+  },
+  {
+    "code": "MRU",
+    "name": {
+      "de": "Ouguiya",
+      "en": "ouguiya",
+      "fr": "ouguiya mauritanien",
+      "es": "uguiya",
+      "ru": "мавританская угия",
+      "kk": "Мавритания угиясы"
+    },
+    "subunit": "Khoum",
+    "flag": "🇲🇷"
+  },
+  {
+    "code": "MUR",
+    "name": {
+      "de": "Mauritius-Rupie",
+      "en": "Mauritian rupee",
+      "fr": "roupie mauricienne",
+      "es": "rupia mauriciana",
+      "ru": "маврикийская рупия",
+      "kk": "Маврикий рупиясы"
+    },
+    "subunit": "Cent",
+    "symbol": "₨",
+    "flag": "🇲🇺"
+  },
+  {
+    "code": "MVR",
+    "name": {
+      "de": "Rufiyaa",
+      "en": "rufiyaa",
+      "fr": "rufiyaa maldivien",
+      "es": "rufiya",
+      "ru": "мальдивская руфия",
+      "kk": "Мальдив руфиясы"
+    },
+    "subunit": "Laari",
+    "flag": "🇲🇻"
+  },
+  {
+    "code": "MWK",
+    "name": {
+      "de": "Malawi-Kwacha",
+      "en": "Malawian kwacha",
+      "fr": "kwacha malawite",
+      "es": "kuacha malauí",
+      "ru": "малавийская квача",
+      "kk": "Малави квачасы"
+    },
+    "subunit": "Tambala",
+    "flag": "🇲🇼"
+  },
+  {
+    "code": "MXN",
+    "name": {
+      "de": "mexikanischer Peso",
+      "en": "Mexican peso",
+      "fr": "peso mexicain",
+      "es": "peso mexicano",
+      "ru": "мексиканский песо",
+      "kk": "Мексика песосы"
+    },
+    "subunit": "Centavo",
+    "symbol": "$",
+    "flag": "🇲🇽"
+  },
+  {
+    "code": "MYR",
+    "name": {
+      "de": "Ringgit",
+      "en": "ringgit",
+      "fr": "ringgit malais",
+      "es": "ringit",
+      "ru": "малайзийский ринггит",
+      "kk": "Малайзия ринггиті"
+    },
+    "subunit": "Sen",
+    "symbol": "RM",
+    "flag": "🇲🇾"
+  },
+  {
+    "code": "MZN",
+    "name": {
+      "de": "Metical",
+      "en": "metical",
+      "fr": "metical mozambicain",
+      "es": "metical",
+      "ru": "мозамбикский метикал",
+      "kk": "Мозамбик метикалы"
+    },
+    "subunit": "Centavo",
+    "symbol": "MT",
+    "flag": "🇲🇿"
+  },
+  {
+    "code": "NAD",
+    "name": {
+      "de": "Namibia-Dollar",
+      "en": "Namibian dollar",
+      "fr": "dollar namibien",
+      "es": "dólar namibio",
+      "ru": "доллар Намибии",
+      "kk": "Намибия доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇳🇦"
+  },
+  {
+    "code": "XPF",
+    "name": {
+      "de": "CFP-Franc",
+      "en": "CFP franc",
+      "fr": "franc CFP",
+      "es": "franco CFP",
+      "ru": "французский тихоокеанский франк",
+      "kk": "КФП франкі"
+    },
+    "subunit": "Centime",
+    "flag": null
+  },
+  {
+    "code": "NGN",
+    "name": {
+      "de": "Naira",
+      "en": "naira",
+      "fr": "naira nigérian",
+      "es": "naira",
+      "ru": "нигерийская найра",
+      "kk": "Нигерия найрасы"
+    },
+    "subunit": "Kobo",
+    "symbol": "₦",
+    "flag": "🇳🇬"
+  },
+  {
+    "code": "NIO",
+    "name": {
+      "de": "Córdoba Oro",
+      "en": "córdoba oro",
+      "fr": "córdoba oro nicaraguayen",
+      "es": "córdoba nicaragüense",
+      "ru": "никарагуанская кордоба",
+      "kk": "Никарагуа кордобасы"
+    },
+    "subunit": "Centavo",
+    "symbol": "C$",
+    "flag": "🇳🇮"
+  },
+  {
+    "code": "NOK",
+    "name": {
+      "de": "norwegische Krone",
+      "en": "Norwegian krone",
+      "fr": "couronne norvégienne",
+      "es": "corona noruega",
+      "ru": "норвежская крона",
+      "kk": "Норвегия кроны"
+    },
+    "subunit": "Øre",
+    "symbol": "kr",
+    "flag": "🇳🇴"
+  },
+  {
+    "code": "NPR",
+    "name": {
+      "de": "nepalesische Rupie",
+      "en": "Nepalese rupee",
+      "fr": "roupie népalaise",
+      "es": "rupia nepalí",
+      "ru": "непальская рупия",
+      "kk": "Непал рупиясы"
+    },
+    "subunit": "Paisa; Mohur",
+    "symbol": "₨",
+    "flag": "🇳🇵"
+  },
+  {
+    "code": "OMR",
+    "name": {
+      "de": "Omani-Rial",
+      "en": "Omani rial",
+      "fr": "riyal omanais",
+      "es": "rial omaní",
+      "ru": "оманский риал",
+      "kk": "Оман риалы"
+    },
+    "subunit": "Baiza",
+    "symbol": "﷼",
+    "flag": "🇴🇲"
+  },
+  {
+    "code": "PAB",
+    "name": {
+      "de": "Balboa",
+      "en": "balboa",
+      "fr": "balboa panaméen",
+      "es": "balboa panameño",
+      "ru": "панамский бальбоа",
+      "kk": "Панама бальбоасы"
+    },
+    "subunit": "Centésimo",
+    "symbol": "B/.",
+    "flag": "🇵🇦"
+  },
+  {
+    "code": "PEN",
+    "name": {
+      "de": "Sol",
+      "en": "sol",
+      "fr": "sol péruvien",
+      "es": "sol peruano",
+      "ru": "перуанский соль",
+      "kk": "Перу солі"
+    },
+    "subunit": "Céntimo",
+    "symbol": "S/.",
+    "flag": "🇵🇪"
+  },
+  {
+    "code": "PGK",
+    "name": {
+      "de": "Kina",
+      "en": "kina",
+      "fr": "kina papouan-néo-guinéen",
+      "es": "kina",
+      "ru": "кина Папуа – Новой Гвинеи",
+      "kk": "Папуа - Жаңа Гвинея кинасы"
+    },
+    "subunit": "Toea",
+    "flag": "🇵🇬"
+  },
+  {
+    "code": "PHP",
+    "name": {
+      "de": "philippinischer Peso",
+      "en": "Philippine peso",
+      "fr": "peso philippin",
+      "es": "peso filipino",
+      "ru": "филиппинский песо",
+      "kk": "Филиппин песосы"
+    },
+    "subunit": "Centavo",
+    "symbol": "₱",
+    "flag": "🇵🇭"
+  },
+  {
+    "code": "PKR",
+    "name": {
+      "de": "pakistanische Rupie",
+      "en": "Pakistani rupee",
+      "fr": "roupie pakistanaise",
+      "es": "rupia pakistaní",
+      "ru": "пакистанская рупия",
+      "kk": "Пәкістан рупиясы"
+    },
+    "subunit": "Paisa",
+    "symbol": "₨",
+    "flag": "🇵🇰"
+  },
+  {
+    "code": "PLN",
+    "name": {
+      "de": "Zloty",
+      "en": "zloty",
+      "fr": "zloty polonais",
+      "es": "esloti",
+      "ru": "польский злотый",
+      "kk": "Польша злотасы"
+    },
+    "subunit": "Grosz",
+    "symbol": "zł",
+    "flag": "🇵🇱"
+  },
+  {
+    "code": "PYG",
+    "name": {
+      "de": "Guarani",
+      "en": "guaraní",
+      "fr": "guaraní paraguayen",
+      "es": "guaraní paraguayo",
+      "ru": "парагвайский гуарани",
+      "kk": "Парагвай гуараниі"
+    },
+    "subunit": "Céntimo",
+    "symbol": "Gs",
+    "flag": "🇵🇾"
+  },
+  {
+    "code": "QAR",
+    "name": {
+      "de": "Katar-Riyal",
+      "en": "Qatari riyal",
+      "fr": "riyal qatari",
+      "es": "rial catarí",
+      "ru": "катарский риал",
+      "kk": "Катар риалы"
+    },
+    "subunit": "Dirham",
+    "symbol": "﷼",
+    "flag": "🇶🇦"
+  },
+  {
+    "code": "RON",
+    "name": {
+      "de": "rumänischer Leu",
+      "en": "Romanian leu",
+      "fr": "leu roumain",
+      "es": "leu rumano",
+      "ru": "румынский лей",
+      "kk": "Румыния лейі"
+    },
+    "subunit": "Ban",
+    "symbol": "lei",
+    "flag": "🇷🇴"
+  },
+  {
+    "code": "RSD",
+    "name": {
+      "de": "serbischer Dinar",
+      "en": "Serbian dinar",
+      "fr": "dinar serbe",
+      "es": "dinar serbio",
+      "ru": "сербский динар",
+      "kk": "Сербия динары"
+    },
+    "subunit": "Para",
+    "symbol": "Дин.",
+    "flag": "🇷🇸"
+  },
+  {
+    "code": "RUB",
+    "name": {
+      "de": "russischer Rubel",
+      "en": "Russian rouble",
+      "fr": "rouble russe",
+      "es": "rublo ruso",
+      "ru": "российский рубль",
+      "kk": "Ресей рублі"
+    },
+    "subunit": "Kopeke",
+    "symbol": "₽",
+    "flag": "🇷🇺"
+  },
+  {
+    "code": "RWF",
+    "name": {
+      "de": "Ruanda-Franc",
+      "en": "Rwandese franc",
+      "fr": "franc rwandais",
+      "es": "franco ruandés",
+      "ru": "франк Руанды",
+      "kk": "Руанда франкі"
+    },
+    "subunit": "Centime",
+    "flag": "🇷🇼"
+  },
+  {
+    "code": "SAR",
+    "name": {
+      "de": "Saudi-Riyal",
+      "en": "riyal",
+      "fr": "riyal saoudien",
+      "es": "rial saudí",
+      "ru": "саудовский риял",
+      "kk": "Сауд Арабиясының риалы"
+    },
+    "subunit": "Halala",
+    "symbol": "﷼",
+    "flag": "🇸🇦"
+  },
+  {
+    "code": "SBD",
+    "name": {
+      "de": "Salomonen-Dollar",
+      "en": "Solomon Islands dollar",
+      "fr": "dollar des îles Salomon",
+      "es": "dólar salomonense",
+      "ru": "доллар Соломоновых Островов",
+      "kk": "Соломон аралдары доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇸🇧"
+  },
+  {
+    "code": "SCR",
+    "name": {
+      "de": "Seychellen-Rupie",
+      "en": "Seychelles rupee",
+      "fr": "roupie des Seychelles",
+      "es": "rupia seychellense",
+      "ru": "сейшельская рупия",
+      "kk": "Сейшель рупиясы"
+    },
+    "subunit": "Cent",
+    "symbol": "₨",
+    "flag": "🇸🇨"
+  },
+  {
+    "code": "SDG",
+    "name": {
+      "de": "sudanesisches Pfund",
+      "en": "Sudanese pound",
+      "fr": "livre soudanaise",
+      "es": "libra sudanesa",
+      "ru": "суданский фунт",
+      "kk": "Судан фунты"
+    },
+    "subunit": "Piaster",
+    "flag": "🇸🇩"
+  },
+  {
+    "code": "SEK",
+    "name": {
+      "de": "schwedische Krone",
+      "en": "krona",
+      "fr": "couronne suédoise",
+      "es": "corona sueca",
+      "ru": "шведская крона",
+      "kk": "Швеция кроны"
+    },
+    "subunit": "Öre",
+    "symbol": "kr",
+    "flag": "🇸🇪"
+  },
+  {
+    "code": "SHP",
+    "name": {
+      "de": "St.-Helena-Pfund",
+      "en": "Saint Helena pound",
+      "fr": "livre de Sainte-Hélène",
+      "es": "libra de Santa Elena",
+      "ru": "фунт острова Святой Елены",
+      "kk": "Әулие Елена аралы фунты"
+    },
+    "subunit": "Penny",
+    "symbol": "£",
+    "flag": "🇸🇭"
+  },
+  {
+    "code": "SLE",
+    "name": {
+      "de": "Leone",
+      "en": "leone",
+      "fr": "Leone",
+      "es": "Leone",
+      "ru": "Леоне",
+      "kk": "Леоне"
+    },
+    "subunit": "Cent",
+    "flag": "🇸🇱"
+  },
+  {
+    "code": "SOS",
+    "name": {
+      "de": "Somalia-Schilling",
+      "en": "Somali shilling",
+      "fr": "shilling somalien",
+      "es": "chelín somalí",
+      "ru": "сомалийский шиллинг",
+      "kk": "Сомали шиллингі"
+    },
+    "subunit": "Cent",
+    "symbol": "S",
+    "flag": "🇸🇴"
+  },
+  {
+    "code": "SRD",
+    "name": {
+      "de": "Suriname-Dollar",
+      "en": "Surinamese dollar",
+      "fr": "dollar surinamais",
+      "es": "dólar surinamés",
+      "ru": "суринамский доллар",
+      "kk": "Суринам доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "$",
+    "flag": "🇸🇷"
+  },
+  {
+    "code": "SSP",
+    "name": {
+      "de": "südsudanesisches Pfund",
+      "en": "South Sudanese pound",
+      "fr": "livre sud-soudanaise",
+      "es": "libra sursudanesa",
+      "ru": "южносуданский фунт",
+      "kk": "Оңтүстік Судан фунты"
+    },
+    "subunit": "Piaster",
+    "flag": "🇸🇸"
+  },
+  {
+    "code": "STN",
+    "name": {
+      "de": "Dobra",
+      "en": "dobra",
+      "fr": "dobra santoméen",
+      "es": "dobra",
+      "ru": "добра Сан-Томе и Принсипи",
+      "kk": "Сант-Томе мен Принсипи добрасы"
+    },
+    "subunit": "Centime",
+    "flag": "🇸🇹"
+  },
+  {
+    "code": "SVC",
+    "name": {
+      "de": "El-Salvador-Colón",
+      "en": "Salvadorian colón",
+      "fr": "colón salvadorien",
+      "es": "colón salvadoreño",
+      "ru": "Сальвадорский колон",
+      "kk": "Сальвадор колон"
+    },
+    "subunit": "Centavo",
+    "symbol": "$",
+    "flag": "🇸🇻"
+  },
+  {
+    "code": "SYP",
+    "name": {
+      "de": "syrisches Pfund",
+      "en": "Syrian pound",
+      "fr": "livre syrienne",
+      "es": "libra siria",
+      "ru": "сирийский фунт",
+      "kk": "Сирия фунты"
+    },
+    "subunit": "Piastre",
+    "symbol": "£",
+    "flag": "🇸🇾"
+  },
+  {
+    "code": "SZL",
+    "name": {
+      "de": "Lilangeni",
+      "en": "lilangeni",
+      "fr": "lilangeni swazi",
+      "es": "lilangeni",
+      "ru": "свазилендский лилангени",
+      "kk": "Свазиленд лилангениі"
+    },
+    "subunit": "Cent",
+    "flag": "🇸🇿"
+  },
+  {
+    "code": "TJS",
+    "name": {
+      "de": "Somoni",
+      "en": "somoni",
+      "fr": "somoni tadjik",
+      "es": "somoni tayiko",
+      "ru": "таджикский сомони",
+      "kk": "Тәжікстан сомониі"
+    },
+    "subunit": "Diram",
+    "flag": "🇹🇯"
+  },
+  {
+    "code": "TMT",
+    "name": {
+      "de": "Turkmenistan-Manat",
+      "en": "Turkmen manat",
+      "fr": "nouveau manat turkmène",
+      "es": "manat turcomano",
+      "ru": "новый туркменский манат",
+      "kk": "Түрікменстан манаты"
+    },
+    "subunit": "Tenge",
+    "flag": "🇹🇲"
+  },
+  {
+    "code": "TND",
+    "name": {
+      "de": "tunesischer Dinar",
+      "en": "Tunisian dinar",
+      "fr": "dinar tunisien",
+      "es": "dinar tunecino",
+      "ru": "тунисский динар",
+      "kk": "Тунис динары"
+    },
+    "subunit": "Millime",
+    "flag": "🇹🇳"
+  },
+  {
+    "code": "TOP",
+    "name": {
+      "de": "Pa’anga",
+      "en": "pa’anga",
+      "fr": "pa’anga tongan",
+      "es": "paanga",
+      "ru": "тонганская паанга",
+      "kk": "Тонга паангасы"
+    },
+    "subunit": "Seniti",
+    "flag": "🇹🇴"
+  },
+  {
+    "code": "TTD",
+    "name": {
+      "de": "Trinidad-und-Tobago-Dollar",
+      "en": "Trinidad and Tobago dollar",
+      "fr": "dollar trinidadien",
+      "es": "dólar de Trinidad y Tobago",
+      "ru": "доллар Тринидада и Тобаго",
+      "kk": "Тринидад және Тобаго доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "TT$",
+    "flag": "🇹🇹"
+  },
+  {
+    "code": "TWD",
+    "name": {
+      "de": "neuer Taiwan-Dollar",
+      "en": "new Taiwan dollar",
+      "fr": "nouveau dollar taïwanais",
+      "es": "nuevo dólar taiwanés",
+      "ru": "новый тайваньский доллар",
+      "kk": "Жаңа Тайван доллары"
+    },
+    "subunit": "Cent",
+    "symbol": "NT$",
+    "flag": "🇹🇼"
+  },
+  {
+    "code": "TZS",
+    "name": {
+      "de": "Tansania-Schilling",
+      "en": "Tanzanian shilling",
+      "fr": "shilling tanzanien",
+      "es": "chelín tanzano",
+      "ru": "танзанийский шиллинг",
+      "kk": "Танзания шиллингі"
+    },
+    "subunit": "Cent",
+    "flag": "🇹🇿"
+  },
+  {
+    "code": "UAH",
+    "name": {
+      "de": "Griwna",
+      "en": "hryvnia",
+      "fr": "hryvnia ukrainienne",
+      "es": "grivna",
+      "ru": "украинская гривна",
+      "kk": "Украина гривнасы"
+    },
+    "subunit": "Kopeke",
+    "symbol": "₴",
+    "flag": "🇺🇦"
+  },
+  {
+    "code": "UGX",
+    "name": {
+      "de": "Uganda-Schilling",
+      "en": "Uganda shilling",
+      "fr": "shilling ougandais",
+      "es": "chelín ugandés",
+      "ru": "угандийский шиллинг",
+      "kk": "Уганда шиллингі"
+    },
+    "subunit": "Cent",
+    "flag": "🇺🇬"
+  },
+  {
+    "code": "UYU",
+    "name": {
+      "de": "uruguayischer Peso",
+      "en": "Uruguayan peso",
+      "fr": "peso uruguayen",
+      "es": "peso uruguayo",
+      "ru": "уругвайский песо",
+      "kk": "Уругвай песосы"
+    },
+    "subunit": "Centésimo",
+    "symbol": "$U",
+    "flag": "🇺🇾"
+  },
+  {
+    "code": "UZS",
+    "name": {
+      "de": "Sum",
+      "en": "sum",
+      "fr": "sum ouzbek",
+      "es": "sum",
+      "ru": "узбекский сум",
+      "kk": "Өзбекстан сомы"
+    },
+    "subunit": "Tiyin",
+    "symbol": "лв",
+    "flag": "🇺🇿"
+  },
+  {
+    "code": "VES",
+    "name": {
+      "de": "Bolívar Soberano",
+      "en": "bolívar soberano",
+      "fr": "bolivar vénézuélien",
+      "es": "bolívar venezolano",
+      "ru": "венесуэльский боливар",
+      "kk": "Венесуэла боливары"
+    },
+    "subunit": "Céntimo",
+    "flag": "🇻🇪"
+  },
+  {
+    "code": "VND",
+    "name": {
+      "de": "Dong",
+      "en": "dong",
+      "fr": "dông vietnamien",
+      "es": "dong",
+      "ru": "вьетнамский донг",
+      "kk": "Вьетнам донгі"
+    },
+    "symbol": "₫",
+    "flag": "🇻🇳"
+  },
+  {
+    "code": "VUV",
+    "name": {
+      "de": "Vatu",
+      "en": "vatu",
+      "fr": "vatu vanuatuan",
+      "es": "vatu",
+      "ru": "вату Вануату",
+      "kk": "Вануату ватуы"
+    },
+    "flag": "🇻🇺"
+  },
+  {
+    "code": "WST",
+    "name": {
+      "de": "Tala",
+      "en": "tala",
+      "fr": "tala samoan",
+      "es": "tala",
+      "ru": "самоанская тала",
+      "kk": "Самоа таласы"
+    },
+    "subunit": "Sene",
+    "flag": "🇼🇸"
+  },
+  {
+    "code": "YER",
+    "name": {
+      "de": "Jemen-Rial",
+      "en": "Yemeni rial",
+      "fr": "riyal yéménite",
+      "es": "rial yemení",
+      "ru": "йеменский риал",
+      "kk": "Йемен риалы"
+    },
+    "subunit": "Fils",
+    "symbol": "﷼",
+    "flag": "🇾🇪"
+  },
+  {
+    "code": "ZMW",
+    "name": {
+      "de": "sambischer Kwacha",
+      "en": "Zambian kwacha",
+      "fr": "kwacha zambien",
+      "es": "kuacha zambiano",
+      "ru": "замбийская квача",
+      "kk": "Замбия квачасы"
+    },
+    "subunit": "Ngwee",
+    "flag": "🇿🇲"
+  },
+  {
+    "code": "ZWL",
+    "name": {
+      "de": "Simbabwe-Dollar",
+      "en": "Zimbabwe dollar",
+      "fr": "dollar zimbabwéen",
+      "es": "dólar zimbabuense",
+      "ru": "Доллар Зимбабве",
+      "kk": "Зимбабве доллары"
+    },
+    "subunit": "Cent",
+    "flag": "🇿🇼"
+  }
+]
