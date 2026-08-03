@@ -15,10 +15,11 @@ import {
 import { mongo, QueryFilter, Types } from 'mongoose'
 import { BACKEND_CACHE } from '../db.js'
 import { createOperationServices } from '../factory.js'
-import { checkIfUserIsProjectSupervisor, documentFileHandler, fileHandler } from '../helper.js'
+import { assertUserHasBankAccount, checkIfUserIsProjectSupervisor, documentFileHandler, fileHandler } from '../helper.js'
 import i18n from '../i18n.js'
 import { emitIntegrationEvent } from '../integrations/dispatcher.js'
 import ExpenseReport, { ExpenseReportDoc } from '../models/expenseReport.js'
+import { removeFromProjectBalance, reverseAdvanceOffset } from '../models/helper.js'
 import User from '../models/user.js'
 import { createBookingExportPackage, getBookingExportPreview } from './bookingExport.js'
 import { Controller, checkOwner, GetterQuery, SetterBody } from './controller.js'
@@ -215,6 +216,7 @@ export class ExpenseReportController extends Controller {
       allowNew: false,
       async checkOldObject(oldObject: ExpenseReportDoc) {
         if (oldObject.owner._id.equals(request.user._id) && oldObject.state === ExpenseReportState.IN_WORK) {
+          assertUserHasBankAccount(request.user, request.user.settings.language)
           assertExpenseReportCanEnterReview(oldObject, request.user.settings.language)
           await oldObject.saveToHistory()
           return true
@@ -250,6 +252,18 @@ export class ExpenseReportController extends Controller {
       query: { limit: 5 },
       filter: { 'access.examine/expenseReport': true },
       projection: { name: 1, email: 1 }
+    })
+  }
+
+  @Post('comment')
+  public async postComment(@Body() requestBody: { _id: string; comment: string }, @Request() request: AuthenticatedExpressRequest) {
+    const extendedBody = Object.assign(requestBody, { editor: request.user._id })
+    return await this.setter(ExpenseReport, {
+      requestBody: extendedBody,
+      allowNew: false,
+      async checkOldObject(oldObject: ExpenseReportDoc) {
+        return !oldObject.historic && oldObject.owner._id.equals(request.user._id)
+      }
     })
   }
 }
@@ -403,7 +417,12 @@ export class ExpenseReportExamineController extends Controller {
       },
       allowNew: true,
       async checkOldObject(oldObject: ExpenseReportDoc) {
-        if (oldObject.state === ExpenseReportState.REVIEW_COMPLETED && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
+        if (
+          oldObject.state === ExpenseReportState.REVIEW_COMPLETED &&
+          checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
+        ) {
+          await removeFromProjectBalance(oldObject)
+          await reverseAdvanceOffset(oldObject, 'ExpenseReport')
           await oldObject.saveToHistory()
           return true
         }
@@ -438,7 +457,14 @@ export class ExpenseReportExamineController extends Controller {
         emitIntegrationEvent({ type: extendedBody._id ? 'report.back_to_in_work' : 'report.review_requested', report: e }),
       allowNew: true,
       async checkOldObject(oldObject: ExpenseReportDoc) {
-        if ((oldObject.state === ExpenseReportState.IN_REVIEW || oldObject.state === ExpenseReportState.REVIEW_COMPLETED) && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
+        if (
+          (oldObject.state === ExpenseReportState.IN_REVIEW || oldObject.state === ExpenseReportState.REVIEW_COMPLETED) &&
+          checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
+        ) {
+          if (oldObject.state === ExpenseReportState.REVIEW_COMPLETED) {
+            await removeFromProjectBalance(oldObject)
+            await reverseAdvanceOffset(oldObject, 'ExpenseReport')
+          }
           await oldObject.saveToHistory()
           return true
         }
@@ -509,6 +535,18 @@ export class ExpenseReportExamineController extends Controller {
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
     return Readable.from([report])
+  }
+
+  @Post('comment')
+  public async postComment(@Body() requestBody: { _id: string; comment: string }, @Request() request: AuthenticatedExpressRequest) {
+    const extendedBody = Object.assign(requestBody, { editor: request.user._id })
+    return await this.setter(ExpenseReport, {
+      requestBody: extendedBody,
+      allowNew: false,
+      async checkOldObject(oldObject: ExpenseReportDoc) {
+        return !oldObject.historic && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
+      }
+    })
   }
 }
 

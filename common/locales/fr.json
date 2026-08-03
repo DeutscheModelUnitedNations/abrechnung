@@ -45,6 +45,7 @@
     "isReadOnly": "Le système est en lecture seule !",
     "loginFailed": "Echec de connexion!",
     "mailSend": "E-mail envoyé.",
+    "missingBankAccount": "Veuillez renseigner vos coordonnées bancaires dans vos paramètres utilisateur avant de soumettre.",
     "negativeTotal": "Cette déclaration ne compense pas toutes les entrées négatives.",
     "noData": {
       "advanceForUserX": "Aucune avance approuvée pour '{X}'. Demandez-en une !",

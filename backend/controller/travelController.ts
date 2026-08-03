@@ -15,10 +15,11 @@ import {
 import { mongo, QueryFilter, Types } from 'mongoose'
 import { BACKEND_CACHE } from '../db.js'
 import { createOperationServices } from '../factory.js'
-import { checkIfUserIsProjectSupervisor, documentFileHandler, fileHandler } from '../helper.js'
+import { assertUserHasBankAccount, checkIfUserIsProjectSupervisor, documentFileHandler, fileHandler } from '../helper.js'
 import i18n from '../i18n.js'
 import { emitIntegrationEvent } from '../integrations/dispatcher.js'
 import ApprovedTravel from '../models/approvedTravel.js'
+import { removeFromProjectBalance, reverseAdvanceOffset } from '../models/helper.js'
 import Travel, { TravelDoc } from '../models/travel.js'
 import User from '../models/user.js'
 import { createBookingExportPackage, getBookingExportPreview } from './bookingExport.js'
@@ -221,7 +222,9 @@ export class TravelController extends Controller {
       async checkOldObject(oldObject: TravelDoc) {
         if (
           oldObject.owner._id.equals(request.user._id) &&
-          (oldObject.state === TravelState.APPROVED || oldObject.state === TravelState.IN_REVIEW || oldObject.state === TravelState.REVIEW_COMPLETED) &&
+          (oldObject.state === TravelState.APPROVED ||
+            oldObject.state === TravelState.IN_REVIEW ||
+            oldObject.state === TravelState.REVIEW_COMPLETED) &&
           oldObject.editor._id.equals(request.user._id)
         ) {
           await oldObject.saveToHistory()
@@ -245,6 +248,7 @@ export class TravelController extends Controller {
       allowNew: false,
       async checkOldObject(oldObject: TravelDoc) {
         if (oldObject.owner._id.equals(request.user._id) && oldObject.state === TravelState.APPROVED) {
+          assertUserHasBankAccount(request.user, request.user.settings.language)
           await assertTravelCanEnterReview(oldObject, request.user.settings.language)
           await oldObject.saveToHistory()
           return true
@@ -280,6 +284,18 @@ export class TravelController extends Controller {
       query: { limit: 5 },
       filter: { 'access.examine/travel': true },
       projection: { name: 1, email: 1 }
+    })
+  }
+
+  @Post('comment')
+  public async postComment(@Body() requestBody: { _id: string; comment: string }, @Request() request: AuthenticatedExpressRequest) {
+    const extendedBody = Object.assign(requestBody, { editor: request.user._id })
+    return await this.setter(Travel, {
+      requestBody: extendedBody,
+      allowNew: false,
+      async checkOldObject(oldObject: TravelDoc) {
+        return !oldObject.historic && oldObject.owner._id.equals(request.user._id)
+      }
     })
   }
 }
@@ -558,6 +574,10 @@ export class TravelExamineController extends Controller {
           (oldObject.state === TravelState.IN_REVIEW || oldObject.state === TravelState.REVIEW_COMPLETED) &&
           checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
         ) {
+          if (oldObject.state === TravelState.REVIEW_COMPLETED) {
+            await removeFromProjectBalance(oldObject)
+            await reverseAdvanceOffset(oldObject, 'Travel')
+          }
           await oldObject.saveToHistory()
           return true
         }
@@ -575,7 +595,14 @@ export class TravelExamineController extends Controller {
       allowNew: false,
       cb: (e: ITravel) => emitIntegrationEvent({ type: 'travel.back_to_approved', report: e }),
       async checkOldObject(oldObject: TravelDoc) {
-        if ((oldObject.state === TravelState.IN_REVIEW || oldObject.state === TravelState.REVIEW_COMPLETED) && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)) {
+        if (
+          (oldObject.state === TravelState.IN_REVIEW || oldObject.state === TravelState.REVIEW_COMPLETED) &&
+          checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
+        ) {
+          if (oldObject.state === TravelState.REVIEW_COMPLETED) {
+            await removeFromProjectBalance(oldObject)
+            await reverseAdvanceOffset(oldObject, 'Travel')
+          }
           await oldObject.saveToHistory()
           return true
         }
@@ -623,6 +650,18 @@ export class TravelExamineController extends Controller {
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
     return Readable.from([report])
+  }
+
+  @Post('comment')
+  public async postComment(@Body() requestBody: { _id: string; comment: string }, @Request() request: AuthenticatedExpressRequest) {
+    const extendedBody = Object.assign(requestBody, { editor: request.user._id })
+    return await this.setter(Travel, {
+      requestBody: extendedBody,
+      allowNew: false,
+      async checkOldObject(oldObject: TravelDoc) {
+        return !oldObject.historic && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
+      }
+    })
   }
 }
 

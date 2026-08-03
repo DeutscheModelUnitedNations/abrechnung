@@ -221,10 +221,16 @@
                 </small></div>
                 <div v-if="expenseReport.state <= State.BOOKABLE" class="mb-3">
                   <label for="comment" class="form-label">{{ t('labels.comment') }}</label>
-                  <CTextArea
-                    id="comment"
-                    v-model="expenseReport.comment as string | undefined"
-                    :disabled="isReadOnly && !(endpointPrefix === 'examine/' && expenseReport.state === State.IN_REVIEW)" />
+                  <CTextArea id="comment" v-model="expenseReport.comment as string | undefined" :disabled="!canComment" />
+                  <button
+                    v-if="canComment"
+                    type="button"
+                    class="btn btn-secondary mt-1"
+                    :disabled="!expenseReport.comment"
+                    @click="addComment()">
+                    <i class="bi bi-plus-lg"></i>
+                    <span class="ms-1">{{ t('labels.addX', { X: t('labels.comment') }) }}</span>
+                  </button>
                 </div>
                 <div v-if="endpointPrefix === 'examine/'" class="mb-3">
                   <label for="bookingRemark" class="form-label">{{ t('labels.bookingRemark') }}</label>
@@ -267,6 +273,7 @@
                       @click="expenseReport.editor._id !== expenseReport.owner._id && endpointPrefix !== 'examine/' ? null : backToinReview()"
                       :disabled="expenseReport.editor._id !== expenseReport.owner._id && endpointPrefix !== 'examine/'">
                       <i class="bi bi-arrow-counterclockwise"></i>
+                      <span class="ms-1">{{ t(endpointPrefix === 'examine/' ? 'labels.backToReviewer' : 'labels.editAgain') }}</span>
                     </button>
                   </div>
                 </template>
@@ -363,6 +370,9 @@ const isReadOnly = computed(() => {
       isReadOnlySwitchOn.value)
   )
 })
+const canComment = computed(
+  () => !isReadOnly.value || (props.endpointPrefix === 'examine/' && expenseReport.value.state === State.IN_REVIEW)
+)
 
 const reviewResults = ref<ValidationResult[]>([])
 const canEnterReview = computed(() => !reviewResults.value.some((issue: ValidationResult) => issue.severity === 'error'))
@@ -434,6 +444,16 @@ async function toExamination() {
   })
   if (result.ok) {
     router.push({ path: '/', hash: '#skip' })
+  }
+}
+
+async function addComment() {
+  const result = await API.setter<ExpenseReport<string>>(`${props.endpointPrefix}expenseReport/comment`, {
+    _id: expenseReport.value._id,
+    comment: expenseReport.value.comment
+  })
+  if (result.ok) {
+    setExpenseReport(result.ok)
   }
 }
 

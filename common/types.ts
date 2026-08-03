@@ -508,6 +508,7 @@ export interface Comment<idType extends _id = _id, State extends AnyState = AnyS
   text: string
   author: UserSimple<idType>
   toState: State
+  createdAt: Date | string
   _id: idType
 }
 
@@ -537,6 +538,7 @@ export type Log<idType extends _id = _id, S extends AnyState = AnyState> = {
 }
 interface ReportOwner<idType extends _id = _id> extends UserSimple<idType> {
   additionalDetails?: string | null
+  settings?: { bankAccount?: BankAccount | null }
 }
 
 export interface ReportSimple<idType extends _id = _id, S extends AnyState = AnyState> {

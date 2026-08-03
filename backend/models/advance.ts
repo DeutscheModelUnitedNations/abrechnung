@@ -9,7 +9,7 @@ import {
   reportModelNamesWithoutAdvance,
   State
 } from 'abrechnung-common/types.js'
-import { subtractAmounts } from 'abrechnung-common/utils/scripts.js'
+import { subtractAmounts, sumAmounts } from 'abrechnung-common/utils/scripts.js'
 import mongoose, { Document, HydratedDocument, Model, model, Query, Schema, Types } from 'mongoose'
 import { createOperationServices } from '../factory.js'
 import { setAdvanceBalance } from '../helper.js'
@@ -27,6 +27,11 @@ interface Methods {
     subject: string,
     session?: mongoose.ClientSession | null
   ): Promise<number>
+  reverseOffset(
+    reportModelName: ReportModelNameWithoutAdvance | 'offsetEntry',
+    reportId: Types.ObjectId,
+    session?: mongoose.ClientSession | null
+  ): Promise<void>
 }
 
 const advanceSchema = () =>
@@ -57,7 +62,7 @@ const populates = {
   budget: [{ path: 'budget.currency' }],
   bookings: [{ path: 'bookings.ledgerAccount' }, { path: 'bookings.project', select: { identifier: 1, organisation: 1 } }],
   project: [{ path: 'project' }],
-  owner: [{ path: 'owner', select: { name: 1, email: 1, additionalDetails: 1 } }],
+  owner: [{ path: 'owner', select: { name: 1, email: 1, additionalDetails: 1, 'settings.bankAccount': 1 } }],
   editor: [{ path: 'editor', select: { name: 1, email: 1 } }],
   log: advanceStates.map((state) => ({ path: `log.${state}.by`, select: { name: 1, email: 1 } })),
   comments: [{ path: 'comments.author', select: { name: 1, email: 1 } }]
@@ -147,6 +152,30 @@ schema.methods.offset = async function (
   await doc.save({ session })
   await recalcAllAssociatedReports(doc._id, session)
   return difference
+}
+
+schema.methods.reverseOffset = async function (
+  this: AdvanceBaseDoc,
+  reportModelName: ReportModelNameWithoutAdvance | 'offsetEntry',
+  reportId: Types.ObjectId,
+  session: mongoose.ClientSession | null = null
+) {
+  const doc = await model<Advance<Types.ObjectId>, AdvanceModel>('Advance').findOne({ _id: this._id }).session(session)
+  if (!doc) {
+    return
+  }
+  const entryIndex = doc.offsetAgainst.findIndex((o) => o.type === reportModelName && o.reportId?.equals(reportId))
+  if (entryIndex === -1) {
+    return
+  }
+  const [entry] = doc.offsetAgainst.splice(entryIndex, 1)
+  doc.balance.amount = sumAmounts(doc.balance.amount, entry.amount)
+  if (doc.balance.amount > 0) {
+    doc.settledOn = undefined
+  }
+  doc.markModified('offsetAgainst')
+  await doc.save({ session })
+  await recalcAllAssociatedReports(doc._id, session)
 }
 
 schema.methods.addComment = function () {

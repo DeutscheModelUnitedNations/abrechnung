@@ -45,6 +45,7 @@
     "isReadOnly": "System ist Schreibgeschützt!",
     "loginFailed": "Anmeldung fehlgeschlagen!",
     "mailSend": "E-Mail wurde versandt.",
+    "missingBankAccount": "Bitte hinterlege zunächst deine Bankverbindung in den Nutzereinstellungen, bevor du einreichst.",
     "negativeTotal": "Diese Abrechnung gleicht nicht alle negativen Einträge aus.",
     "noData": {
       "advanceForUserX": "Kein genehmigter Vorschuss für '{X}'. Beantrage einen!",

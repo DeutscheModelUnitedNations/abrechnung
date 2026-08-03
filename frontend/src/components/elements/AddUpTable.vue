@@ -23,10 +23,10 @@
               {{ `(${formatter.baseCurrency(getAdvanceOverflowAmount(addUp[index - 1]))} ${t('labels.left')})` }}
             </small>
             <template v-if="row[0] === 'labels.balance' && addUp[index - 1].negativeTotal">
-              <TooltipElement :text="t('alerts.negativeTotal')"><small class="fw-light">
-                <br >
-                {{ `(⚠️ ${formatter.baseCurrency(getNegativeTotalWarningAmount(addUp[index - 1]))})` }}
-              </small></TooltipElement>
+              <br >
+              <small class="text-danger">
+                {{ t('labels.total') }}: {{ formatter.baseCurrency(getNegativeTotalWarningAmount(addUp[index - 1])) }}
+              </small>
             </template>
           </td>
         </template>
@@ -52,7 +52,6 @@ import { computed, PropType } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatter } from '../../formatter.js'
 import ProgressCircle from './ProgressCircle.vue'
-import TooltipElement from './TooltipElement.vue'
 
 const { t } = useI18n()
 

@@ -8,6 +8,7 @@ type TravelValidatorSettings = ValidatorSettings & { travelSettings: TravelSetti
 type TravelConflictCode = 'stagesOverlapping' | 'countryChangeBetweenStages'
 export interface TravelValidationContext {
   vehicleRegistration?: Travel<_id, binary>['stages'][number]['cost']['receipts'] | null
+  hasValidBankAccount?: boolean
 }
 
 type TravelValidatorFn = (
@@ -63,6 +64,7 @@ export class TravelValidator extends Validator<ValidatableTravel, TravelValidato
       )
     },
     (travel) => (travel.stages.length < 1 ? [{ code: 'noData.stage', severity: 'error' }] : []),
+    (_travel, _settings, context) => (context?.hasValidBankAccount === false ? [{ code: 'missingBankAccount', severity: 'error' }] : []),
     (travel) => this.getStageDateResults(travel),
     (travel) => this.getStageCountryResults(travel),
     (travel, settings) => {

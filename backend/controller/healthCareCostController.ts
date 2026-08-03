@@ -16,7 +16,7 @@ import {
 import { mongo, QueryFilter, Types } from 'mongoose'
 import { BACKEND_CACHE } from '../db.js'
 import { createOperationServices } from '../factory.js'
-import { checkIfUserIsProjectSupervisor, documentFileHandler, fileHandler } from '../helper.js'
+import { assertUserHasBankAccount, checkIfUserIsProjectSupervisor, documentFileHandler, fileHandler } from '../helper.js'
 import i18n from '../i18n.js'
 import { emitIntegrationEvent } from '../integrations/dispatcher.js'
 import HealthCareCost, { HealthCareCostDoc } from '../models/healthCareCost.js'
@@ -166,6 +166,7 @@ export class HealthCareCostController extends Controller {
       allowNew: false,
       async checkOldObject(oldObject: HealthCareCostDoc) {
         if (oldObject.owner._id.equals(request.user._id) && oldObject.state === HealthCareCostState.IN_WORK) {
+          assertUserHasBankAccount(request.user, request.user.settings.language)
           assertHealthCareCostCanEnterReview(oldObject, request.user.settings.language)
           await oldObject.saveToHistory()
           return true
@@ -201,6 +202,18 @@ export class HealthCareCostController extends Controller {
       query: { limit: 5 },
       filter: { 'access.examine/healthCareCost': true },
       projection: { name: 1, email: 1 }
+    })
+  }
+
+  @Post('comment')
+  public async postComment(@Body() requestBody: { _id: string; comment: string }, @Request() request: AuthenticatedExpressRequest) {
+    const extendedBody = Object.assign(requestBody, { editor: request.user._id })
+    return await this.setter(HealthCareCost, {
+      requestBody: extendedBody,
+      allowNew: false,
+      async checkOldObject(oldObject: HealthCareCostDoc) {
+        return !oldObject.historic && oldObject.owner._id.equals(request.user._id)
+      }
     })
   }
 }
@@ -415,6 +428,18 @@ export class HealthCareCostExamineController extends Controller {
   @Get('organisation')
   public async getOrganisation(@Queries() query: GetterQuery<IOrganisation>) {
     return await this.getter(Organisation, { query })
+  }
+
+  @Post('comment')
+  public async postComment(@Body() requestBody: { _id: string; comment: string }, @Request() request: AuthenticatedExpressRequest) {
+    const extendedBody = Object.assign(requestBody, { editor: request.user._id })
+    return await this.setter(HealthCareCost, {
+      requestBody: extendedBody,
+      allowNew: false,
+      async checkOldObject(oldObject: HealthCareCostDoc) {
+        return !oldObject.historic && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
+      }
+    })
   }
 }
 

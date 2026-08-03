@@ -204,10 +204,16 @@
                 </small></div>
                 <div v-if="travel.state < State.BOOKED" class="mb-3">
                   <label for="comment" class="form-label">{{ t('labels.comment') }}</label>
-                  <CTextArea
-                    id="comment"
-                    v-model="travel.comment"
-                    :disabled="isReadOnly && !(endpointPrefix === 'examine/' && travel.state === State.IN_REVIEW)" />
+                  <CTextArea id="comment" v-model="travel.comment" :disabled="!canComment" />
+                  <button
+                    v-if="canComment"
+                    type="button"
+                    class="btn btn-secondary mt-1"
+                    :disabled="!travel.comment"
+                    @click="addComment()">
+                    <i class="bi bi-plus-lg"></i>
+                    <span class="ms-1">{{ t('labels.addX', { X: t('labels.comment') }) }}</span>
+                  </button>
                 </div>
                 <div v-if="endpointPrefix === 'examine/'" class="mb-3">
                   <label for="bookingRemark" class="form-label">{{ t('labels.bookingRemark') }}</label>
@@ -301,6 +307,7 @@ import {
 } from 'abrechnung-common/types.js'
 import type { ValidationResult } from 'abrechnung-common/report/validator.js'
 import { combineTravelValidationResults } from 'abrechnung-common/travel/validator.js'
+import { isValidBic, isValidIban } from 'abrechnung-common/utils/bank.js'
 import { placeToSimpleString, refNumberToString } from 'abrechnung-common/utils/scripts.js'
 import type { PropType } from 'vue'
 import { computed, ref, useTemplateRef } from 'vue'
@@ -372,6 +379,14 @@ const isReadOnly = computed(() => {
       isReadOnlySwitchOn.value)
   )
 })
+const canComment = computed(
+  () => !isReadOnly.value || (props.endpointPrefix === 'examine/' && travel.value.state === State.IN_REVIEW)
+)
+
+const hasValidBankAccount = computed(() => {
+  const bankAccount = APP_DATA.value?.user.settings.bankAccount
+  return Boolean(bankAccount && isValidIban(bankAccount.iban) && (!bankAccount.bic || isValidBic(bankAccount.bic)))
+})
 
 const travelValidationResults = computed(() => {
   if (
@@ -383,7 +398,8 @@ const travelValidationResults = computed(() => {
     return [] as ValidationResult[]
   }
   const results = APP_DATA.value.travelCalculator.validator.getValidationSummary(travel.value, {
-    vehicleRegistration: props.endpointPrefix !== 'examine/' ? APP_DATA.value.user.vehicleRegistration : null
+    vehicleRegistration: props.endpointPrefix !== 'examine/' ? APP_DATA.value.user.vehicleRegistration : null,
+    hasValidBankAccount: props.endpointPrefix === 'examine/' ? true : hasValidBankAccount.value
   }).results
 
   if (props.endpointPrefix !== 'examine/') {
@@ -450,6 +466,10 @@ function handleTravelIssueAction(payload: ValidationIssueActionPayload) {
 
   if (payload.type === 'multi-stage' && payload.stageIndexes.length > 0) {
     highlightStages(payload.stageIndexes)
+  }
+
+  if (payload.type === 'user-settings') {
+    router.push('/user/settings')
   }
 }
 
@@ -544,6 +564,16 @@ async function toExamination() {
   modalFormIsLoading.value = false
   if (result.ok) {
     router.push({ path: '/' })
+  }
+}
+
+async function addComment() {
+  const result = await API.setter<Travel<string>>(`${props.endpointPrefix}travel/comment`, {
+    _id: travel.value._id,
+    comment: travel.value.comment
+  })
+  if (result.ok) {
+    setTravel(result.ok)
   }
 }
 

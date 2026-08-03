@@ -6,7 +6,7 @@ import Formatter from '../utils/formatter.js'
 import printerSettings from './printerSettings.js'
 import { ReportPrinter } from './reportPrinter.js'
 
-const user = { _id: 'user', email: 'user@example.org', name: { givenName: 'Test', familyName: 'User' } }
+const user = { _id: 'user', email: 'user@example.org', name: { givenName: 'Test', familyName: 'User' }, settings: { bankAccount: null } }
 
 const advance: Advance<string> = {
   _id: 'advance',

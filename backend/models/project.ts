@@ -1,10 +1,11 @@
 import { _id, Project, ProjectSimple, ProjectUsers } from 'abrechnung-common/types.js'
-import { sumAmounts } from 'abrechnung-common/utils/scripts.js'
+import { subtractAmounts, sumAmounts } from 'abrechnung-common/utils/scripts.js'
 import mongoose, { HydratedDocument, InferSchemaType, Model, model, Schema, Types } from 'mongoose'
 import { costObject } from './helper.js'
 
 interface Methods {
   addToBalance(reportTotal: number, session?: mongoose.ClientSession | null): Promise<void>
+  subtractFromBalance(reportTotal: number, session?: mongoose.ClientSession | null): Promise<void>
 }
 
 export const projectSchema = () =>
@@ -32,6 +33,22 @@ schema.methods.addToBalance = async function (this: ProjectSimpleDoc, reportTota
     return
   }
   doc.balance.amount = sumAmounts(doc.balance.amount, reportTotal)
+  await doc.save({ session })
+}
+
+schema.methods.subtractFromBalance = async function (
+  this: ProjectSimpleDoc,
+  reportTotal: number,
+  session: mongoose.ClientSession | null = null
+) {
+  if (reportTotal <= 0) {
+    return
+  }
+  const doc = await model<Project<Types.ObjectId>, ProjectModel>('Project').findOne({ _id: this._id }).session(session)
+  if (!doc) {
+    return
+  }
+  doc.balance.amount = Math.max(0, subtractAmounts(doc.balance.amount, reportTotal))
   await doc.save({ session })
 }
 

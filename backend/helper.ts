@@ -1,10 +1,13 @@
 import { BaseCurrencyMoneyNotNull, DocumentFile as IDocumentFile, User as IUser, Money } from 'abrechnung-common/types.js'
+import { isValidBic, isValidIban } from 'abrechnung-common/utils/bank.js'
 import { getBaseCurrencyAmount } from 'abrechnung-common/utils/scripts.js'
 import { NextFunction, Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
 import { Types } from 'mongoose'
 import multer from 'multer'
+import { ValidationClientError } from './controller/error.js'
 import ENV from './env.js'
+import i18n from './i18n.js'
 import DocumentFile from './models/documentFile.js'
 
 interface ReqDocument extends Omit<IDocumentFile, 'data'> {
@@ -102,6 +105,13 @@ export function checkIfUserIsProjectSupervisor(user: IUser<Types.ObjectId>, proj
     return true
   }
   return user.projects.supervised.some((p) => p._id.equals(projectId))
+}
+
+export function assertUserHasBankAccount(user: Pick<IUser, 'settings'>, language: string) {
+  const bankAccount = user.settings.bankAccount
+  if (!bankAccount || !isValidIban(bankAccount.iban) || (bankAccount.bic && !isValidBic(bankAccount.bic))) {
+    throw new ValidationClientError(i18n.t('alerts.missingBankAccount', { lng: language }))
+  }
 }
 
 export const fileHandler = multer({ limits: { fileSize: ENV.VITE_MAX_FILE_SIZE } })

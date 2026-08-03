@@ -151,10 +151,6 @@
     <template v-if="formStage.transport.type !== 'ownCar'">
       <div class="row mb-2">
         <div class="col">
-          <label for="stageFormCurrency" class="form-label me-2">{{ t('labels.currency') }}</label>
-          <CurrencySelector id="stageFormCurrency" v-model="formStage.cost.currency" :disabled="disabled" :required="true" />
-        </div>
-        <div class="col">
           <label for="invoiceDateInput" class="form-label">
             {{ t('labels.invoiceDate') }}
             <span v-if="hasCostAmount" class="text-danger">*</span>
@@ -172,12 +168,15 @@
 
     <CostPositionsEditor
       v-model="formStage.cost.positions"
+      v-model:currency="formStage.cost.currency"
       :default-project="defaultProject"
       report-type="Travel"
-      :currency="formStage.cost.currency"
       :disabled="disabled"
       :required="true"
       :amount-required="false"
+      :require-single-position-description="false"
+      :lock-project="true"
+      :vat-enabled="false"
       :own-car="formStage.transport.type === 'ownCar'" />
 
     <template
@@ -281,7 +280,6 @@ import { computed, PropType, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatter } from '../../../formatter'
 import CountrySelector from '../../elements/CountrySelector.vue'
-import CurrencySelector from '../../elements/CurrencySelector.vue'
 import CostPositionsEditor from '../../elements/CostPositionsEditor.vue'
 import DateInput from '../../elements/DateInput.vue'
 import FileUpload from '../../elements/FileUpload.vue'

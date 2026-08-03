@@ -18,6 +18,10 @@ import { assertBookingsBalanced, requestBookingExport } from '../_booking.js'
 
 const agent = await createAgent()
 await loginUser(agent, 'user')
+await User.updateMany(
+  {},
+  { $set: { 'settings.bankAccount': { accountHolder: 'Test Employee', iban: 'DE89370400440532013000', bic: 'COBADEFFXXX' } } }
+)
 
 //@ts-expect-error
 let expenseReport: ExpenseReportSimple = { name: 'Expenses from last Month' }
@@ -557,6 +561,10 @@ test.serial('POST /book/expenseReport/bookingExportPackage', async (t) => {
 
 test.serial('bookable expense report reverses negative net and VAT totals', async (t) => {
   await loginUser(agent, 'user')
+  await User.updateMany(
+    {},
+    { $set: { 'settings.bankAccount': { accountHolder: 'Test Employee', iban: 'DE89370400440532013000', bic: 'COBADEFFXXX' } } }
+  )
   const createResponse = await agent.post('/expenseReport/inWork').send({ name: 'Negative VAT report', project: expenseReport.project })
   t.is(createResponse.status, 200)
   const negativeReport = createResponse.body.result as ExpenseReportSimple

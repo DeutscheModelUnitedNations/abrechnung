@@ -18,7 +18,10 @@
               @cancel="resetAndHide()"
               @decision="(d, c, br) => approveAdvance((modalAdvance as AdvanceSimple<string>), d, c, br)" />
             <template v-else>
-              <Advance :advance="(modalAdvance as AdvanceSimple<string>)" endpointPrefix="approve/">
+              <Advance
+                :advance="(modalAdvance as AdvanceSimple<string>)"
+                endpointPrefix="approve/"
+                :show-comment-form="!canWithdrawApproval(modalAdvance as AdvanceSimple<string>)">
                 <template #buttons>
                   <button
                     v-if="!modalAdvance.settledOn && !isOffsetFormVisible"

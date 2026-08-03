@@ -42,18 +42,6 @@
       </div>
     </section>
 
-    <section class="card mb-4">
-      <div class="card-body">
-        <h3 class="h5 card-title mb-3">{{ t('labels.vehicleRegistration') }}</h3>
-        <FileUpload
-          id="user-settings-vehicle-registration"
-          :model-value="vehicleRegistration"
-          multiple
-          @update:model-value="saveVehicleRegistration" />
-        <span v-if="savingVehicleRegistration" class="spinner-border spinner-border-sm mt-2"></span>
-      </div>
-    </section>
-
     <section class="card">
       <div class="card-body">
         <h3 class="h5 card-title mb-3">API Key</h3>
@@ -68,13 +56,12 @@
 </template>
 
 <script lang="ts" setup>
-import { type BankAccount, type DocumentFile, locales, type User } from 'abrechnung-common/types.js'
+import { type BankAccount, locales, type User } from 'abrechnung-common/types.js'
 import { reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import API from '@/api.js'
 import ApiKeyForm from '@/components/elements/ApiKeyForm.vue'
 import BankAccountForm from '@/components/elements/BankAccountForm.vue'
-import FileUpload from '@/components/elements/FileUpload.vue'
 import HealthInsuranceSelector from '@/components/elements/HealthInsuranceSelector.vue'
 import OrganisationSelector from '@/components/elements/OrganisationSelector.vue'
 import APP_LOADER from '@/dataLoader.js'
@@ -83,7 +70,6 @@ const { t, locale } = useI18n()
 await APP_LOADER.loadData()
 const APP_DATA = APP_LOADER.data
 const savingGeneralSettings = ref(false)
-const savingVehicleRegistration = ref(false)
 const currentSettings = APP_DATA.value!.user.settings
 const generalSettings = reactive({
   language: currentSettings.language,
@@ -91,7 +77,6 @@ const generalSettings = reactive({
   insurance: currentSettings.insurance,
   showInstallBanner: currentSettings.showInstallBanner
 })
-const vehicleRegistration = ref([...(APP_DATA.value!.user.vehicleRegistration ?? [])])
 
 async function saveGeneralSettings() {
   savingGeneralSettings.value = true
@@ -112,21 +97,6 @@ async function saveGeneralSettings() {
 
 function updateBankAccount(bankAccount: BankAccount | null) {
   if (APP_DATA.value) APP_DATA.value.user.settings.bankAccount = bankAccount
-}
-
-async function saveVehicleRegistration(files: Partial<DocumentFile<string, Blob>>[]) {
-  savingVehicleRegistration.value = true
-  vehicleRegistration.value = files as DocumentFile<string>[]
-  const result = await API.setter<User<string>>(
-    'user/vehicleRegistration',
-    { vehicleRegistration: files },
-    { headers: { 'Content-Type': 'multipart/form-data' } }
-  )
-  savingVehicleRegistration.value = false
-  if (result.ok && APP_DATA.value) {
-    APP_DATA.value.user = result.ok
-    vehicleRegistration.value = result.ok.vehicleRegistration ?? []
-  }
 }
 
 function markApiKeyConfigured() {

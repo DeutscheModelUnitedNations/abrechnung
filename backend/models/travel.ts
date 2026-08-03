@@ -122,7 +122,7 @@ const populates = {
   advances: [{ path: 'advances', select: { name: 1, balance: 1, budget: 1, state: 1, project: 1 } }],
   bookings: [{ path: 'bookings.ledgerAccount' }, { path: 'bookings.project', select: { identifier: 1, organisation: 1 } }],
   project: [{ path: 'project' }],
-  owner: [{ path: 'owner', select: { name: 1, email: 1, additionalDetails: 1 } }],
+  owner: [{ path: 'owner', select: { name: 1, email: 1, additionalDetails: 1, 'settings.bankAccount': 1 } }],
   editor: [{ path: 'editor', select: { name: 1, email: 1 } }],
   log: travelStates.map((state) => ({ path: `log.${state}.by`, select: { name: 1, email: 1 } })),
   comments: [{ path: 'comments.author', select: { name: 1, email: 1 } }]
@@ -226,7 +226,7 @@ schema.pre('validate', async function () {
           this.stages.map(({ cost }) => cost),
           'Travel',
           false,
-          true
+          false
         )
       : []
   ])

@@ -306,6 +306,11 @@ class ReportPrint<idType extends _id> {
         width
       })
     }
+    const bankAccount = this.report.owner.settings?.bankAccount
+    if (bankAccount) {
+      const bankAccountLine = `${this.t('labels.iban')}: ${bankAccount.iban}${bankAccount.bic ? `    ${this.t('labels.bic')}: ${bankAccount.bic}` : ''}`
+      yLeft = this.drawer.drawMultilineText(bankAccountLine, { xStart: x, yStart: yLeft, fontSize: options.fontSize, width })
+    }
     if (placeLines.length > 0) {
       yLeft -= options.fontSize
     }
@@ -341,6 +346,16 @@ class ReportPrint<idType extends _id> {
       }
       const tableData = getAddUpTableData(this.drawer.formatter, this.report.addUp, reportIsTravel(this.report))
       summary = tableData.map((row) => Object.fromEntries(row.map((value, index) => [index.toString(10), value])))
+      if (this.report.addUp.some((addUp) => addUp.negativeTotal)) {
+        // biome-ignore lint/suspicious/noExplicitAny: dynamic column count keyed by addUp index
+        const totalRow: any = { '0': this.t('labels.total') }
+        for (let i = 0; i < this.report.addUp.length; i++) {
+          totalRow[(i + 1).toString(10)] = this.report.addUp[i].negativeTotal
+            ? this.drawer.formatter.baseCurrency(this.report.addUp[i].total.amount)
+            : ''
+        }
+        summary.push(totalRow)
+      }
     }
     const fontSize = options.fontSize + 2
     this.drawer.drawText(this.t('labels.summary'), { xStart: options.xStart, yStart: options.yStart - fontSize, fontSize: fontSize })
@@ -422,7 +437,14 @@ class ReportPrint<idType extends _id> {
       title: 'author',
       fn: (a: Comment['author'] | string) => ((a as UserSimple).name ? this.drawer.formatter.name((a as UserSimple).name) : (a as string))
     })
-    columns.push({ key: 'text', width: 300, alignment: TextAlignment.Left, title: 'value' })
+    columns.push({ key: 'text', width: 240, alignment: TextAlignment.Left, title: 'value' })
+    columns.push({
+      key: 'createdAt',
+      width: 90,
+      alignment: TextAlignment.Left,
+      title: 'createdAt',
+      fn: (d?: Date | string) => (d ? this.drawer.formatter.dateTime(d) : '')
+    })
 
     const fontSize = options.fontSize + 2
     this.drawer.drawText(this.t('labels.comments'), { xStart: options.xStart, yStart: options.yStart - fontSize, fontSize: fontSize })
@@ -431,7 +453,7 @@ class ReportPrint<idType extends _id> {
     const tableOptions: TableOptions = options
     tableOptions.firstRow = false
 
-    let rows: { author: Comment['author'] | string; text: string }[] = []
+    let rows: { author: Comment['author'] | string; text: string; createdAt?: Date | string }[] = []
     if (drawComments) {
       rows = [...this.report.comments]
     }
@@ -439,7 +461,11 @@ class ReportPrint<idType extends _id> {
       rows.push({ author: this.t('labels.bookingRemark'), text: this.report.bookingRemark })
     }
 
-    return await this.drawer.drawTable<{ author: Comment['author'] | string; text: string }>(rows, columns, tableOptions)
+    return await this.drawer.drawTable<{ author: Comment['author'] | string; text: string; createdAt?: Date | string }>(
+      rows,
+      columns,
+      tableOptions
+    )
   }
 
   getReceiptNumberLinkSegments(cost: Cost, receiptMap: ReceiptMap<idType>) {

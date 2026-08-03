@@ -190,10 +190,16 @@
                 </small></div>
                 <div v-if="healthCareCost.state < State.BOOKABLE" class="mb-3">
                   <label for="comment" class="form-label">{{ t('labels.comment') }}</label>
-                  <CTextArea
-                    id="comment"
-                    v-model="healthCareCost.comment as string | undefined"
-                    :disabled="isReadOnly && !(endpointPrefix === 'examine/' && healthCareCost.state === State.IN_REVIEW)" />
+                  <CTextArea id="comment" v-model="healthCareCost.comment as string | undefined" :disabled="!canComment" />
+                  <button
+                    v-if="canComment"
+                    type="button"
+                    class="btn btn-secondary mt-1"
+                    :disabled="!healthCareCost.comment"
+                    @click="addComment()">
+                    <i class="bi bi-plus-lg"></i>
+                    <span class="ms-1">{{ t('labels.addX', { X: t('labels.comment') }) }}</span>
+                  </button>
                 </div>
                 <div v-if="endpointPrefix === 'examine/'" class="mb-3">
                   <label for="bookingRemark" class="form-label">{{ t('labels.bookingRemark') }}</label>
@@ -340,6 +346,9 @@ const isReadOnly = computed(() => {
       isReadOnlySwitchOn.value)
   )
 })
+const canComment = computed(
+  () => !isReadOnly.value || (props.endpointPrefix === 'examine/' && healthCareCost.value.state === State.IN_REVIEW)
+)
 
 const reviewResults = ref<ValidationResult[]>([])
 const canEnterReview = computed(() => !reviewResults.value.some((issue: ValidationResult) => issue.severity === 'error'))
@@ -408,6 +417,16 @@ async function toExamination() {
   })
   if (result.ok) {
     router.push({ path: props.parentPages[0].link })
+  }
+}
+
+async function addComment() {
+  const result = await API.setter<HealthCareCost<string>>(`${props.endpointPrefix}healthCareCost/comment`, {
+    _id: healthCareCost.value._id,
+    comment: healthCareCost.value.comment
+  })
+  if (result.ok) {
+    setHealthCareCost(result.ok)
   }
 }
 

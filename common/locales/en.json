@@ -45,6 +45,7 @@
     "isReadOnly": "System is read-only!",
     "loginFailed": "Failed to log in!",
     "mailSend": "Email was sent.",
+    "missingBankAccount": "Please add your bank details in your user settings before submitting.",
     "negativeTotal": "This report does not offset all negative entries.",
     "noData": {
       "advanceForUserX": "No approved advance for '{X}'. Apply for one!",

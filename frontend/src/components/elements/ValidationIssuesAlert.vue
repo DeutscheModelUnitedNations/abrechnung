@@ -195,6 +195,9 @@ function getIssueDisplay(result: ValidationResult) {
   if (result.code === 'noData.expense') {
     return { subject: t('labels.expense') }
   }
+  if (result.code === 'missingBankAccount') {
+    return { subject: t('labels.bankAccount'), actionPayload: { type: 'user-settings' } as ValidationIssueActionPayload }
+  }
   if (result.path) {
     return { subject: formatValidationPath(result.path) }
   }

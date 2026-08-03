@@ -144,6 +144,18 @@ export class AdvanceController extends Controller {
     this.setHeader('Content-Length', report.length)
     return Readable.from([report])
   }
+
+  @Post('comment')
+  public async postComment(@Body() requestBody: { _id: string; comment: string }, @Request() request: AuthenticatedExpressRequest) {
+    const extendedBody = Object.assign(requestBody, { editor: request.user._id })
+    return await this.setter(Advance, {
+      requestBody: extendedBody,
+      allowNew: false,
+      async checkOldObject(oldObject: AdvanceDoc) {
+        return !oldObject.historic && oldObject.owner._id.equals(request.user._id)
+      }
+    })
+  }
 }
 
 @Tags('Advance')
@@ -329,6 +341,18 @@ export class AdvanceApproveController extends Controller {
     this.setHeader('Content-Type', 'application/pdf')
     this.setHeader('Content-Length', report.length)
     return Readable.from([report])
+  }
+
+  @Post('comment')
+  public async postComment(@Body() requestBody: { _id: string; comment: string }, @Request() request: AuthenticatedExpressRequest) {
+    const extendedBody = Object.assign(requestBody, { editor: request.user._id })
+    return await this.setter(Advance, {
+      requestBody: extendedBody,
+      allowNew: false,
+      async checkOldObject(oldObject: AdvanceDoc) {
+        return !oldObject.historic && checkIfUserIsProjectSupervisor(request.user, oldObject.project._id)
+      }
+    })
   }
 }
 

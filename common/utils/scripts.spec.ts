@@ -298,7 +298,7 @@ test('addUp aggregates expenses and advances per project for expense reports', (
   if (!secondaryProjectAddUp) return
 
   t.is(secondaryProjectAddUp.expenses.amount, -70)
-  t.is(secondaryProjectAddUp.total.amount, 0)
+  t.is(secondaryProjectAddUp.total.amount, -70)
   t.is(secondaryProjectAddUp.advance.amount, 25)
   t.is(secondaryProjectAddUp.balance.amount, 0)
   t.true(secondaryProjectAddUp.advanceOverflow)
@@ -482,7 +482,7 @@ test('addUp still flags totals that are negative after cent rounding', (t) => {
   const result = addUp<Id, AddUpReport>(expenseReport)
 
   t.is(result.length, 1)
-  t.is(result[0].total.amount, 0)
+  t.is(result[0].total.amount, -0.01)
   t.is(result[0].balance.amount, 0)
   t.true(result[0].negativeTotal)
 })

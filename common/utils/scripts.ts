@@ -257,7 +257,7 @@ export function getAddUpTableData(formatter: Formatter, addUps: AddUp<_id>[], wi
     if (hasAdvance) {
       summary[j++].push(
         addUps[i].advance.amount > 0
-          ? formatter.baseCurrency(-1 * (addUps[i].advanceOverflow ? addUps[i].total.amount : addUps[i].advance.amount))
+          ? formatter.baseCurrency(-1 * (addUps[i].advanceOverflow ? Math.max(0, addUps[i].total.amount) : addUps[i].advance.amount))
           : ''
       )
     }
@@ -404,12 +404,11 @@ export function addUp<idType extends _id, T extends AddUpTravel | AddUpReport>(r
   }
   for (const addUp of addUps) {
     const lumpSumsAmount = (addUp as FlatAddUp<idType, Travel<_id, binary>>).lumpSums?.amount
-    let totalAmount = roundAmount(
+    const totalAmount = roundAmount(
       sumAmounts(addUp.expenses.amount, typeof lumpSumsAmount === 'number' && !Number.isNaN(lumpSumsAmount) ? lumpSumsAmount : 0)
     )
     if (totalAmount < 0) {
       addUp.negativeTotal = true
-      totalAmount = 0
     }
     addUp.total.amount = totalAmount
 

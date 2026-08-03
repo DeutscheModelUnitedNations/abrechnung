@@ -224,7 +224,8 @@ export function requestBaseSchema<S extends AnyState = AnyState>(
         {
           text: { type: String },
           author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-          toState: { type: Number, required: true, enum: stages }
+          toState: { type: Number, required: true, enum: stages },
+          createdAt: { type: Date, required: true, default: Date.now }
         }
       ]
     },
@@ -248,7 +249,7 @@ export function requestBaseSchema<S extends AnyState = AnyState>(
   const addUp = {
     project: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     balance: costObject({ exchangeRate: false, receipts: false, required: true, min: 0 }),
-    total: costObject({ exchangeRate: false, receipts: false, required: true, min: 0 }),
+    total: costObject({ exchangeRate: false, receipts: false, required: true }),
     expenses: costObject({ exchangeRate: false, receipts: false, required: true }),
     advance: costObject({ exchangeRate: false, receipts: false, required: true, min: 0 }),
     advanceOverflow: { type: Boolean, required: true, default: false },
@@ -369,6 +370,40 @@ export async function addToProjectBalance(report: { addUp: AddUp[]; project: Pro
     // await session.commitTransaction() // needs Replica Set
   } catch (error) {
     // await session.abortTransaction() // needs Replica Set
+    // biome-ignore lint/complexity/noUselessCatch: finally needs catch
+    throw error
+  } finally {
+    await session.endSession()
+  }
+}
+
+// Reverses offsetAdvance() for a report that leaves REVIEW_COMPLETED (e.g. sent back to the reviewer), so its
+// previously offset amount is credited back to the advance instead of staying deducted indefinitely.
+export async function reverseAdvanceOffset(
+  report: { advances: AdvanceBase<Types.ObjectId>[]; _id: Types.ObjectId },
+  modelName: ReportModelNameWithoutAdvance
+) {
+  const session = await mongoose.startSession()
+  try {
+    for (const advance of report.advances) {
+      await (advance as AdvanceDoc).reverseOffset(modelName, report._id, session)
+    }
+  } catch (error) {
+    // biome-ignore lint/complexity/noUselessCatch: finally needs catch
+    throw error
+  } finally {
+    await session.endSession()
+  }
+}
+
+// Reverses addToProjectBalance() for the same case.
+export async function removeFromProjectBalance(report: { addUp: AddUp[]; project: Project }) {
+  const session = await mongoose.startSession()
+  try {
+    for (const addUp of report.addUp) {
+      await (addUp.project as ProjectDoc).subtractFromBalance(addUp.total.amount, session)
+    }
+  } catch (error) {
     // biome-ignore lint/complexity/noUselessCatch: finally needs catch
     throw error
   } finally {

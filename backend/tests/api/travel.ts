@@ -14,11 +14,16 @@ import { Types } from 'mongoose'
 import { shutdown } from '../../app.js'
 import { objectToFormFields } from '../../helper.js'
 import TravelModel from '../../models/travel.js'
+import UserModel from '../../models/user.js'
 import createAgent, { loginUser } from '../_agent.js'
 import { assertBookingsBalanced, requestBookingExport } from '../_booking.js'
 
 const agent = await createAgent()
 await loginUser(agent, 'user')
+await UserModel.updateMany(
+  {},
+  { $set: { 'settings.bankAccount': { accountHolder: 'Test Employee', iban: 'DE89370400440532013000', bic: 'COBADEFFXXX' } } }
+)
 
 let travel: TravelSimple = {
   name: 'Ankara Aug 2023',

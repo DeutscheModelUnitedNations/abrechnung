@@ -26,16 +26,6 @@
 
     <div class="row mb-2">
       <div class="col">
-        <label for="expenseFormCurrency" class="form-label me-2">
-          {{ t('labels.currency') }}
-          <span class="text-danger">*</span>
-        </label>
-        <CurrencySelector id="expenseFormCurrency" v-model="formExpense.cost.currency" :disabled="disabled" :required="true" />
-        <small v-if="formExpense.cost.positions.length > 1" class="text-secondary tnum">
-          {{ t('labels.total') }}: {{ formatter.currency(getCostGrossAmount(formExpense.cost), formExpense.cost.currency._id) }}
-        </small>
-      </div>
-      <div class="col">
         <label for="invoiceDateInput" class="form-label">
           {{ t('labels.invoiceDate') }}
           <span class="text-danger">*</span>
@@ -52,11 +42,13 @@
 
     <CostPositionsEditor
       v-model="formExpense.cost.positions"
+      v-model:currency="formExpense.cost.currency"
       :default-project="defaultProject"
       report-type="ExpenseReport"
-      :currency="formExpense.cost.currency"
       :disabled="disabled"
-      :require-single-position-description="false" />
+      :require-single-position-description="false"
+      :lock-project="true"
+      :vat-enabled="false" />
 
     <div class="mb-3">
       <label for="travelFormDescription" class="form-label">{{ t('labels.note') }}</label>
@@ -99,15 +91,12 @@
 
 <script lang="ts" setup>
 import { baseCurrency, Expense, ProjectSimple } from 'abrechnung-common/types.js'
-import { getCostGrossAmount } from 'abrechnung-common/utils/scripts.js'
 import { PropType, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import CurrencySelector from '@/components/elements/CurrencySelector.vue'
 import CostPositionsEditor from '@/components/elements/CostPositionsEditor.vue'
 import DateInput from '@/components/elements/DateInput.vue'
 import FileUpload from '@/components/elements/FileUpload.vue'
 import InfoPoint from '@/components/elements/InfoPoint.vue'
-import { formatter } from '@/formatter.js'
 import CTextArea from '@/components/elements/TextArea.vue'
 
 const { t } = useI18n()

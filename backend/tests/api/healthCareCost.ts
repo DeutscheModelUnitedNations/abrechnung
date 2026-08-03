@@ -2,11 +2,16 @@ import { BookingExportRow, Category, HealthCareCost, HealthCareCostSimple, Healt
 import test from 'ava'
 import { shutdown } from '../../app.js'
 import { objectToFormFields } from '../../helper.js'
+import User from '../../models/user.js'
 import createAgent, { loginUser } from '../_agent.js'
 import { assertBookingsBalanced, requestBookingExport } from '../_booking.js'
 
 const agent = await createAgent()
 await loginUser(agent, 'user')
+await User.updateMany(
+  {},
+  { $set: { 'settings.bankAccount': { accountHolder: 'Test Employee', iban: 'DE89370400440532013000', bic: 'COBADEFFXXX' } } }
+)
 
 //@ts-expect-error
 let healthCareCost: HealthCareCostSimple = { name: 'Broken leg', patientName: 'Ben Logas' }
