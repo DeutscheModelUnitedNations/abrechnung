@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 
+import { Logger, LogLevel } from 'abrechnung-common/utils/logger.js'
 import { escapeRegExp } from 'abrechnung-common/utils/scripts.js'
 import { clientsClaim } from 'workbox-core'
 import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from 'workbox-precaching'
@@ -13,7 +14,6 @@ import {
   readRequestFromDB,
   storeRequestToDB
 } from '@/indexedDB'
-import { logger } from '@/logger.js'
 
 declare let self: ServiceWorkerGlobalScope
 
@@ -22,6 +22,11 @@ declare let self: ServiceWorkerGlobalScope
 // -----------------------------------------------------------------------------
 
 const IS_DEV_SERVICE_WORKER = self.location.pathname.endsWith('/dev-sw.js') || self.location.search.includes('dev-sw')
+// Not '@/logger.js': that pulls in '@/env.js', which reads globalThis.__ABRECHNUNG_ENV__ — only
+// injected into the page's global scope via index.html's runtime-config.js, never into the service
+// worker's own scope. Importing it here throws on every SW install, since production builds also
+// don't bake VITE_BACKEND_URL/VITE_FRONTEND_URL into import.meta.env (they're runtime-injected).
+const logger = new Logger(IS_DEV_SERVICE_WORKER ? LogLevel.INFO : LogLevel.ERROR)
 const EMBEDDED_RUNTIME_CONFIG = '__ABRECHNUNG_SW_CONFIG__'
 const runtimeConfiguration = (
   IS_DEV_SERVICE_WORKER
